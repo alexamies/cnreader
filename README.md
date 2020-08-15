@@ -1,0 +1,2 @@
+# cnreader
+Chinese Text Reader
