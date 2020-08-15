@@ -1,2 +1,2 @@
-# cnreader
-Chinese Text Reader
+# Chinese Text Reader
+A Go library for analyzing Chinese text
