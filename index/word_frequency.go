@@ -6,7 +6,8 @@ package index
 import (
 	"fmt"
 	"sort"
-	"github.com/alexamies/cnreader/dictionary"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
 // A word with corpus entry label
@@ -54,23 +55,25 @@ func (sortedWF *SortedWF) Swap(i, j int) {
  * senses matches the label.
  */
 func FilterByDomain(words []SortedWordItem,
-		domain_en string) []dictionary.HeadwordDef {
-	headwords := []dictionary.HeadwordDef{}
-	if domain_en == "" {
+		domain string, wdict map[string]dicttypes.Word) []dicttypes.Word {
+	headwords := []dicttypes.Word{}
+	if len(domain) == 0 {
 		return headwords
 	}
 	for _, sw := range words {
-		hw, _ := dictionary.GetHeadword(sw.Word)
-		wsArr := []dictionary.WordSenseEntry{}
-		for _, ws := range *hw.WordSenses {
-			if ws.Topic_en == domain_en {
-				wsArr = append(wsArr, ws)
+		w, ok := wdict[sw.Word]
+		if ok {
+			wsArr := []dicttypes.WordSense{}
+			for _, ws := range w.Senses {
+				if ws.Domain == domain {
+					wsArr = append(wsArr, ws)
+				}
 			}
-		}
-		if len(wsArr) > 0 {
-			h := dictionary.CloneHeadword(hw)
-			h.WordSenses = &wsArr
-			headwords = append(headwords, h)
+			if len(wsArr) > 0 {
+				h := dicttypes.CloneWord(w)
+				h.Senses = wsArr
+				headwords = append(headwords, h)
+			}
 		}
 	}
 	return headwords

@@ -8,18 +8,20 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
-	"github.com/alexamies/chinesenotes-go/tokenizer"
-	"github.com/alexamies/cnreader/corpus"
-	"github.com/alexamies/cnreader/dictionary"
-	"github.com/alexamies/cnreader/index"
-	"github.com/alexamies/cnreader/ngram"
-	"github.com/alexamies/cnreader/library"
 	"log"
 	"os"
 	"strings"
 	"text/template"
 	"time"
+	"unicode"
 	"unicode/utf8"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"
+	"github.com/alexamies/chinesenotes-go/tokenizer"
+	"github.com/alexamies/cnreader/corpus"
+	"github.com/alexamies/cnreader/index"
+	"github.com/alexamies/cnreader/ngram"
+	"github.com/alexamies/cnreader/library"
 )
 
 // Maximum number of word frequency entries to output to the generated
@@ -39,13 +41,17 @@ const MAX_TITLE = 5
 // Max number of keywords to display
 const MAX_KEYWORDS = 10
 
+// Maximum number of containing words to output to the generated
+// HTML file
+const MAX_CONTAINS = 50
+
 // Holds vocabulary analysis for a corpus text
 type AnalysisResults struct {
 	Title                   string
 	WC, UniqueWords, CCount int
-	ProperNouns				dictionary.Headwords
+	ProperNouns				[]dicttypes.Word
 	DocumentGlossary 		Glossary
-	TopKeywords				dictionary.Headwords
+	TopKeywords				dicttypes.Words
 	WordFrequencies         []WFResult
 	LexicalWordFreq         []WFResult
 	BigramFreqSorted        []ngram.BigramFreq
@@ -61,10 +67,10 @@ type CorpusEntryContent struct {
 
 // Dictionary entry content struct used for writing a dictionary entry to HTML
 type DictEntry struct {
-	Headword     dictionary.HeadwordDef
+	Headword     dicttypes.Word
 	RelevantDocs []index.RetrievalResult
-	ContainsByDomain []dictionary.HeadwordDef
-	Contains     []dictionary.HeadwordDef
+	ContainsByDomain []dicttypes.Word
+	Contains     []dicttypes.Word
 	Collocations []ngram.BigramFreq
 	UsageArr     []WordUsage
 	DateUpdated  string
@@ -96,26 +102,95 @@ type WFResult struct {
 	Chinese, Pinyin, English, Usage string
 }
 
-/* Break usage example text into links with highlight on headword
-   Parameters:
-      usageText - usage example or notes on lexical unit
-      headword - Includes simplified and traditional Chinese text
-   Return
-      marked up text with links and highlight
-*/
-func decodeUsageExample(usageText string, headword dictionary.HeadwordDef,
+// DictionaryConfig encapsulates parameters for dictionary configuration
+type DictionaryConfig struct {
+	AvoidSubDomains map[string]bool
+	DictionaryDir string
+}
+
+// Get a list of words that containst the given word
+func ContainsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
+	//log.Printf("dictionary.ContainsWord: Enter\n")
+	contains := []dicttypes.Word{}
+	for _, hw := range headwords {
+		if len(contains) <= MAX_CONTAINS && hw.Simplified != word && strings.Contains(hw.Simplified, word) {
+			contains = append(contains, hw)
+		}
+	}
+	return contains
+}
+
+
+// Compute headword numbers for all lexical units listed in data/words.txt
+// Return a sorted array of headwords
+func GetHeadwords(wdict map[string]dicttypes.Word) []dicttypes.Word {
+	hwArray := []dicttypes.Word{}
+	for _, w := range wdict {
+		hwArray = append(hwArray, w)
+	}
+	log.Printf("dictionary.GetHeadwords: hwcount = %d\n", len(hwArray))
+	return hwArray
+}
+
+func GetHwMap(wdict map[string]dicttypes.Word) map[int]dicttypes.Word {
+	hwIdMap := make(map[int]dicttypes.Word)
+	for _, w := range wdict {
+		hwIdMap[w.HeadwordId] = w
+	}
+	return hwIdMap
+}
+
+// Tests whether the symbol is a CJK character, excluding punctuation
+// Only looks at the first charater in the string
+func IsCJKChar(character string) bool {
+	r := []rune(character)
+	return unicode.Is(unicode.Han, r[0]) && !unicode.IsPunct(r[0])
+}
+
+// Filter the list of headwords by the given domain
+// Parameters
+//   hws: A list of headwords
+//   domain_en: the domain to filter by, ignored if empty
+// Return
+//   hw: an array of headwords matching the domain, with senses not matching the
+//       domain also removed
+func FilterByDomain(hws []dicttypes.Word, domain string) []dicttypes.Word {
+	if len(domain) == 0 {
+		return hws
+	}
+	headwords := []dicttypes.Word{}
+	for _, hw := range hws {
+		wsArr := []dicttypes.WordSense{}
+		for _, ws := range hw.Senses {
+			if ws.Domain == domain {
+				wsArr = append(wsArr, ws)
+			}
+		}
+		if len(wsArr) > 0 {
+			h := dicttypes.CloneWord(hw)
+			h.Senses = wsArr
+			headwords = append(headwords, h)
+		}
+	}
+	return headwords
+}
+
+// decodeUsageExample formats usage example text into links with highlight
+//   Return
+//      marked up text with links and highlight
+func decodeUsageExample(usageText string, headword dicttypes.Word,
 		dictTokenizer tokenizer.Tokenizer, outputConfig corpus.HTMLOutPutConfig,
-		corpusConfig corpus.CorpusConfig) string {
+		corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) string {
 	tokens, _ := ParseText(usageText, "", corpus.NewCorpusEntry(),
-			dictTokenizer, corpusConfig)
+			dictTokenizer, corpusConfig, wdict)
 	replacementText := ""
 	for e := tokens.Front(); e != nil; e = e.Next() {
 		word := e.Value.(string)
-		if word == *headword.Simplified || word == *headword.Traditional {
+		if word == headword.Simplified || word == headword.Traditional {
 			replacementText = replacementText +
 				"<span class='usage-highlight'>" + word + "</span>"
 		} else {
-			ws, ok := dictionary.GetWord(word)
+			ws, ok := wdict[word]
 			if ok {
 				replacementText = replacementText + hyperlink(ws, word, outputConfig.VocabFormat)
 			} else {
@@ -132,7 +207,7 @@ func GetChunks(text string) list.List {
 	cjk := ""
 	noncjk := ""
 	for _, character := range text {
-		if dictionary.IsCJKChar(string(character)) {
+		if IsCJKChar(string(character)) {
 			if noncjk != "" {
 				chunks.PushBack(noncjk)
 				noncjk = ""
@@ -158,7 +233,8 @@ func GetChunks(text string) list.List {
 // Compute word frequencies, collocations, and usage for the entire corpus
 func GetWordFrequencies(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer,
-		corpusConfig corpus.CorpusConfig) VocabAnalysis {
+		corpusConfig corpus.CorpusConfig,
+		wdict map[string]dicttypes.Word) VocabAnalysis {
 
 	log.Printf("analysis.GetWordFrequencies: enter")
 
@@ -179,7 +255,8 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 			src := corpusConfig.CorpusDir + entry.RawFile
 			text := corpLoader.ReadText(src)
 			ccount += utf8.RuneCountInString(text)
-			_, results := ParseText(text, col.Title, &entry, dictTokenizer, corpusConfig)
+			_, results := ParseText(text, col.Title, &entry, dictTokenizer,
+						corpusConfig, wdict)
 			wcTotal[col.Corpus] += results.WC
 
 			// Process collocations
@@ -223,44 +300,49 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 
 // Constructs a hyperlink for a headword, including Pinyin and English in the
 // title attribute for the link mouseover
-func hyperlink(entries []*dictionary.WordSenseEntry, text, vocabFormat string) string {
+func hyperlink(w dicttypes.Word, text, vocabFormat string) string {
 	classTxt := "vocabulary"
-	if entries[0].IsProperNoun() {
+	if w.IsProperNoun() {
 		classTxt = classTxt + " propernoun"
 	}
-	pinyin := entries[0].Pinyin
-	english := entries[0].English
-	if len(entries) > 1 {
+	pinyin := w.Pinyin
+	english := ""
+	if len(w.Senses) > 0 {
+		english = w.Senses[0].English
+	}
+	if len(w.Senses) > 1 {
 		english = ""
-		for i, entry := range entries {
+		for i, entry := range w.Senses {
 			english += fmt.Sprintf("%d. %s, ", i + 1, entry.English)
 		}
 		english = english[0:len(english)-2]
 	}
 	return fmt.Sprintf(vocabFormat, pinyin, english, classTxt,
-			entries[0].HeadwordId, text)
+			w.HeadwordId, text)
 }
 
-// Constructs a HTML span element for a headword, including Pinyin and English
+// span constructs a HTML span element for a headword
 // in the title attribute for the mouseover and headword id in the microdata
 // 'data' attrbute.
-func span(entries []*dictionary.WordSenseEntry, text string) string {
+func span(w dicttypes.Word, text string) string {
 	classTxt := "vocabulary"
-	if entries[0].IsProperNoun() {
+	if w.IsProperNoun() {
 		classTxt = classTxt + " propernoun"
 	}
-	pinyin := entries[0].Pinyin
-	english := entries[0].English
-	if len(entries) > 1 {
+	pinyin := w.Pinyin
+	english := ""
+	if len(w.Senses) > 0 {
+		english = w.Senses[0].English
+	}
+	if len(w.Senses) > 1 {
 		english = ""
-		for i, entry := range entries {
+		for i, entry := range w.Senses {
 			english += fmt.Sprintf("%d. %s, ", i + 1, entry.English)
 		}
 		english = english[0:len(english)-2]
 	}
 	vocabFormat := `<span title="%s | %s" class="%s" itemprop="HeadwordId" value="%d">%s</span>`
-	return fmt.Sprintf(vocabFormat, pinyin, english, classTxt,
-			entries[0].HeadwordId, text)
+	return fmt.Sprintf(vocabFormat, pinyin, english, classTxt, w.HeadwordId, text)
 }
 
 // Parses a Chinese text into words
@@ -272,8 +354,8 @@ func span(entries []*dictionary.WordSenseEntry, text string) string {
 //   tokens: the tokens for the parsed text
 //   results: vocabulary analysis results
 func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
-		dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig) (
-		tokens list.List, results CollectionAResults) {
+		dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig,
+		wdict map[string]dicttypes.Word) (tokens list.List, results CollectionAResults) {
 	vocab := map[string]int{}
 	bigrams := map[string]int{}
 	bigramMap := ngram.BigramFreqMap{}
@@ -283,8 +365,8 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 	wc := 0
 	cc := 0
 	chunks := GetChunks(text)
-	hwIdMap := dictionary.GetHwMap()
-	lastHWPtr := new(dictionary.HeadwordDef)
+	hwIdMap := GetHwMap(wdict)
+	lastHWPtr := &dicttypes.Word{}
 	lastHW := *lastHWPtr
 	lastHWText := ""
 	//fmt.Printf("ParseText: For text %s got %d chunks\n", colTitle, chunks.Len())
@@ -292,9 +374,9 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 		chunk := e.Value.(string)
 		//fmt.Printf("ParseText: chunk %s\n", chunk)
 		characters := strings.Split(chunk, "")
-		if !dictionary.IsCJKChar(characters[0]) || corpus.IsExcluded(corpusConfig.Excluded, chunk) {
+		if !IsCJKChar(characters[0]) || corpus.IsExcluded(corpusConfig.Excluded, chunk) {
 			tokens.PushBack(chunk)
-			lastHWPtr = new(dictionary.HeadwordDef)
+			lastHWPtr = &dicttypes.Word{}
 			lastHW = *lastHWPtr
 			lastHWText = ""
 			continue
@@ -318,27 +400,25 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 				}
 				hwid := token.DictEntry.HeadwordId
 				hw := hwIdMap[hwid]
-				if lastHW.Id != 0 {
-					if hw.WordSenses == nil {
+				if lastHW.HeadwordId != 0 {
+					if len(hw.Senses) == 0 {
 						log.Printf("ParseText: WordSenses nil for %s "+
 									", id = %d, in %s, %s\n", w, hwid,
 									document.Title, colTitle)
 					}
-					bigram, ok := bigramMap.GetBigramVal(lastHW.Id, hwid)
+					bigram, ok := bigramMap.GetBigramVal(lastHW.HeadwordId, hwid)
 					if !ok {
 						bigram = ngram.NewBigram(lastHW, hw, chunk,
 								document.GlossFile, document.Title, colTitle)
 					}
 					bigramMap.PutBigram(bigram)
-					collocations.PutBigram(bigram.HeadwordDef1.Id, bigram)
-					collocations.PutBigram(bigram.HeadwordDef2.Id, bigram)
+					collocations.PutBigram(bigram.HeadwordDef1.HeadwordId, bigram)
+					collocations.PutBigram(bigram.HeadwordDef2.HeadwordId, bigram)
 				}
 				lastHW = hw
 			}
 		}
 	}
-	//log.Printf("analysis.ParseText: %s found character count %d, vocab %d\n",
-	//	document.RawFile, cc, len(vocab))
 	dl := index.DocLength{document.GlossFile, wc}
 	dlArray := []index.DocLength{dl}
 	results = CollectionAResults{
@@ -391,7 +471,7 @@ func add(x, y int) int {
 // Returns: the name of the file written to
 func writeAnalysisCorpus(results CollectionAResults,
 		docFreq index.DocumentFrequency, outputConfig corpus.HTMLOutPutConfig,
-		indexConfig index.IndexConfig) string {
+		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) string {
 
 	// If the web/analysis directory does not exist, then skip the analysis
 	analysisDir := outputConfig.WebDir + "/analysis/"
@@ -402,13 +482,13 @@ func writeAnalysisCorpus(results CollectionAResults,
 
 	// Parse template and organize template parameters
 	sortedWords := index.SortedFreq(results.Vocab)
-	wfResults := results.GetWordFreq(sortedWords)
+	wfResults := results.GetWordFreq(sortedWords, wdict)
 	maxWf := len(wfResults)
 	if maxWf > MAX_WF_OUTPUT {
 		maxWf = MAX_WF_OUTPUT
 	}
 
-	lexicalWordFreq := results.GetLexicalWordFreq(sortedWords)
+	lexicalWordFreq := results.GetLexicalWordFreq(sortedWords, wdict)
 	maxLex := len(lexicalWordFreq)
 	if maxLex > MAX_WF_OUTPUT {
 		maxLex = MAX_WF_OUTPUT
@@ -432,10 +512,10 @@ func writeAnalysisCorpus(results CollectionAResults,
 	aResults := AnalysisResults{
 		Title:            title,
 		WC:               results.WC,
-		CCount:			  results.CCount,
-		ProperNouns:      dictionary.Headwords{},
-		DocumentGlossary: MakeGlossary("", []dictionary.HeadwordDef{}),
-		TopKeywords:	  dictionary.Headwords{},
+		CCount:			  		results.CCount,
+		ProperNouns:      dicttypes.Words{},
+		DocumentGlossary: MakeGlossary("", []dicttypes.Word{}),
+		TopKeywords:	  	dicttypes.Words{},
 		UniqueWords:      len(results.Vocab),
 		WordFrequencies:  wfResults[:maxWf],
 		LexicalWordFreq:  lexicalWordFreq[:maxLex],
@@ -486,7 +566,8 @@ func writeAnalysisCorpus(results CollectionAResults,
 // Returns the name of the file written to
 func writeAnalysis(results CollectionAResults, srcFile, glossFile,
 		collectionTitle, docTitle string,
-		outputConfig corpus.HTMLOutPutConfig) string {
+		outputConfig corpus.HTMLOutPutConfig,
+		wdict map[string]dicttypes.Word) string {
 
 	//log.Printf("analysis.writeAnalysis: enter")
 	analysisDir := outputConfig.WebDir + "/analysis/"
@@ -496,7 +577,7 @@ func writeAnalysis(results CollectionAResults, srcFile, glossFile,
 	}
 
 	// Parse template and organize template parameters
-	properNouns := makePNList(results.Vocab)
+	properNouns := makePNList(results.Vocab, wdict)
 
 	domain_label := outputConfig.Domain
 	//log.Printf("analysis.writeAnalysis: domain_label: %s\n", domain_label)
@@ -505,26 +586,26 @@ func writeAnalysis(results CollectionAResults, srcFile, glossFile,
 	//log.Printf("analysis.writeAnalysis: found sortedWords for %s, count %d\n",
 	//	srcFile, len(sortedWords))
 
-	glossary := MakeGlossary(domain_label, results.GetHeadwords())
+	glossary := MakeGlossary(domain_label, results.GetHeadwords(wdict))
 
-	wfResults := results.GetWordFreq(sortedWords)
+	wfResults := results.GetWordFreq(sortedWords, wdict)
 	maxWf := len(wfResults)
 	if maxWf > MAX_WF_OUTPUT {
 		maxWf = MAX_WF_OUTPUT
 	}
 
-	lexicalWordFreq := results.GetLexicalWordFreq(sortedWords)
+	lexicalWordFreq := results.GetLexicalWordFreq(sortedWords, wdict)
 	maxLex := len(lexicalWordFreq)
 	if maxLex > MAX_WF_OUTPUT {
 		maxLex = MAX_WF_OUTPUT
 	}
 
-	topKeywords := []dictionary.HeadwordDef{}
+	topKeywords := []dicttypes.Word{}
 	if domain_label != "" {
 		//keywords := index.SortByWeight(results.Vocab)
 		//topKeywords = index.GetHeadwordArray(keywords)
 		//topKeywords = dictionary.FilterByDomain(topKeywords, domain_label)
-		topKeywords = index.FilterByDomain(sortedWords, domain_label)
+		topKeywords = index.FilterByDomain(sortedWords, domain_label, wdict)
 		maxKeywords := len(topKeywords)
 		if maxKeywords > MAX_KEYWORDS {
 			maxKeywords = MAX_KEYWORDS
@@ -621,7 +702,8 @@ func writeAnalysis(results CollectionAResults, srcFile, glossFile,
 // baseDir: The base directory to use
 func writeCollection(collectionEntry corpus.CollectionEntry,
 		outputConfig corpus.HTMLOutPutConfig, libLoader library.LibraryLoader,
-		dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig) CollectionAResults {
+		dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig,
+		wdict map[string]dicttypes.Word) CollectionAResults {
 
 	log.Printf("analysis.writeCollection: enter CollectionFile =" +
 			collectionEntry.CollectionFile)
@@ -639,16 +721,16 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		//}
 		text := corpLoader.ReadText(src)
 		tokens, results := ParseText(text, collectionEntry.Title, &entry,
-				dictTokenizer, corpusConfig)
+				dictTokenizer, corpusConfig, wdict)
 		aFile := writeAnalysis(results, entry.RawFile, entry.GlossFile,
-			collectionEntry.Title, entry.Title, outputConfig)
+			collectionEntry.Title, entry.Title, outputConfig, wdict)
 		sourceFormat := "TEXT"
 		if strings.HasSuffix(entry.RawFile, ".html") {
 			sourceFormat = "HTML"
 		}
 		writeCorpusDoc(tokens, results.Vocab, dest, collectionEntry.GlossFile,
 				collectionEntry.Title, entry.Title, aFile, sourceFormat, outputConfig,
-				corpusConfig)
+				corpusConfig, wdict)
 		aResults.AddResults(results)
 		aResults.DocFreq.AddVocabulary(results.Vocab)
 		aResults.BigramDF.AddVocabulary(results.Bigrams)
@@ -658,7 +740,7 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 				entry.GlossFile, results.WC)
 	}
 	aFile := writeAnalysis(aResults, collectionEntry.CollectionFile,
-		collectionEntry.GlossFile, collectionEntry.Title, "", outputConfig)
+		collectionEntry.GlossFile, collectionEntry.Title, "", outputConfig, wdict)
 	corpus.WriteCollectionFile(collectionEntry, aFile, outputConfig,
 			corpusConfig)
 	//log.Printf("analysis.writeCollection: exit\n")
@@ -671,7 +753,8 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 func WriteCorpus(collections []corpus.CollectionEntry,
 		outputConfig corpus.HTMLOutPutConfig,
 		libLoader library.LibraryLoader, dictTokenizer tokenizer.Tokenizer,
-		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig) {
+		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig,
+		wdict map[string]dicttypes.Word) {
 	log.Printf("analysis.WriteCorpus: enter")
 	index.Reset(indexConfig)
 	wfDocMap := index.TermFreqDocMap{}
@@ -681,14 +764,14 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	aResults := NewCollectionAResults()
 	for _, collectionEntry := range collections {
 		results := writeCollection(collectionEntry, outputConfig, libLoader,
-				dictTokenizer, corpusConfig)
+				dictTokenizer, corpusConfig, wdict)
 		aResults.AddResults(results)
 		docFreq.AddDocFreq(results.DocFreq)
 		bigramDF.AddDocFreq(results.BigramDF)
 		wfDocMap.Merge(results.WFDocMap)
 		bigramDocMap.Merge(results.BigramDocMap)
 	}
-	writeAnalysisCorpus(aResults, docFreq, outputConfig, indexConfig)
+	writeAnalysisCorpus(aResults, docFreq, outputConfig, indexConfig, wdict)
 	docFreq.WriteToFile(index.DOC_FREQ_FILE, indexConfig)
 	bigramDF.WriteToFile(index.BIGRAM_DOC_FREQ_FILE, indexConfig)
 	wfDocMap.WriteToFile(docFreq, index.WF_DOC_FILE, indexConfig)
@@ -701,12 +784,13 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 // Write all the collections in the default corpus (collections.csv file)
 func WriteCorpusAll(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, outputConfig corpus.HTMLOutPutConfig,
-		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig) {
+		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig,
+		wdict map[string]dicttypes.Word) {
 	log.Printf("analysis.WriteCorpusAll: enter")
 	corpLoader := libLoader.GetCorpusLoader()
 	collections := corpLoader.LoadCorpus(corpus.COLLECTIONS_FILE)
 	WriteCorpus(collections, outputConfig, libLoader, dictTokenizer,
-			corpusConfig, indexConfig)
+			corpusConfig, indexConfig, wdict)
 }
 
 // Writes a corpus document collection to HTML, including all the entries
@@ -714,13 +798,13 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 // collectionFile: the name of the collection file
 func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 			dictTokenizer tokenizer.Tokenizer, outputConfig corpus.HTMLOutPutConfig,
-			corpusConfig corpus.CorpusConfig) {
+			corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) {
 	collectionEntry, err := libLoader.GetCorpusLoader().GetCollectionEntry(collectionFile)
 	if err != nil {
 		log.Fatalf("analysis.WriteCorpusCol: fatal error %v", err)
 	}
 	writeCollection(collectionEntry, outputConfig, libLoader, dictTokenizer,
-			corpusConfig)
+			corpusConfig, wdict)
 }
 
 // Writes a corpus document with markup for the array of tokens
@@ -735,7 +819,7 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 func writeCorpusDoc(tokens list.List, vocab map[string]int, filename string,
 	collectionURL string, collectionTitle string, entryTitle string,
 	aFile string, sourceFormat string, outputConfig corpus.HTMLOutPutConfig,
-		corpusConfig corpus.CorpusConfig) {
+		corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) {
 
 	var b bytes.Buffer
 	replacer := strings.NewReplacer("\n", "<br/>")
@@ -744,7 +828,7 @@ func writeCorpusDoc(tokens list.List, vocab map[string]int, filename string,
 	for e := tokens.Front(); e != nil; e = e.Next() {
 		chunk := e.Value.(string)
 		//fmt.Printf("WriteDoc: Word %s\n", word)
-		if entries, ok := dictionary.GetWord(chunk); ok && !corpus.IsExcluded(corpusConfig.Excluded, chunk) {
+		if entries, ok := wdict[chunk]; ok && !corpus.IsExcluded(corpusConfig.Excluded, chunk) {
 			fmt.Fprintf(&b, span(entries, chunk))
 		} else {
 			if sourceFormat != "HTML" {
@@ -783,10 +867,10 @@ func writeCorpusDoc(tokens list.List, vocab map[string]int, filename string,
 // GlossChinese: whether to convert the Chinese text in the file to hyperlinks
 func WriteDoc(tokens list.List, vocab map[string]int, filename,
 	templateName, templateFile string, glossChinese bool, title string,
-		corpusConfig corpus.CorpusConfig) {
+		corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) {
 	if templateFile != `\N` {
 		writeHTMLDoc(tokens, vocab, filename, templateName, templateFile,
-			glossChinese, title)
+			glossChinese, title, wdict)
 		return
 	}
 	f, err := os.Create(filename)
@@ -799,9 +883,9 @@ func WriteDoc(tokens list.List, vocab map[string]int, filename,
 	for e := tokens.Front(); e != nil; e = e.Next() {
 		chunk := e.Value.(string)
 		//fmt.Printf("WriteDoc: Word %s\n", word)
-		if entries, ok := dictionary.GetWord(chunk); ok && !corpus.IsExcluded(corpusConfig.Excluded, chunk) {
+		if word, ok := wdict[chunk]; ok && !corpus.IsExcluded(corpusConfig.Excluded, chunk) {
 			wordIds := ""
-			for _, ws := range entries {
+			for _, ws := range word.Senses {
 				if wordIds == "" {
 					wordIds = fmt.Sprintf("%d", ws.Id)
 				} else {
@@ -824,7 +908,8 @@ func WriteDoc(tokens list.List, vocab map[string]int, filename,
 // filename: The file name to write to
 // GlossChinese: whether to convert the Chinese text in the file to hyperlinks
 func writeHTMLDoc(tokens list.List, vocab map[string]int, filename,
-	templateName, templateFile string, glossChinese bool, title string) {
+		templateName, templateFile string, glossChinese bool, title string,
+		wdict map[string]dicttypes.Word) {
 	var b bytes.Buffer
 
 	// Iterate over text chunks
@@ -833,11 +918,14 @@ func writeHTMLDoc(tokens list.List, vocab map[string]int, filename,
 		//fmt.Printf("WriteDoc: Word %s\n", word)
 		if !glossChinese {
 			fmt.Fprintf(&b, chunk)
-		} else if entries, ok := dictionary.GetWord(chunk); ok {
+		} else if word, ok := wdict[chunk]; ok {
 			// Regular HTML link
-			mouseover := fmt.Sprintf("%s | %s", entries[0].Pinyin,
-				entries[0].English)
-			link := fmt.Sprintf("/words/%d.html", entries[0].HeadwordId)
+			english := ""
+			if len(word.Senses) > 0 {
+				english = word.Senses[0].English
+			}
+			mouseover := fmt.Sprintf("%s | %s", word.Pinyin, english)
+			link := fmt.Sprintf("/words/%d.html", word.HeadwordId)
 			fmt.Fprintf(&b, "<a title='%s' href='%s'>%s</a>", mouseover, link,
 				chunk)
 		} else {
@@ -868,12 +956,13 @@ func writeHTMLDoc(tokens list.List, vocab map[string]int, filename,
 // Writes dictionary headword entries
 func WriteHwFiles(loader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, outputConfig corpus.HTMLOutPutConfig,
-		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig) {
+		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig,
+		wdict map[string]dicttypes.Word) {
 	log.Printf("analysis.WriteHwFiles: Begin +++++++++++\n")
 	index.BuildIndex(indexConfig)
 	log.Printf("analysis.WriteHwFiles: Get headwords\n")
-	hwArray := dictionary.GetHeadwords()
-	vocabAnalysis := GetWordFrequencies(loader, dictTokenizer, corpusConfig)
+	hwArray := GetHeadwords(wdict)
+	vocabAnalysis := GetWordFrequencies(loader, dictTokenizer, corpusConfig, wdict)
 	usageMap := vocabAnalysis.UsageMap
 	collocations := vocabAnalysis.Collocations
 	corpusEntryMap := loader.GetCorpusLoader().LoadAll(corpus.COLLECTIONS_FILE)
@@ -897,39 +986,33 @@ func WriteHwFiles(loader library.LibraryLoader,
 		}
 
 		// Look for different writings of traditional form
-		tradVariants := []dictionary.WordSenseEntry{}
-		for _, ws := range *hw.WordSenses {
-			if hw.Id != ws.HeadwordId {
+		tradVariants := []dicttypes.WordSense{}
+		for _, ws := range hw.Senses {
+			if hw.Traditional != ws.Traditional {
 				tradVariants = append(tradVariants, ws)
-				//log.Printf("analysis.WriteHwFiles: hw.Id != ws.HeadwordId: %d, %d\n",
-				//	hw.Id, ws.HeadwordId)
 			}
 		}
 
-		//if hw.Id == 873 {
-		//	log.Printf("analysis.WriteHwFiles: hw.Id %d, image: %s\n", hw.Id, hw.WordSenses[0].Image)
-		//}
-
 		// Words that contain this word
-		contains := dictionary.ContainsWord(*hw.Simplified, hwArray)
+		contains := ContainsWord(hw.Simplified, hwArray)
 
 		// Filter contains words by domain
 		containsByDomain := ContainsByDomain(contains, outputConfig)
 		contains = Subtract(contains, containsByDomain)
 
 		// Sorted array of collocations
-		wordCollocations := collocations.SortedCollocations(hw.Id)
+		wordCollocations := collocations.SortedCollocations(hw.HeadwordId)
 
 		// Combine usage arrays for both simplified and traditional characters
-		usageArrPtr, ok := usageMap[*hw.Simplified]
+		usageArrPtr, ok := usageMap[hw.Simplified]
 		if !ok {
-			usageArrPtr, ok = usageMap[*hw.Traditional]
+			usageArrPtr, ok = usageMap[hw.Traditional]
 			if !ok {
 				//log.Printf("WriteHwFiles: no usage for %s", hw.Simplified)
 				usageArrPtr = &[]WordUsage{}
 			}
 		} else {
-			usageArrTradPtr, ok := usageMap[*hw.Traditional]
+			usageArrTradPtr, ok := usageMap[hw.Traditional]
 			if ok {
 				usageArr := *usageArrPtr
 				usageArrTrad := *usageArrTradPtr
@@ -944,7 +1027,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 		hlUsageArr := []WordUsage{}
 		for _, wu := range *usageArrPtr {
 			hlText := decodeUsageExample(wu.Example, hw, dictTokenizer, outputConfig,
-					corpusConfig)
+					corpusConfig, wdict)
 			hlWU := WordUsage{
 				Freq:       wu.Freq,
 				RelFreq:    wu.RelFreq,
@@ -966,19 +1049,20 @@ func WriteHwFiles(loader library.LibraryLoader,
 			UsageArr:     hlUsageArr,
 			DateUpdated:  dateUpdated,
 		}
-		filename := fmt.Sprintf("%s%s%d%s", outputConfig.WebDir, "/words/", hw.Id, ".html")
+		filename := fmt.Sprintf("%s%s%d%s", outputConfig.WebDir, "/words/",
+				hw.HeadwordId, ".html")
 		f, err := os.Create(filename)
 		if err != nil {
 			log.Printf("WriteHwFiles: Error creating file for hw.Id %d, "+
-				"Simplified %s", hw.Id, hw.Simplified)
-			log.Fatal(err)
+				"Simplified %s", hw.HeadwordId, hw.Simplified)
+			log.Fatalf("hit a problem: %v", err)
 		}
 		w := bufio.NewWriter(f)
 		err = tmpl.Execute(w, dictEntry)
 		if err != nil {
 			log.Printf("analysis.WriteHwFiles: error executing template for hw.Id: %d,"+
-				" filename: %s, Simplified: %s", hw.Id, filename, hw.Simplified)
-			log.Fatal(err)
+				" filename: %s, Simplified: %s", hw.HeadwordId, filename, hw.Simplified)
+			log.Fatalf("hit a different problem: %v", err)
 		}
 		w.Flush()
 		f.Close()
@@ -1020,7 +1104,7 @@ func writeLibraryFile(lib library.Library, corpora []library.CorpusData,
 // in the library
 func WriteLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 			outputConfig corpus.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
-			indexConfig index.IndexConfig) {
+			indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) {
 	corpora := lib.Loader.LoadLibrary()
 	libraryOutFile := outputConfig.WebDir + "/library.html"
 	writeLibraryFile(lib, corpora, libraryOutFile, outputConfig)
@@ -1043,13 +1127,14 @@ func WriteLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		} else if c.Status == "translator_portal" {
 			outputFile = fmt.Sprintf("%s/%s.html", portalDir, c.ShortName)
 		} else {
-			log.Printf("library.WriteLibraryFiles: not sure what to do with status",
+			log.Printf("library.WriteLibraryFiles: not sure what to do with status %v",
 				c.Status)
 			continue
 		}
 		fName := fmt.Sprintf(c.FileName)
 		collections := lib.Loader.GetCorpusLoader().LoadCorpus(fName)
-		WriteCorpus(collections, outputConfig, lib.Loader, dictTokenizer, corpusConfig, indexConfig)
+		WriteCorpus(collections, outputConfig, lib.Loader, dictTokenizer,
+				corpusConfig, indexConfig, wdict)
 		corpus := library.Corpus{c.Title, "", lib.DateUpdated, collections}
 		f, err := os.Create(outputFile)
 		if err != nil {

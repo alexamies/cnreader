@@ -4,7 +4,6 @@ package index
 import (
 	"fmt"
 	"github.com/alexamies/cnreader/corpus"
-	"github.com/alexamies/cnreader/dictionary"
 	"testing"
 )
 

@@ -9,11 +9,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/alexamies/chinesenotes-go/config"
+	"github.com/alexamies/chinesenotes-go/dictionary"
 	"github.com/alexamies/chinesenotes-go/fileloader"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/analysis"
 	"github.com/alexamies/cnreader/corpus"
-	"github.com/alexamies/cnreader/dictionary"
 	"github.com/alexamies/cnreader/index"
 	"github.com/alexamies/cnreader/library"
 	"github.com/alexamies/cnreader/tmindex"
@@ -108,8 +108,8 @@ func getCorpusConfig() corpus.CorpusConfig {
 	}
 }
 
-func getDictionaryConfig() dictionary.DictionaryConfig {
-	return dictionary.DictionaryConfig{
+func getDictionaryConfig() analysis.DictionaryConfig {
+	return analysis.DictionaryConfig{
 		AvoidSubDomains: config.AvoidSubDomains(),
 		DictionaryDir: config.DictionaryDir(),
 	}
@@ -155,10 +155,6 @@ func main() {
 	var collectionFile = flag.String("collection", "", 
 		"Enhance HTML markup and do vocabulary analysis for all the files " +
 		"listed in given collection.")
-	var headwords = flag.Bool("headwords", false,
-		"Compute headword definitions " +
-		" for all lexical units listed in data/words.txt, writing to the " +
-		"headword.txt file.")
 	var html = flag.Bool("html", false, "Enhance HTML markup for all files " +
 		"listed in data/corpus/html-conversion.csv")
 	var hwFiles = flag.Bool("hwfiles", false, "Compute and write " +
@@ -175,7 +171,6 @@ func main() {
 	outputConfig := getHTMLOutPutConfig()
 	corpusConfig := getCorpusConfig()
 	indexConfig := getIndexConfig()
-	dictionaryConfig := getDictionaryConfig()
 
 	// Read headwords and validate
 	posFName := fmt.Sprintf("%s/%s", config.DictionaryDir(), "grammar.txt")
@@ -195,10 +190,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("creatting dictionary validator: %v", err)
 	}
-	_, err = dictionary.ReadDict(config.LUFileNames(), validator, getDictionaryConfig())
-	if err != nil {
-		log.Fatalf("main: unexpected error reading headwords, %v", err)
-	}
 
 	// Setup loader for library
 	fname := projectHome + "/" + library.LibraryFile
@@ -211,12 +202,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error opening dictionary: %v", err)
 	}
+	err = dictionary.ValidateDict(wdict, validator,)
+	if err != nil {
+		log.Fatalf("main: unexpected error reading headwords, %v", err)
+	}
 	dictTokenizer := tokenizer.DictTokenizer{wdict}
 
 	if (*collectionFile != "") {
 		log.Printf("main: Analyzing collection %s\n", *collectionFile)
 		analysis.WriteCorpusCol(*collectionFile, fileLibraryLoader,
-				dictTokenizer, outputConfig, corpusConfig)
+				dictTokenizer, outputConfig, corpusConfig, wdict)
 	} else if *html {
 		log.Printf("main: Converting all HTML files\n")
 		conversions := getHTMLConversions()
@@ -231,17 +226,14 @@ func main() {
 				src, dest, templateFile)
 			text := fileLibraryLoader.GetCorpusLoader().ReadText(src)
 			tokens, results := analysis.ParseText(text, "",
-				corpus.NewCorpusEntry(), dictTokenizer, getCorpusConfig())
+					corpus.NewCorpusEntry(), dictTokenizer, getCorpusConfig(), wdict)
 			analysis.WriteDoc(tokens, results.Vocab, dest, conversion.Template,
-				templateFile, conversion.GlossChinese, conversion.Title, corpusConfig)
+					templateFile, conversion.GlossChinese, conversion.Title, corpusConfig, wdict)
 		}
-	} else if *headwords {
-		log.Printf("main: Write Headwords\n")
-		dictionary.WriteHeadwords(dictionaryConfig)
 	} else if *hwFiles {
 		log.Printf("main: Writing word entries for headwords\n")
 		analysis.WriteHwFiles(fileLibraryLoader, dictTokenizer, outputConfig,
-				corpusConfig, indexConfig)
+				corpusConfig, indexConfig, wdict)
 	} else if *librarymeta {
 		log.Printf("main: Writing digital library metadata\n")
 		fname := projectHome + "/" + library.LibraryFile
@@ -258,7 +250,7 @@ func main() {
 			Loader: fileLibraryLoader,
 		}
 		analysis.WriteLibraryFiles(lib, dictTokenizer, outputConfig, corpusConfig,
-				indexConfig)
+				indexConfig, wdict)
 	} else if *writeTMIndex {
 
 		log.Println("main: Writing translation memory index")
@@ -269,7 +261,7 @@ func main() {
 	} else {
 		log.Println("main: Writing out entire corpus")
 		analysis.WriteCorpusAll(fileLibraryLoader, dictTokenizer, outputConfig,
-				corpusConfig, indexConfig)
+				corpusConfig, indexConfig, wdict)
 	}
 
 	// Memory profiling

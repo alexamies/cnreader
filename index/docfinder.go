@@ -6,12 +6,13 @@ package index
 import (
 	"bufio"
 	"fmt"
-	"github.com/alexamies/cnreader/corpus"
-	"github.com/alexamies/cnreader/dictionary"
 	"encoding/json"
 	"io"
 	"log"
 	"os"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"
+	"github.com/alexamies/cnreader/corpus"
 )
 
 // Maximum number of documents displayed on a web page
@@ -29,7 +30,7 @@ type IndexConfig struct {
 }
 
 // Retrieves documents with title for a single keyword
-func FindDocsForKeyword(keyword dictionary.HeadwordDef,
+func FindDocsForKeyword(keyword dicttypes.Word,
 		corpusEntryMap map[string]corpus.CorpusEntry) []RetrievalResult {
 	docs := make([]RetrievalResult, 0)
 	if !keywordIndexReady {
@@ -39,9 +40,9 @@ func FindDocsForKeyword(keyword dictionary.HeadwordDef,
 	}
 	// TODO - separate corpora into simplified and traditional. At the moment
 	// only traditional will work
-	kw := *keyword.Simplified
-	if *keyword.Traditional != "\\N" {
-		kw = *keyword.Traditional
+	kw := keyword.Simplified
+	if keyword.Traditional != "\\N" {
+		kw = keyword.Traditional
 	}
 	i := 0
 	//log.Printf("index.FindForKeyword, wfdoc[kw] %v\n", wfdoc[kw])

@@ -5,10 +5,8 @@ package analysis
 
 import (
 	"container/list"
-	"fmt"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/corpus"
-	"github.com/alexamies/cnreader/dictionary"
 	"github.com/alexamies/cnreader/index"
 	"github.com/alexamies/cnreader/library"
 	"log"
@@ -31,6 +29,13 @@ func mockCorpusConfig() corpus.CorpusConfig {
 		CorpusDir: "corpus",
 		Excluded: map[string]bool{},
 		ProjectHome: "..",
+	}
+}
+
+// IndexConfig encapsulates parameters for index configuration
+func mockIndexConfig() index.IndexConfig {
+	return index.IndexConfig{
+		IndexDir: "index",
 	}
 }
 
@@ -67,9 +72,9 @@ func mockValidator() (dictionary.Validator, error) {
 	return dictionary.NewValidator(posReader, domainReader)
 }
 
-func printList(l list.List) {
+func printList(t *testing.T, l list.List) {
 	for e := l.Front(); e != nil; e = e.Next() {
-		fmt.Print(e.Value)
+		t.Log(e.Value)
 	}
 }
 
@@ -229,7 +234,7 @@ func TestReadText2(t *testing.T) {
 }
 
 func TestParseText1(t *testing.T) {
-	//log.Printf("TestParseText1: Begin ******** \n")
+	t.Log("TestParseText1: Begin ********")
 	files := []string{"../testdata/testwords.txt"}
 	validator, err := mockValidator()
 	if err != nil {
@@ -254,7 +259,7 @@ func TestParseText1(t *testing.T) {
 	if results.CCount != 4 {
 		t.Error("Expected to get cc = 4, got ", results.CCount)
 	}
-	//log.Printf("TestParseText1: End ******** \n")
+	t.Log("TestParseText1: End ******** ")
 }
 
 func TestParseText2(t *testing.T) {
@@ -322,7 +327,7 @@ func TestParseText3(t *testing.T) {
 }
 
 func TestParseText4(t *testing.T) {
-	files := config.LUFileNames()
+	files := []string{"../testdata/testwords.txt"}
 	validator, err := mockValidator()
 	if err != nil {
 		t.Fatalf("TestParseText4: Unexpected error: %v", err)
@@ -335,7 +340,7 @@ func TestParseText4(t *testing.T) {
 	if len(text) != len(tokenText) {
 		t.Error("Expected to string length ", len(text), ", got ",
 			len(tokenText))
-		printList(tokens)
+		printList(t, tokens)
 	}
 	if results.CCount != 23 {
 		t.Error("Expected to get char count 23, got ", results.CCount)
@@ -344,7 +349,7 @@ func TestParseText4(t *testing.T) {
 }
 
 func TestParseText5(t *testing.T) {
-	files := config.LUFileNames()
+	files := []string{"../testdata/testwords.txt"}
 	validator, err := mockValidator()
 	if err != nil {
 		t.Fatalf("TestParseText5: Unexpected error: %v", err)
@@ -358,7 +363,7 @@ func TestParseText5(t *testing.T) {
 	if len(text) != len(tokenText) {
 		t.Error("Expected to string length ", len(text), ", got ",
 			len(tokenText))
-		printList(tokens)
+		printList(t, tokens)
 	}
 	if results.CCount != 49 {
 		t.Error("Expected to get char count 49, got ", results.CCount)
@@ -477,7 +482,7 @@ func TestSampleUsage4(t *testing.T) {
 }
 
 func TestSortedFreq(t *testing.T) {
-	files := config.LUFileNames()
+	files := []string{"../testdata/testwords.txt"}
 	validator, err := mockValidator()
 	if err != nil {
 		t.Fatalf("TestSortedFreq: Unexpected error: %v", err)
@@ -491,13 +496,13 @@ func TestSortedFreq(t *testing.T) {
 	expected := len(results.Vocab)
 	got := len(sortedWords)
 	if expected != got {
-		t.Error("TestSortedFreq: Expected %d, got %d", expected, got)
+		t.Errorf("TestSortedFreq: Expected %d, got %d", expected, got)
 		return
 	}
 }
 
 func TestWriteAnalysis(t *testing.T) {
-	log.Printf("analysis.TestWriteAnalysis: Begin +++++++++++\n")
+	t.Logf("analysis.TestWriteAnalysis: Begin +++++++++++\n")
 	term := "繁"
 	_, results := ParseText(term, "", corpus.NewCorpusEntry(),
 			tokenizer.DictTokenizer{}, mockCorpusConfig())
@@ -508,34 +513,22 @@ func TestWriteAnalysis(t *testing.T) {
 	}
 	df := index.NewDocumentFrequency()
 	df.AddVocabulary(vocab)
-	df.WriteToFile("analysis_df_test.txt")
-	index.ReadDocumentFrequency()
-	writeAnalysis(results, srcFile, glossFile, "Test Collection", "Test Doc")
+	indexConfig := mockIndexConfig()
+	df.WriteToFile("analysis_df_test.txt", indexConfig)
+	index.ReadDocumentFrequency(indexConfig)
+	writeAnalysis(results, srcFile, glossFile, "Test Collection", "Test Doc",
+			mockOutputConfig())
 	log.Printf("analysis.TestWriteAnalysis: End +++++++++++\n")
 }
 
-/*
-func TestWriteCorpusAll(t *testing.T) {
-	log.Printf("analysis.TestWriteCorpusAll: Begin +++++++++++\n")
-	WriteCorpusAll()
-	log.Printf("analysis.TestWriteCorpusAll: End +++++++++++\n")
-}
-*/
-
-/*
-func TestWriteCorpusCol(t *testing.T) {
-	log.Printf("analysis.TestWriteCorpusCol: Begin +++++++++++\n")
-	WriteCorpusCol("lunyu.csv")
-	log.Printf("analysis.TestWriteCorpusCol: End +++++++++++\n")
-}
-*/
-
 func TestWriteCorpusDoc1(t *testing.T) {
 	log.Printf("analysis.TestWriteCorpusDoc1: Begin +++++++++++\n")
+	corpusConfig := mockCorpusConfig()
 	tokens, results := ParseText("繁", "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig())
+			tokenizer.DictTokenizer{}, corpusConfig)
 	outfile := "../testoutput/output.html"
-	writeCorpusDoc(tokens, results.Vocab, outfile, "", "", "", "", "TXT")
+	writeCorpusDoc(tokens, results.Vocab, outfile, "", "", "", "", "TXT",
+			mockOutputConfig(), corpusConfig)
 	log.Printf("analysis.TestWriteCorpusDoc1: End +++++++++++\n")
 }
 
@@ -544,7 +537,8 @@ func TestWriteDoc1(t *testing.T) {
 	tokens, results := ParseText("繁", "", corpus.NewCorpusEntry(),
 			tokenizer.DictTokenizer{}, mockCorpusConfig())
 	outfile := "../testoutput/output.html"
-	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "")
+	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
+			mockCorpusConfig())
 	log.Printf("analysis.TestWriteDoc1: End +++++++++++\n")
 }
 
@@ -563,7 +557,8 @@ func TestWriteDoc2(t *testing.T) {
 		t.Error("Expected to get length 4, got ", tokens.Len())
 	}
 	outfile := "../testoutput/test-gloss.html"
-	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "")
+	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
+			mockCorpusConfig())
 }
 
 func TestWriteDoc3(t *testing.T) {
@@ -581,7 +576,8 @@ func TestWriteDoc3(t *testing.T) {
 		t.Error("Expected to get length 6, got ", tokens.Len())
 	}
 	outfile := "../testoutput/test-simplified-gloss.html"
-	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "")
+	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
+			mockCorpusConfig())
 }
 
 func TestWriteDoc4(t *testing.T) {
@@ -604,7 +600,8 @@ func TestWriteDoc4(t *testing.T) {
 			tokens.Len())
 	}
 	outfile := "../testoutput/test-simplified-gloss2.html"
-	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "")
+	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
+			mockCorpusConfig())
 }
 
 func TestWriteLibraryFiles0(t *testing.T) {
@@ -617,7 +614,8 @@ func TestWriteLibraryFiles0(t *testing.T) {
 		TargetStatus: "public",
 		Loader: emptyLibLoader,
 	}
-	WriteLibraryFiles(lib)
+	WriteLibraryFiles(lib, tokenizer.DictTokenizer{}, mockOutputConfig(),
+			mockCorpusConfig(), mockIndexConfig())
 }
 
 func TestWriteLibraryFiles1(t *testing.T) {
@@ -630,5 +628,6 @@ func TestWriteLibraryFiles1(t *testing.T) {
 		TargetStatus: "public",
 		Loader: mockLoader,
 	}
-	WriteLibraryFiles(lib)
+	WriteLibraryFiles(lib, tokenizer.DictTokenizer{}, mockOutputConfig(),
+			mockCorpusConfig(), mockIndexConfig())
 }

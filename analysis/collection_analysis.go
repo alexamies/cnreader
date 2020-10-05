@@ -4,7 +4,7 @@ CollectionAResults type for vocabulary analysis of a collection of texts
 package analysis
 
 import (
-	"github.com/alexamies/cnreader/dictionary"
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 	"github.com/alexamies/cnreader/index"
 	"github.com/alexamies/cnreader/ngram"
 )
@@ -56,36 +56,41 @@ func (results *CollectionAResults) AddResults(more CollectionAResults) {
 }
 
 // Returns the subset of words that are lexical (content) words
-func (results *CollectionAResults) GetLexicalWordFreq(sortedWords []index.SortedWordItem) []WFResult {
-
+func (results *CollectionAResults) GetLexicalWordFreq(sortedWords []index.SortedWordItem,
+		wdict map[string]dicttypes.Word) []WFResult {
 	wfResults := make([]WFResult, 0)
 	for _, value := range sortedWords {
-		ws, _ := dictionary.GetWordSense(value.Word)
-		if !ws.IsFunctionWord() {
-			wfResults = append(wfResults, WFResult{
-				Freq:       value.Freq,
-				HeadwordId: ws.HeadwordId,
-				Chinese:    value.Word,
-				Pinyin:     ws.Pinyin,
-				English:    ws.English,
-				Usage:      results.Usage[value.Word]})
+		if word, ok := wdict[value.Word]; ok {
+			for _, ws := range word.Senses {
+				if !ws.IsFunctionWord() {
+					wfResults = append(wfResults, WFResult{
+						Freq:       value.Freq,
+						HeadwordId: ws.HeadwordId,
+						Chinese:    value.Word,
+						Pinyin:     ws.Pinyin,
+						English:    ws.English,
+						Usage:      results.Usage[value.Word]})
+				}
+			}
 		}
 	}
 	return wfResults
 }
 
 // Returns the subset of words that are lexical (content) words
-func (results *CollectionAResults) GetHeadwords() []dictionary.HeadwordDef {
-	headwords := make([]dictionary.HeadwordDef, 0, len(results.Vocab))
+func (results *CollectionAResults) GetHeadwords(wdict map[string]dicttypes.Word) []dicttypes.Word {
+	headwords := make([]dicttypes.Word, 0, len(results.Vocab))
 	for k := range results.Vocab {
-		hw, _ := dictionary.GetHeadword(k)
-		headwords = append(headwords, hw)
+		if hw, ok := wdict[k]; ok {
+			headwords = append(headwords, hw)
+		}
 	}
 	return headwords
 }
 
 // Returns the subset of words that are lexical (content) words
-func (results *CollectionAResults) GetWordFreq(sortedWords []index.SortedWordItem) []WFResult {
+func (results *CollectionAResults) GetWordFreq(sortedWords []index.SortedWordItem,
+		wdict map[string]dicttypes.Word) []WFResult {
 
 	wfResults := make([]WFResult, 0)
 	maxWFOutput := len(sortedWords)
@@ -93,14 +98,17 @@ func (results *CollectionAResults) GetWordFreq(sortedWords []index.SortedWordIte
 		maxWFOutput = MAX_WF_OUTPUT
 	}
 	for _, value := range sortedWords[:maxWFOutput] {
-		ws, _ := dictionary.GetWordSense(value.Word)
-		wfResults = append(wfResults, WFResult{
-			Freq:       value.Freq,
-			HeadwordId: ws.HeadwordId,
-			Chinese:    value.Word,
-			Pinyin:     ws.Pinyin,
-			English:    ws.English,
-			Usage:      results.Usage[value.Word]})
+		if word, ok := wdict[value.Word]; ok {
+			for _, ws := range word.Senses {
+				wfResults = append(wfResults, WFResult{
+					Freq:       value.Freq,
+					HeadwordId: ws.HeadwordId,
+					Chinese:    value.Word,
+					Pinyin:     ws.Pinyin,
+					English:    ws.English,
+					Usage:      results.Usage[value.Word]})
+			}
+		}
 	}
 	return wfResults
 }

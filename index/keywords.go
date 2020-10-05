@@ -2,7 +2,7 @@
 package index
 
 import (
-	"github.com/alexamies/cnreader/dictionary"
+	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"log"
 	"sort"
 )
@@ -33,10 +33,10 @@ func (kws Keywords) Less(i, j int) bool {
 //   terms: The Chinese (simplified or traditional) text of the words
 // Return
 //   hws: an array of word senses
-func GetHeadwordArray(keywords Keywords) ([]dictionary.HeadwordDef) {
-	hws := []dictionary.HeadwordDef{}
+func GetHeadwordArray(keywords Keywords, wdict map[string]dicttypes.Word) ([]dicttypes.Word) {
+	hws := []dicttypes.Word{}
 	for _, kw := range keywords {
-		hw, ok := dictionary.GetHeadword(kw.Term)
+		hw, ok := wdict[kw.Term]
 		if ok {
 			hws = append(hws, hw)
 		} else {

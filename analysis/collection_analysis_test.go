@@ -3,7 +3,6 @@ package analysis
 
 import (
 	"fmt"
-	"github.com/alexamies/cnreader/dictionary"
 	"github.com/alexamies/cnreader/index"
 	"github.com/alexamies/cnreader/ngram"
 	"testing"

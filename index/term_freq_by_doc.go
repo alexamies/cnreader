@@ -71,7 +71,7 @@ func (termFreqDocMap TermFreqDocMap) WriteToFile(df DocumentFrequency,
 	fname := indexConfig.IndexDir + "/" + fileName
 	wfFile, err := os.Create(fname)
 	if err != nil {
-		log.Printf("Could not open write wfFile", err)
+		log.Printf("Could not open write wfFile: %v", err)
 		return
 	}
 	defer wfFile.Close()

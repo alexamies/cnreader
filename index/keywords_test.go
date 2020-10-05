@@ -3,7 +3,6 @@ package index
 
 import (
 	"github.com/alexamies/chinesenotes-go/config"
-	"github.com/alexamies/cnreader/dictionary"
 	"log"
 	"testing"
 )

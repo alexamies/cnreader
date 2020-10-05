@@ -2,7 +2,6 @@
 package analysis
 
 import (
-	"github.com/alexamies/cnreader/dictionary"
 	"log"
 	"testing"
 )

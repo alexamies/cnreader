@@ -7,50 +7,44 @@ that match the given domain.
 package analysis
 
 import (
-	"github.com/alexamies/cnreader/dictionary"
 	"sort"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
 // The content for a corpus entry
 type Glossary struct {
 	Domain string
-	Words []dictionary.HeadwordDef
+	Words []dicttypes.WordSense
 }
 
 // Makes a glossary by filtering by the domain label and sorting by Chinese
 // pinyin.
-func MakeGlossary(domain_en string, headwords []dictionary.HeadwordDef) Glossary {
-	hws := dictionary.Headwords{}
-	if domain_en == "" {
-		return Glossary{domain_en, hws}
+func MakeGlossary(domain string, headwords []dicttypes.Word) Glossary {
+	hws := dicttypes.WordSenses{}
+	if len(domain) == 0 {
+		return Glossary{domain, hws}
 	}
 	for _, hw := range headwords {
-		gwsArray := []dictionary.WordSenseEntry{}
-		for _, ws := range *hw.WordSenses {
-			if ws.Topic_en == domain_en && ws.Grammar != "proper noun" {
-				gwsArray = append(gwsArray, ws)
+		for _, ws := range hw.Senses {
+			if ws.Domain == domain && ws.Grammar != "proper noun" {
+				hws = append(hws, ws)
 			}
-		}
-		if len(gwsArray) > 0 {
-			ghw := dictionary.CloneHeadword(hw)
-			ghw.WordSenses = &gwsArray
-			hws = append(hws, ghw)
 		}
 	}
 	sort.Sort(hws)
-	return Glossary{domain_en, hws}
+	return Glossary{domain, hws}
 }
 
 // Makes a list of proper nouns, sorted by Pinyin
-func makePNList(vocab map[string]int) dictionary.Headwords {
-	hws := []dictionary.HeadwordDef{}
+func makePNList(vocab map[string]int, wdict map[string]dicttypes.Word) dicttypes.Words {
+	hws := dicttypes.Words{}
 	for w, _ := range vocab {
-		hw, ok := dictionary.GetHeadword(w)
+		hw, ok := wdict[w]
 			if ok && hw.IsProperNoun() {
 				hws = append(hws, hw)
 			}
 	}
-	headwords := dictionary.Headwords(hws)
-	sort.Sort(headwords)
-	return headwords
+	sort.Sort(hws)
+	return hws
 }

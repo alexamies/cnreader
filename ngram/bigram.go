@@ -5,8 +5,9 @@ package ngram
 
 import (
 	"fmt"
-	"github.com/alexamies/cnreader/dictionary"
 	"log"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
 var NULL_BIGRAM_PTR *Bigram
@@ -16,27 +17,27 @@ var NULL_BIGRAM_PTR *Bigram
 //ids. Also, include an example of the bigram so that usage context can be
 // investigated
 type Bigram struct {
-	HeadwordDef1 *dictionary.HeadwordDef  // First headword
-	HeadwordDef2 *dictionary.HeadwordDef  // Second headword
+	HeadwordDef1 *dicttypes.Word  // First headword
+	HeadwordDef2 *dicttypes.Word  // Second headword
 	Example, ExFile, ExDocTitle, ExColTitle *string
 }
 
 // Constructor for a Bigram struct
-func NewBigram(hw1, hw2 dictionary.HeadwordDef,
+func NewBigram(hw1, hw2 dicttypes.Word,
 		example, exFile, exDocTitle, exColTitle string) *Bigram {
-	if hw1.WordSenses == nil || hw2.WordSenses == nil {
+	if hw1.Senses == nil || hw2.Senses == nil {
 		msg := "bigram.NewBigram: nil reference"
-		if hw1.Simplified != nil {
-			msg += fmt.Sprintf(", Simplified1 = %s", *hw1.Simplified)
+		if len(hw1.Simplified) != 0 {
+			msg += fmt.Sprintf(", Simplified1 = %s", hw1.Simplified)
 		}
-		if hw2.Simplified != nil {
-			msg += fmt.Sprintf(", Simplified2 = %s", *hw2.Simplified)
+		if len(hw2.Simplified) != 0 {
+			msg += fmt.Sprintf(", Simplified2 = %s", hw2.Simplified)
 		}
-		if hw1.Traditional != nil {
-			msg += fmt.Sprintf(", Traditional1 = %s", *hw1.Traditional)
+		if len(hw1.Traditional) != 0 {
+			msg += fmt.Sprintf(", Traditional1 = %s", hw1.Traditional)
 		}
-		if hw2.Traditional != nil {
-			msg += fmt.Sprintf(", Traditional2 = %s", *hw2.Traditional)
+		if len(hw2.Traditional) != 0 {
+			msg += fmt.Sprintf(", Traditional2 = %s", hw2.Traditional)
 		}
 		msg += fmt.Sprintf("in %s, %s", exFile, exColTitle)
 		log.Printf(msg)
@@ -53,14 +54,12 @@ func NewBigram(hw1, hw2 dictionary.HeadwordDef,
 
 func NullBigram() *Bigram {
 	if NULL_BIGRAM_PTR == nil {
-		s1 := ""
-		s2 := ""
-		hw1 := dictionary.HeadwordDef{
-			Id: 0,
-			Simplified: &s1, 
-			Traditional: &s2,
-			Pinyin: []string{},
-			WordSenses: &[]dictionary.WordSenseEntry{},
+		hw1 := dicttypes.Word{
+			HeadwordId: 0,
+			Simplified: "", 
+			Traditional: "",
+			Pinyin: "",
+			Senses: []dicttypes.WordSense{},
 		}
 		NULL_BIGRAM_PTR = NewBigram(hw1, hw1, "", "", "", "")
 	}
@@ -74,54 +73,54 @@ func bigramKey(id1, id2 int) string {
 
 // Bigrams that contain function words should be excluded
 func (bigram *Bigram) ContainsFunctionWord() bool {
-	if bigram.HeadwordDef1.WordSenses == nil || bigram.HeadwordDef2.WordSenses == nil {
-		msg := "bigram.ContainsFunctionWord: nil reference"
-		if bigram.HeadwordDef1.Simplified != nil {
+	if bigram.HeadwordDef1.Senses == nil || bigram.HeadwordDef2.Senses == nil {
+		msg := "bigram.ContainsFunctionWord: no value"
+		if len(bigram.HeadwordDef1.Simplified) != 0 {
 			msg += fmt.Sprintf(", Simplified1 = %s",  
-				*bigram.HeadwordDef1.Simplified)
+				bigram.HeadwordDef1.Simplified)
 		}
-		if bigram.HeadwordDef2.Simplified != nil {
+		if len(bigram.HeadwordDef2.Simplified) != 0 {
 			msg += fmt.Sprintf(", Simplified2 = %s",  
-				*bigram.HeadwordDef1.Simplified)
+				bigram.HeadwordDef1.Simplified)
 		}
 		log.Printf(msg)
 		return false
 	}
-	ws1 := (*bigram.HeadwordDef1.WordSenses)[0]
-	ws2 := (*bigram.HeadwordDef2.WordSenses)[0]
+	ws1 := bigram.HeadwordDef1.Senses[0]
+	ws2 := bigram.HeadwordDef2.Senses[0]
 	return ws1.IsFunctionWord() || ws2.IsFunctionWord()
 }
 
 // The simplified text of the bigram
 func (bigram *Bigram) Simplified() string {
-	if bigram.HeadwordDef1.Simplified == nil || bigram.HeadwordDef2.Simplified == nil {
-		msg := "bigram.Simplified nil value"
+	if len(bigram.HeadwordDef1.Simplified) == 0 || len(bigram.HeadwordDef2.Simplified) == 0 {
+		msg := "bigram.Simplified no value"
 		log.Printf(msg)
 		return msg
 	}
-	return fmt.Sprintf("%s%s", *bigram.HeadwordDef1.Simplified,
-		*bigram.HeadwordDef2.Simplified)
+	return fmt.Sprintf("%s%s", bigram.HeadwordDef1.Simplified,
+		bigram.HeadwordDef2.Simplified)
 }
 
 // Override string method for comparison
 func (bigram *Bigram) String() string {
-	return bigramKey(bigram.HeadwordDef1.Id, bigram.HeadwordDef2.Id)
+	return bigramKey(bigram.HeadwordDef1.HeadwordId, bigram.HeadwordDef2.HeadwordId)
 }
 
 // The traditional text of the bigram
 func (bigram *Bigram) Traditional() string {
-	if bigram.HeadwordDef1.Traditional == nil || bigram.HeadwordDef2.Traditional == nil {
-		msg := "bigram.Traditional(): nil reference"
+	if len(bigram.HeadwordDef1.Traditional) == 0 || len(bigram.HeadwordDef2.Traditional) == 0 {
+		msg := "bigram.Traditional(): no value"
 		log.Printf(msg)
 		return msg
 	}
-	t1 := *bigram.HeadwordDef1.Traditional
+	t1 := bigram.HeadwordDef1.Traditional
 	if t1 == "\\N" {
-		t1 = *bigram.HeadwordDef1.Simplified
+		t1 = bigram.HeadwordDef1.Simplified
 	}
-	t2 := *bigram.HeadwordDef2.Traditional
+	t2 := bigram.HeadwordDef2.Traditional
 	if t2 == "\\N" {
-		t2 = *bigram.HeadwordDef2.Simplified
+		t2 = bigram.HeadwordDef2.Simplified
 	}
 	return fmt.Sprintf("%s%s", t1, t2)
 }
