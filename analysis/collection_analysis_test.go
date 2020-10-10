@@ -2,15 +2,16 @@
 package analysis
 
 import (
-	"fmt"
+	"testing"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 	"github.com/alexamies/cnreader/index"
 	"github.com/alexamies/cnreader/ngram"
-	"testing"
 )
 
 // Test sorting of word frequencies
 func TestAddResults(t *testing.T) {
-	fmt.Printf("TestAddResults: Begin unit tests\n")
+	t.Log("TestAddResults: Begin unit tests")
 
 	// Setup
 	vocab := map[string]int{"one": 1, "three": 3, "two": 2}
@@ -18,35 +19,35 @@ func TestAddResults(t *testing.T) {
 	unknown := map[string]int{"x": 1}
 	s1 := "蓝"
 	s2 := "藍"
-	ws1 := dictionary.WordSenseEntry{
+	ws1 := dicttypes.WordSense{
 		Id:          1,
 		Simplified:  s1,
 		Traditional: s2,
 		Pinyin:      "lán",
 		Grammar:     "adjective",
 	}
-	hw1 := dictionary.HeadwordDef{
-		Id:          1,
-		Simplified:  &s1,
-		Traditional: &s2,
-		Pinyin:      []string{},
-		WordSenses:  &[]dictionary.WordSenseEntry{ws1},
+	hw1 := dicttypes.Word{
+		HeadwordId:          1,
+		Simplified:  s1,
+		Traditional: s2,
+		Pinyin:      "",
+		Senses:  []dicttypes.WordSense{ws1},
 	}
 	s3 := "天"
 	s4 := "\\N"
-	ws2 := dictionary.WordSenseEntry{
+	ws2 := dicttypes.WordSense{
 		Id:          1,
 		Simplified:  s3,
 		Traditional: s4,
 		Pinyin:      "tiān",
 		Grammar:     "noun",
 	}
-	hw2 := dictionary.HeadwordDef{
-		Id:          2,
-		Simplified:  &s3,
-		Traditional: &s4,
-		Pinyin:      []string{},
-		WordSenses:  &[]dictionary.WordSenseEntry{ws2},
+	hw2 := dicttypes.Word{
+		HeadwordId:          2,
+		Simplified:  s3,
+		Traditional: s4,
+		Pinyin:      "",
+		Senses:  []dicttypes.WordSense{ws2},
 	}
 	example := ""
 	exFile := ""
@@ -67,19 +68,19 @@ func TestAddResults(t *testing.T) {
 	moreUsage := map[string]string{"two": "two banana"}
 	s5 := "海"
 	s6 := "\\N"
-	ws3 := dictionary.WordSenseEntry{
+	ws3 := dicttypes.WordSense{
 		Id:          3,
 		Simplified:  s5,
 		Traditional: s6,
 		Pinyin:      "hǎi",
 		Grammar:     "noun",
 	}
-	hw3 := dictionary.HeadwordDef{
-		Id:          3,
-		Simplified:  &s5,
-		Traditional: &s6,
-		Pinyin:      []string{},
-		WordSenses:  &[]dictionary.WordSenseEntry{ws3},
+	hw3 := dicttypes.Word{
+		HeadwordId:          3,
+		Simplified:  s5,
+		Traditional: s6,
+		Pinyin:      "",
+		Senses:  []dicttypes.WordSense{ws3},
 	}
 	b2 := ngram.NewBigram(hw1, hw3, example, exFile, exDocTitle, exColTitle)
 	bm2 := ngram.BigramFreqMap{}
@@ -158,7 +159,8 @@ func TestGetLexicalWordFreq0(t *testing.T) {
 	}
 
 	// Method to test
-	lexicalWF := results.GetLexicalWordFreq(sortedWords)
+	wdict := make(map[string]dicttypes.Word)
+	lexicalWF := results.GetLexicalWordFreq(sortedWords, wdict)
 
 	// Check results
 	r := len(lexicalWF)
@@ -186,7 +188,8 @@ func TestGetWordFreq0(t *testing.T) {
 	}
 
 	// Method to test
-	lexicalWF := results.GetWordFreq(sortedWords)
+	wdict := make(map[string]dicttypes.Word)
+	lexicalWF := results.GetWordFreq(sortedWords, wdict)
 
 	// Check results
 	r := len(lexicalWF)

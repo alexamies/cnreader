@@ -86,6 +86,9 @@ func (bigram *Bigram) ContainsFunctionWord() bool {
 		log.Printf(msg)
 		return false
 	}
+	if (len(bigram.HeadwordDef1.Senses) == 0) || (len(bigram.HeadwordDef2.Senses) == 0) {
+		return false
+	}
 	ws1 := bigram.HeadwordDef1.Senses[0]
 	ws2 := bigram.HeadwordDef2.Senses[0]
 	return ws1.IsFunctionWord() || ws2.IsFunctionWord()

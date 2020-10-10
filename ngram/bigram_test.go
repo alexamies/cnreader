@@ -14,30 +14,31 @@
 package ngram
 
 import (
-	"fmt"
 	"testing"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
 // Test basic Bigram functions
 func TestBigram(t *testing.T) {
-	fmt.Printf("TestBigram: Begin unit test\n")
+	t.Logf("TestBigram: Begin unit test\n")
 	s1 := "诸"
 	s2 := "諸"
-	hw1 := dictionary.HeadwordDef{
-		Id: 1,
-		Simplified: &s1, 
-		Traditional: &s2,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{},
+	hw1 := dicttypes.Word{
+		HeadwordId: 1,
+		Simplified: s1, 
+		Traditional: s2,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{},
 	}
 	s3 := "倿"
 	s4 := "\\N"
-	hw2 := dictionary.HeadwordDef{
-		Id: 2,
-		Simplified: &s3, 
-		Traditional: &s4,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{},
+	hw2 := dicttypes.Word{
+		HeadwordId: 2,
+		Simplified: s3, 
+		Traditional: s4,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{},
 	}
 	example := ""
 	exFile := ""

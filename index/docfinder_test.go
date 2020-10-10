@@ -2,9 +2,10 @@
 package index
 
 import (
-	"fmt"
-	"github.com/alexamies/cnreader/corpus"
 	"testing"
+
+	"github.com/alexamies/cnreader/corpus"
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
 // IndexConfig encapsulates parameters for index configuration
@@ -23,8 +24,8 @@ func mockCorpusConfig() corpus.CorpusConfig {
 	}
 }
 
-func mockDictionaryConfig() dictionary.DictionaryConfig {
-	return dictionary.DictionaryConfig{
+func mockDictionaryConfig() dicttypes.DictionaryConfig {
+	return dicttypes.DictionaryConfig{
 		AvoidSubDomains: map[string]bool{},
 		DictionaryDir: "data",
 	}
@@ -40,7 +41,7 @@ func (mock mockValidator) Validate(pos, domain string) error {
 func TestFindForKeyword0(t *testing.T) {
 	BuildIndex(mockIndexConfig())
 	documents := FindForKeyword("你")
-	fmt.Println("index.TestFindForKeyword0 ", documents)
+	t.Logf("index.TestFindForKeyword0 %v", documents)
 }
 
 // Trivial test for loading index
@@ -53,12 +54,12 @@ func TestFindDocsForKeyword0(t *testing.T) {
 	BuildIndex(mockIndexConfig())
 	s1 := "海"
 	s2 := "\\N"
-	hw := dictionary.HeadwordDef{
-		Id:          1,
-		Simplified:  &s1,
-		Traditional: &s2,
-		Pinyin:      []string{"hǎi"},
-		WordSenses:  &[]dictionary.WordSenseEntry{},
+	hw := dicttypes.Word{
+		HeadwordId:          1,
+		Simplified:  s1,
+		Traditional: s2,
+		Pinyin:      "hǎi",
+		Senses:  []dicttypes.WordSense{},
 	}
 	fileLoader := corpus.FileCorpusLoader{
 		FileName: "File",
@@ -77,12 +78,12 @@ func TestFindDocsForKeyword1(t *testing.T) {
 	BuildIndex(mockIndexConfig())
 	s1 := "铁"
 	s2 := "鐵"
-	hw := dictionary.HeadwordDef{
-		Id:          1,
-		Simplified:  &s1,
-		Traditional: &s2,
-		Pinyin:      []string{"tiě"},
-		WordSenses:  &[]dictionary.WordSenseEntry{},
+	hw := dicttypes.Word{
+		HeadwordId:          1,
+		Simplified:  s1,
+		Traditional: s2,
+		Pinyin:      "tiě",
+		Senses:  []dicttypes.WordSense{},
 	}
 	fileLoader := corpus.FileCorpusLoader{
 		FileName: "File",

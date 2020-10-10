@@ -2,19 +2,20 @@
 package analysis
 
 import (
-	"log"
 	"testing"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
 // make example data
-func makeHW0() dictionary.HeadwordDef {
+func makeHW0() dicttypes.Word {
 	simp := "国"
 	trad := "國"
 	pinyin := "guó"
 	english := "a country / a state / a kingdom"
 	topic_cn := "古文"
 	topic_en := "Classical Chinese"
-	ws0 := dictionary.WordSenseEntry{
+	ws0 := dicttypes.WordSense{
 		Id: 1075,
 		HeadwordId: 1075,
 		Simplified: simp,
@@ -22,35 +23,35 @@ func makeHW0() dictionary.HeadwordDef {
 		Pinyin: pinyin,
 		English: english,
 		Grammar: "noun",
-		Concept_cn: "\\N",
-		Concept_en: "\\N",
-		Topic_cn: topic_cn,
-		Topic_en: topic_en,
-		Parent_cn: "",
-		Parent_en: "",
+		ConceptCN: "\\N",
+		Concept: "\\N",
+		DomainCN: topic_cn,
+		Domain: topic_en,
+		SubdomainCN: "",
+		Subdomain: "",
 		Image: "",
-		Mp3: "",
+		MP3: "",
 		Notes: "",
 	}
-	wsArray := []dictionary.WordSenseEntry{ws0}
-	return dictionary.HeadwordDef{
-		Id: 1,
-		Simplified: &simp,
-		Traditional: &trad,
-		Pinyin: []string{pinyin},
-		WordSenses: &wsArray,
+	wsArray := []dicttypes.WordSense{ws0}
+	return dicttypes.Word{
+		HeadwordId: 1,
+		Simplified: simp,
+		Traditional: trad,
+		Pinyin: pinyin,
+		Senses: wsArray,
 	}
 }
 
 // make example data
-func makeHW1() dictionary.HeadwordDef {
+func makeHW1() dicttypes.Word {
 	simp := "严净"
 	trad := "嚴淨"
 	pinyin := "yán jìng"
 	english := "majestic and pure"
 	topic_cn := "佛教"
 	topic_en := "Buddhism"
-	ws0 := dictionary.WordSenseEntry{
+	ws0 := dicttypes.WordSense{
 		Id: 62267,
 		HeadwordId: 62267,
 		Simplified: simp,
@@ -58,35 +59,35 @@ func makeHW1() dictionary.HeadwordDef {
 		Pinyin: pinyin,
 		English: english,
 		Grammar: "set phrase",
-		Concept_cn: "\\N",
-		Concept_en: "\\N",
-		Topic_cn: topic_cn,
-		Topic_en: topic_en,
-		Parent_cn: "",
-		Parent_en: "",
+		ConceptCN: "\\N",
+		Concept: "\\N",
+		DomainCN: topic_cn,
+		Domain: topic_en,
+		SubdomainCN: "",
+		Subdomain: "",
 		Image: "",
-		Mp3: "",
+		MP3: "",
 		Notes: "",
 	}
-	wsArray := []dictionary.WordSenseEntry{ws0}
-	return dictionary.HeadwordDef{
-		Id: 1,
-		Simplified: &simp,
-		Traditional: &trad,
-		Pinyin: []string{pinyin},
-		WordSenses: &wsArray,
+	wsArray := []dicttypes.WordSense{ws0}
+	return dicttypes.Word{
+		HeadwordId: 1,
+		Simplified: simp,
+		Traditional: trad,
+		Pinyin: pinyin,
+		Senses: wsArray,
 	}
 }
 
 // make example data
-func makeHW2() dictionary.HeadwordDef {
+func makeHW2() dicttypes.Word {
 	simp := "缘缘"
 	trad := "緣緣"
 	pinyin := "yuányuán"
 	english := "observed object condition"
 	topic_cn := "佛教"
 	topic_en := "Buddhism"
-	ws0 := dictionary.WordSenseEntry{
+	ws0 := dicttypes.WordSense{
 		Id: 62252,
 		HeadwordId: 62252,
 		Simplified: simp,
@@ -94,35 +95,35 @@ func makeHW2() dictionary.HeadwordDef {
 		Pinyin: pinyin,
 		English: english,
 		Grammar: "set phrase",
-		Concept_cn: "\\N",
-		Concept_en: "\\N",
-		Topic_cn: topic_cn,
-		Topic_en: topic_en,
-		Parent_cn: "",
-		Parent_en: "",
+		ConceptCN: "\\N",
+		Concept: "\\N",
+		DomainCN: topic_cn,
+		Domain: topic_en,
+		SubdomainCN: "",
+		Subdomain: "",
 		Image: "",
-		Mp3: "",
+		MP3: "",
 		Notes: "",
 	}
-	wsArray := []dictionary.WordSenseEntry{ws0}
-	return dictionary.HeadwordDef{
-		Id: 1,
-		Simplified: &simp,
-		Traditional: &trad,
-		Pinyin: []string{pinyin},
-		WordSenses: &wsArray,
+	wsArray := []dicttypes.WordSense{ws0}
+	return dicttypes.Word{
+		HeadwordId: 1,
+		Simplified: simp,
+		Traditional: trad,
+		Pinyin: pinyin,
+		Senses: wsArray,
 	}
 }
 
 // make example data
-func makeHW3() dictionary.HeadwordDef {
+func makeHW3() dicttypes.Word {
 	simp := "禅"
 	trad := "禪"
 	pinyin := "chán"
 	english := "meditative concentration"
 	topic_cn := "佛教"
 	topic_en := "Buddhism"
-	ws0 := dictionary.WordSenseEntry{
+	ws0 := dicttypes.WordSense{
 		Id: 3182,
 		HeadwordId: 3182,
 		Simplified: simp,
@@ -130,37 +131,37 @@ func makeHW3() dictionary.HeadwordDef {
 		Pinyin: pinyin,
 		English: english,
 		Grammar: "noun",
-		Concept_cn: "\\N",
-		Concept_en: "\\N",
-		Topic_cn: topic_cn,
-		Topic_en: topic_en,
-		Parent_cn: "",
-		Parent_en: "",
+		ConceptCN: "\\N",
+		Concept: "\\N",
+		DomainCN: topic_cn,
+		Domain: topic_en,
+		SubdomainCN: "",
+		Subdomain: "",
 		Image: "",
-		Mp3: "",
+		MP3: "",
 		Notes: "",
 	}
-	wsArray := []dictionary.WordSenseEntry{ws0}
-	return dictionary.HeadwordDef{
-		Id: 1,
-		Simplified: &simp,
-		Traditional: &trad,
-		Pinyin: []string{pinyin},
-		WordSenses: &wsArray,
+	wsArray := []dicttypes.WordSense{ws0}
+	return dicttypes.Word{
+		HeadwordId: 1,
+		Simplified: simp,
+		Traditional: trad,
+		Pinyin: pinyin,
+		Senses: wsArray,
 	}
 }
 
 // Trivial test of MakeGlossary function
 func TestMakeGlossary0(t *testing.T) {
-	log.Printf("analysis.TestMakeGlossary0: Begin ******** \n")
-	headwords := []dictionary.HeadwordDef{}
+	t.Log("analysis.TestMakeGlossary0: Begin ********")
+	headwords := []dicttypes.Word{}
 	MakeGlossary("test_label", headwords)
 }
 
 // Easy test of MakeGlossary function
 func TestMakeGlossary1(t *testing.T) {
 	hw := makeHW0()
-	headwords := []dictionary.HeadwordDef{hw}
+	headwords := []dicttypes.Word{hw}
 	glossary := MakeGlossary("test_label", headwords)
 	len := len(glossary.Words)
 	expected := 0
@@ -174,7 +175,7 @@ func TestMakeGlossary1(t *testing.T) {
 func TestMakeGlossary2(t *testing.T) {
 	hw0 := makeHW0()
 	hw1 := makeHW1()
-	headwords := []dictionary.HeadwordDef{hw0, hw1}
+	headwords := []dicttypes.Word{hw0, hw1}
 	glossary := MakeGlossary("Buddhism", headwords)
 	len := len(glossary.Words)
 	expected := 1
@@ -189,7 +190,7 @@ func TestMakeGlossary3(t *testing.T) {
 	hw0 := makeHW0()
 	hw1 := makeHW1()
 	hw2 := makeHW2()
-	headwords := []dictionary.HeadwordDef{hw0, hw2, hw1}
+	headwords := []dicttypes.Word{hw0, hw2, hw1}
 	glossary := MakeGlossary("Buddhism", headwords)
 	len := len(glossary.Words)
 	expected := 2
@@ -212,7 +213,7 @@ func TestMakeGlossary4(t *testing.T) {
 	hw1 := makeHW1()
 	hw2 := makeHW2()
 	hw3 := makeHW3()
-	headwords := []dictionary.HeadwordDef{hw0, hw2, hw1, hw3}
+	headwords := []dicttypes.Word{hw0, hw2, hw1, hw3}
 	glossary := MakeGlossary("Buddhism", headwords)
 	len := len(glossary.Words)
 	expected := 3

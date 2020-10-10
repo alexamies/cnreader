@@ -2,46 +2,47 @@
 package ngram
 
 import (
-	"fmt"
 	"testing"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
 // Test basic Bigram functions
 func TestMerge(t *testing.T) {
-	fmt.Printf("TestMerge: Begin unit test\n")
+	t.Log("TestMerge: Begin unit test")
 
 	// Set up test
 	s1 := "蓝"
 	s2 := "藍"
-	ws1 := dictionary.WordSenseEntry{
-		Id: 1,
+	ws1 := dicttypes.WordSense{
+		HeadwordId: 1,
 		Simplified: s1, 
 		Traditional: s2,
 		Pinyin: "lán",
 		Grammar: "adjective",
 	}
-	hw1 := dictionary.HeadwordDef{
-		Id: 1,
-		Simplified: &s1, 
-		Traditional: &s2,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{ws1},
+	hw1 := dicttypes.Word{
+		HeadwordId: 1,
+		Simplified: s1, 
+		Traditional: s2,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{ws1},
 	}
 	s3 := "天"
 	s4 := "\\N"
-	ws2 := dictionary.WordSenseEntry{
-		Id: 1,
+	ws2 := dicttypes.WordSense{
+		HeadwordId: 1,
 		Simplified: s3, 
 		Traditional: s4,
 		Pinyin: "tiān",
 		Grammar: "noun",
 	}
-	hw2 := dictionary.HeadwordDef{
-		Id: 2,
-		Simplified: &s3, 
-		Traditional: &s4,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{ws2},
+	hw2 := dicttypes.Word{
+		HeadwordId: 2,
+		Simplified: s3, 
+		Traditional: s4,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{ws2},
 	}
 	example := ""
 	exFile := ""
@@ -57,19 +58,19 @@ func TestMerge(t *testing.T) {
 	// Second map
 	s5 := "海"
 	s6 := "\\N"
-	ws3 := dictionary.WordSenseEntry{
+	ws3 := dicttypes.WordSense{
 		Id: 3,
 		Simplified: s5, 
 		Traditional: s6,
 		Pinyin: "hǎi",
 		Grammar: "noun",
 	}
-	hw3 := dictionary.HeadwordDef{
-		Id: 3,
-		Simplified: &s5,
-		Traditional: &s6,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{ws3},
+	hw3 := dicttypes.Word{
+		HeadwordId: 3,
+		Simplified: s5,
+		Traditional: s6,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{ws3},
 	}
 	b2 := NewBigram(hw1, hw3, example, exFile, exDocTitle, exColTitle)
 	bm2 := BigramFreqMap{}
@@ -98,35 +99,35 @@ func TestPutBigram(t *testing.T) {
 	// Set up test
 	s1 := "蓝"
 	s2 := "藍"
-	ws1 := dictionary.WordSenseEntry{
+	ws1 := dicttypes.WordSense{
 		Id: 1,
 		Simplified: s1, 
 		Traditional: s2,
 		Pinyin: "lán",
 		Grammar: "adjective",
 	}
-	hw1 := dictionary.HeadwordDef{
-		Id: 1,
-		Simplified: &s1, 
-		Traditional: &s2,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{ws1},
+	hw1 := dicttypes.Word{
+		HeadwordId: 1,
+		Simplified: s1, 
+		Traditional: s2,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{ws1},
 	}
 	s3 := "天"
 	s4 := "\\N"
-	ws2 := dictionary.WordSenseEntry{
+	ws2 := dicttypes.WordSense{
 		Id: 1,
 		Simplified: s3, 
 		Traditional: s4,
 		Pinyin: "tiān",
 		Grammar: "noun",
 	}
-	hw2 := dictionary.HeadwordDef{
-		Id: 2,
-		Simplified: &s3, 
-		Traditional: &s4,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{ws2},
+	hw2 := dicttypes.Word{
+		HeadwordId: 2,
+		Simplified: s3, 
+		Traditional: s4,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{ws2},
 	}
 	example := ""
 	exFile := ""
@@ -147,19 +148,19 @@ func TestPutBigram(t *testing.T) {
 	}
 	s5 := "海"
 	s6 := "\\N"
-	ws3 := dictionary.WordSenseEntry{
+	ws3 := dicttypes.WordSense{
 		Id: 3,
 		Simplified: s5, 
 		Traditional: s6,
 		Pinyin: "hǎi",
 		Grammar: "noun",
 	}
-	hw3 := dictionary.HeadwordDef{
-		Id: 3,
-		Simplified: &s5,
-		Traditional: &s6,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{ws3},
+	hw3 := dicttypes.Word{
+		HeadwordId: 3,
+		Simplified: s5,
+		Traditional: s6,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{ws3},
 	}
 	b2 := NewBigram(hw1, hw3, example, exFile, exDocTitle, exColTitle)
 	r2 := bm.GetBigram(b2)
@@ -175,35 +176,35 @@ func TestPutBigramFreq(t *testing.T) {
 	// Set up test
 	s1 := "蓝"
 	s2 := "藍"
-	ws1 := dictionary.WordSenseEntry{
+	ws1 := dicttypes.WordSense{
 		Id: 1,
 		Simplified: s1, 
 		Traditional: s2,
 		Pinyin: "lán",
 		Grammar: "adjective",
 	}
-	hw1 := dictionary.HeadwordDef{
-		Id: 1,
-		Simplified: &s1, 
-		Traditional: &s2,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{ws1},
+	hw1 := dicttypes.Word{
+		HeadwordId: 1,
+		Simplified: s1, 
+		Traditional: s2,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{ws1},
 	}
 	s3 := "天"
 	s4 := "\\N"
-	ws2 := dictionary.WordSenseEntry{
+	ws2 := dicttypes.WordSense{
 		Id: 1,
 		Simplified: s3, 
 		Traditional: s4,
 		Pinyin: "tiān",
 		Grammar: "noun",
 	}
-	hw2 := dictionary.HeadwordDef{
-		Id: 2,
-		Simplified: &s3, 
-		Traditional: &s4,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{ws2},
+	hw2 := dicttypes.Word{
+		HeadwordId: 2,
+		Simplified: s3, 
+		Traditional: s4,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{ws2},
 	}
 	example := ""
 	exFile := ""

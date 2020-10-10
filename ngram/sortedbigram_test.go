@@ -2,44 +2,45 @@
 package ngram
 
 import (
-	"fmt"
 	"testing"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
 // Test basic Bigram functions
 func TestSortedBFM(t *testing.T) {
-	fmt.Printf("TestSortedBFM: Begin unit test\n")
+	t.Log("TestSortedBFM: Begin unit test")
 	s1 := "蓝"
 	s2 := "藍"
-	ws1 := dictionary.WordSenseEntry{
+	ws1 := dicttypes.WordSense{
 		Id: 1,
 		Simplified: s1, 
 		Traditional: s2,
 		Pinyin: "lán",
 		Grammar: "adjective",
 	}
-	hw1 := dictionary.HeadwordDef{
-		Id: 1,
-		Simplified: &s1, 
-		Traditional: &s2,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{ws1},
+	hw1 := dicttypes.Word{
+		HeadwordId: 1,
+		Simplified: s1, 
+		Traditional: s2,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{ws1},
 	}
 	s3 := "天"
 	s4 := "\\N"
-	ws2 := dictionary.WordSenseEntry{
+	ws2 := dicttypes.WordSense{
 		Id: 1,
 		Simplified: s3, 
 		Traditional: s4,
 		Pinyin: "tiān",
 		Grammar: "noun",
 	}
-	hw2 := dictionary.HeadwordDef{
-		Id: 2,
-		Simplified: &s3, 
-		Traditional: &s4,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{ws2},
+	hw2 := dicttypes.Word{
+		HeadwordId: 2,
+		Simplified: s3, 
+		Traditional: s4,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{ws2},
 	}
 	example := ""
 	exFile := ""
@@ -51,19 +52,19 @@ func TestSortedBFM(t *testing.T) {
 	bm.PutBigram(b1)
 	s5 := "海"
 	s6 := "\\N"
-	ws3 := dictionary.WordSenseEntry{
+	ws3 := dicttypes.WordSense{
 		Id: 3,
 		Simplified: s5, 
 		Traditional: s6,
 		Pinyin: "hǎi",
 		Grammar: "noun",
 	}
-	hw3 := dictionary.HeadwordDef{
-		Id: 3,
-		Simplified: &s5,
-		Traditional: &s6,
-		Pinyin: []string{},
-		WordSenses: &[]dictionary.WordSenseEntry{ws3},
+	hw3 := dicttypes.Word{
+		HeadwordId: 3,
+		Simplified: s5,
+		Traditional: s6,
+		Pinyin: "",
+		Senses: []dicttypes.WordSense{ws3},
 	}
 	b2 := NewBigram(hw1, hw3, example, exFile, exDocTitle, exColTitle)
 	bm.PutBigram(b2)
@@ -78,7 +79,7 @@ func TestSortedBFM(t *testing.T) {
 	if r2 != e2 {
 		t.Error("TestSortedBFM, expected ", e2, " got, ", r2, "sbf[0]", sbf[0])
 	}
-	r3 := *sbf[0].BigramVal.HeadwordDef1.Simplified
+	r3 := sbf[0].BigramVal.HeadwordDef1.Simplified
 	e3 := "蓝"
 	if r3 != e3 {
 		t.Error("TestSortedBFM, expected ", e3, " got, ", r3, "sbf[0]", sbf[0])

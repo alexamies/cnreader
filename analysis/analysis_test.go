@@ -5,14 +5,16 @@ package analysis
 
 import (
 	"container/list"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/alexamies/chinesenotes-go/dictionary"	
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/corpus"
 	"github.com/alexamies/cnreader/index"
 	"github.com/alexamies/cnreader/library"
-	"log"
-	"strings"
-	"testing"
-	"time"
 )
 
 func listToString(l list.List) string {
@@ -50,8 +52,8 @@ func mockOutputConfig() corpus.HTMLOutPutConfig {
 	}
 }
 
-func mockDictionaryConfig() dictionary.DictionaryConfig {
-	return dictionary.DictionaryConfig{
+func mockDictionaryConfig() dicttypes.DictionaryConfig {
+	return dicttypes.DictionaryConfig{
 		AvoidSubDomains: map[string]bool{},
 		DictionaryDir: "data",
 	}
@@ -61,6 +63,94 @@ func mockFileCorpusLoader() corpus.FileCorpusLoader {
 	return corpus.FileCorpusLoader{
 		FileName: "File",
 		Config: mockCorpusConfig(),
+	}
+}
+
+func mockSmallDict() map[string]dicttypes.Word {
+	s1 := "繁体中文"
+	t1 := "繁體中文"
+	hw1 := dicttypes.Word{
+		HeadwordId:  	1,
+		Simplified:  	s1,
+		Traditional: 	t1,
+		Pinyin:      	"fántǐ zhōngwén",
+		Senses:  			[]dicttypes.WordSense{},
+	}
+	s2 := "前"
+	t2 := "\\N"
+	hw2 := dicttypes.Word{
+		HeadwordId:  	2,
+		Simplified:  	s2,
+		Traditional: 	t2,
+		Pinyin:      	"qián",
+		Senses:  			[]dicttypes.WordSense{},
+	}
+	s3 := "不见"
+	t3 := "不見"
+	hw3 := dicttypes.Word{
+		HeadwordId:  	3,
+		Simplified:  	s3,
+		Traditional: 	t3,
+		Pinyin:      	"bújiàn",
+		Senses:				[]dicttypes.WordSense{},
+	}
+	s4 := "古人"
+	t4 := "\\N"
+	hw4 := dicttypes.Word{
+		HeadwordId:  	4,
+		Simplified:  	s4,
+		Traditional: 	t4,
+		Pinyin:      	"gǔrén",
+		Senses:  			[]dicttypes.WordSense{},
+	}
+	s5 := "夫"
+	t5 := "\\N"
+	hw5 := dicttypes.Word{
+		HeadwordId:  	5,
+		Simplified:  	s5,
+		Traditional: 	t5,
+		Pinyin:      	"fú fū",
+		Senses:  			[]dicttypes.WordSense{},
+	}
+	s6 := "起信论"
+	t6 := "起信論"
+	hw6 := dicttypes.Word{
+		HeadwordId:  	6,
+		Simplified:  	s6,
+		Traditional: 	t6,
+		Pinyin:      	"Qǐ Xìn Lùn",
+		Senses:  			[]dicttypes.WordSense{},
+	}
+	s7 := "者"
+	t7 := "\\N"
+	hw7 := dicttypes.Word{
+		HeadwordId:  	7,
+		Simplified:  	s7,
+		Traditional: 	t7,
+		Pinyin:      	"zhě zhuó",
+		Senses:  			[]dicttypes.WordSense{},
+	}
+	s8 := "乃是"
+	t8 := "\\N"
+	hw8 := dicttypes.Word{
+		HeadwordId:  	8,
+		Simplified:  	s8,
+		Traditional: 	t8,
+		Pinyin:      	"nǎishì",
+		Senses:  			[]dicttypes.WordSense{},
+	}
+	return map[string]dicttypes.Word {
+		s1: hw1,
+		t1: hw1,
+		s2: hw2,
+		s3: hw3,
+		t3: hw3,
+		s4: hw4,
+		s5: hw5,
+		s6: hw6,
+		t6: hw6,
+		s7: hw7,
+		s8: hw8,
 	}
 }
 
@@ -81,15 +171,16 @@ func printList(t *testing.T, l list.List) {
 func TestDecodeUsageExample1(t *testing.T) {
 	s1 := "海"
 	s2 := "\\N"
-	hw := dictionary.HeadwordDef{
-		Id:          1,
-		Simplified:  &s1,
-		Traditional: &s2,
-		Pinyin:      []string{"hǎi"},
-		WordSenses:  &[]dictionary.WordSenseEntry{},
+	hw := dicttypes.Word{
+		HeadwordId:          1,
+		Simplified:  s1,
+		Traditional: s2,
+		Pinyin:      "hǎi",
+		Senses:  []dicttypes.WordSense{},
 	}
+	wdict := make(map[string]dicttypes.Word)
 	highlighted := decodeUsageExample("海", hw, tokenizer.DictTokenizer{},
-			mockOutputConfig(), mockCorpusConfig())
+			mockOutputConfig(), mockCorpusConfig(), wdict)
 	expected := "<span class='usage-highlight'>海</span>"
 	if highlighted != expected {
 		t.Error("TestDecodeUsageExample1: Expected ", expected, ", got",
@@ -100,15 +191,16 @@ func TestDecodeUsageExample1(t *testing.T) {
 func TestDecodeUsageExample2(t *testing.T) {
 	s1 := "海"
 	s2 := "\\N"
-	hw := dictionary.HeadwordDef{
-		Id:          1,
-		Simplified:  &s1,
-		Traditional: &s2,
-		Pinyin:      []string{"hǎi"},
-		WordSenses:  &[]dictionary.WordSenseEntry{},
+	hw := dicttypes.Word{
+		HeadwordId:          1,
+		Simplified:  s1,
+		Traditional: s2,
+		Pinyin:      "hǎi",
+		Senses:  []dicttypes.WordSense{},
 	}
+	wdict := make(map[string]dicttypes.Word)
 	highlighted := decodeUsageExample("banana", hw, tokenizer.DictTokenizer{},
-			mockOutputConfig(), mockCorpusConfig())
+			mockOutputConfig(), mockCorpusConfig(), wdict)
 	expected := "banana"
 	if highlighted != expected {
 		t.Error("TestDecodeUsageExample2: Expected ", expected, ", got",
@@ -119,15 +211,16 @@ func TestDecodeUsageExample2(t *testing.T) {
 func TestDecodeUsageExample3(t *testing.T) {
 	s1 := "国"
 	s2 := "國"
-	hw := dictionary.HeadwordDef{
-		Id:          1,
-		Simplified:  &s1,
-		Traditional: &s2,
-		Pinyin:      []string{"guó"},
-		WordSenses:  &[]dictionary.WordSenseEntry{},
+	hw := dicttypes.Word{
+		HeadwordId:          1,
+		Simplified:  s1,
+		Traditional: s2,
+		Pinyin:      "guó",
+		Senses:  []dicttypes.WordSense{},
 	}
+	wdict := make(map[string]dicttypes.Word)
 	highlighted := decodeUsageExample("國", hw, tokenizer.DictTokenizer{},
-			mockOutputConfig(), mockCorpusConfig())
+			mockOutputConfig(), mockCorpusConfig(), wdict)
 	expected := "<span class='usage-highlight'>國</span>"
 	if highlighted != expected {
 		t.Error("TestDecodeUsageExample3: Expected ", expected, ", got",
@@ -136,12 +229,6 @@ func TestDecodeUsageExample3(t *testing.T) {
 }
 
 func TestGetChunks1(t *testing.T) {
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestGetChunks1: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
 	chunks := GetChunks("中文")
 	if chunks.Len() != 1 {
 		t.Error("TestGetChunks1: Expected length of chunks 1, got ",
@@ -155,12 +242,6 @@ func TestGetChunks1(t *testing.T) {
 }
 
 func TestGetChunks2(t *testing.T) {
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestGetChunks2: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
 	chunks := GetChunks("a中文")
 	if chunks.Len() != 2 {
 		t.Error("Expected length of chunks 2, got ", chunks.Len())
@@ -172,12 +253,6 @@ func TestGetChunks2(t *testing.T) {
 }
 
 func TestGetChunks3(t *testing.T) {
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestGetChunks3: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
 	chunks := GetChunks("a中文b")
 	if chunks.Len() != 3 {
 		t.Error("Expected length of chunks 3, got ", chunks.Len())
@@ -190,12 +265,6 @@ func TestGetChunks3(t *testing.T) {
 
 // Simplified Chinese
 func TestGetChunks4(t *testing.T) {
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestGetChunks4: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
 	chunks := GetChunks("简体中文")
 	if chunks.Len() != 1 {
 		t.Error("Simplified Chinese 简体中文: expected length of chunks 1, got ",
@@ -204,7 +273,7 @@ func TestGetChunks4(t *testing.T) {
 	chunk := chunks.Front().Value.(string)
 	if chunk != "简体中文" {
 		for e := chunks.Front(); e != nil; e = e.Next() {
-			log.Printf("TestGetChunks4: chunk: %s\n", e.Value.(string))
+			t.Logf("TestGetChunks4: chunk: %s", e.Value.(string))
 		}
 		t.Error("Expected first element of chunk 简体中文 to be 简体中文, got ",
 			chunk)
@@ -233,132 +302,80 @@ func TestReadText2(t *testing.T) {
 	//log.Printf("TestReadText2: End ******** \n")
 }
 
-func TestParseText1(t *testing.T) {
-	t.Log("TestParseText1: Begin ********")
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestParseText1: Unexpected error: %v", err)
+func TestParseText(t *testing.T) {
+	t.Log("TestParseText: Begin ********")
+	testCases := []struct {
+		in  string
+		expectedFirst string
+		expectedTokens int
+		expectedVocab int
+		expectedWC int
+		expectedCC int
+	}{
+		{
+			in: "繁體中文", 
+			expectedFirst: "繁體中文",
+			expectedTokens: 1,
+			expectedVocab: 1,
+			expectedWC: 1,
+			expectedCC: 4,
+		},
+		{
+			in: "a繁體中文", 
+			expectedFirst: "a",
+			expectedTokens: 2,
+			expectedVocab: 1,
+			expectedWC: 1,
+			expectedCC: 4,
+		},
+		{
+			in: "前不见古人", 
+			expectedFirst: "前",
+			expectedTokens: 3,
+			expectedVocab: 3,
+			expectedWC: 3,
+			expectedCC: 5,
+		},
+		{
+			in: "夫起信論者，乃是...。", 
+			expectedFirst: "前",
+			expectedTokens: 4,
+			expectedVocab: 4,
+			expectedWC: 4,
+			expectedCC: 7,
+		},
 	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
-	tokens, results := ParseText("繁體中文", "", corpus.NewCorpusEntry(),
-		tokenizer.DictTokenizer{}, mockCorpusConfig())
-	if tokens.Len() != 2 {
-		t.Error("Expected to get length 2, got ", tokens.Len())
+	wdict := mockSmallDict()
+	tok := tokenizer.DictTokenizer{wdict}
+	for _, tc := range testCases {
+		tokens, results := ParseText(tc.in, "", corpus.NewCorpusEntry(),
+			tok, mockCorpusConfig(), wdict)
+		if tokens.Len() != tc.expectedTokens {
+			t.Fatalf("expectedTokens %d, got %d", tc.expectedTokens, tokens.Len())
+		}
 		first := tokens.Front().Value.(string)
-		if first != "繁體" {
-			t.Error("Expected to get tokens.Front() 繁體, got ", first)
+		if tc.expectedFirst != first {
+			t.Errorf("expectedFirst: %s, got %s", tc.expectedFirst, first)
+		}
+		if tc.expectedVocab != len(results.Vocab) {
+			t.Errorf("expectedVocab = %d, got %d", tc.expectedVocab, len(results.Vocab))
+		}
+		if tc.expectedWC != results.WC {
+			t.Errorf("expectedWC: %d, got %d", tc.expectedWC, results.WC)
+		}
+		if tc.expectedCC != results.CCount {
+			t.Errorf("expectedCC: %d, got %d", tc.expectedCC, results.CCount)
 		}
 	}
-	if len(results.Vocab) != 2 {
-		t.Error("Expected to get len(vocab) = 2, got ", len(results.Vocab))
-	}
-	if results.WC != 2 {
-		t.Error("Expected to get wc = 2, got ", results.WC)
-	}
-	if results.CCount != 4 {
-		t.Error("Expected to get cc = 4, got ", results.CCount)
-	}
-	t.Log("TestParseText1: End ******** ")
-}
-
-func TestParseText2(t *testing.T) {
-	//log.Printf("TestParseText2: Begin ******** \n")
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestParseText2: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
-	tokens, results := ParseText("a繁體中文", "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig())
-	if tokens.Len() != 3 {
-		t.Error("Expected to get length 3, got ", tokens.Len())
-	}
-	if results.WC != 2 {
-		t.Error("Expected to get wc 2, got ", results.WC)
-	}
-	if results.CCount != 4 {
-		t.Error("Expected to get char count 4, got ", results.CCount)
-		return
-	}
-	first := tokens.Front().Value.(string)
-	if first != "a" {
-		t.Error("Expected to get tokens.Front() a, got ", first)
-	}
-	if len(results.Vocab) != 2 {
-		t.Error("Expected to get len(vocab) = 2, got ", len(results.Vocab))
-	}
-	//log.Printf("TestParseText2: End ******** \n")
-}
-
-func TestParseText3(t *testing.T) {
-	//log.Printf("TestParseText3: Begin +++++++++++\n")
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestParseText3: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
-	tokens, results := ParseText("前不见古人", "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig())
-	if tokens.Len() != 3 {
-		t.Error("Expected to get length 3, got ", tokens.Len())
-		return
-	}
-	if results.WC != 3 {
-		t.Error("Expected to get wc 3, got ", results.WC)
-		return
-	}
-	if results.CCount != 5 {
-		t.Error("Expected to get char count 5, got ", results.CCount)
-		return
-	}
-	expected := []string{"前", "不见", "古人"}
-	i := 0
-	for e := tokens.Front(); e != nil; e = e.Next() {
-		word := e.Value.(string)
-		if expected[i] != e.Value.(string) {
-			t.Error("Failed to get expected word", expected[i], word, i)
-		}
-		i++
-	}
-	//log.Printf("TestParseText3: End +++++++++++\n")
-}
-
-func TestParseText4(t *testing.T) {
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestParseText4: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
-	text := "夫起信論者，乃是至極大乘甚深祕典，開示如理緣起之義。"
-	tokens, results := ParseText(text, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig())
-	tokenText := listToString(tokens)
-	if len(text) != len(tokenText) {
-		t.Error("Expected to string length ", len(text), ", got ",
-			len(tokenText))
-		printList(t, tokens)
-	}
-	if results.CCount != 23 {
-		t.Error("Expected to get char count 23, got ", results.CCount)
-		return
-	}
+	t.Log("TestParseText: End ******** ")
 }
 
 func TestParseText5(t *testing.T) {
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestParseText5: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
+	wdict := make(map[string]dicttypes.Word)
 	corpusLoader := mockFileCorpusLoader()
 	text := corpusLoader.ReadText("../testdata/test-trad.html")
 	tokens, results := ParseText(text, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig())
+			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
 	tokenText := listToString(tokens)
 	if len(text) != len(tokenText) {
 		t.Error("Expected to string length ", len(text), ", got ",
@@ -378,7 +395,6 @@ func TestParseText5(t *testing.T) {
 
 // Basic test with no data
 func TestSampleUsage1(t *testing.T) {
-	//log.Printf("TestSampleUsage1: Begin +++++++++++\n")
 	usageMap := map[string]*[]WordUsage{}
 	usageMap = sampleUsage(usageMap)
 	l := len(usageMap)
@@ -411,7 +427,7 @@ func TestSampleUsage2(t *testing.T) {
 
 // Basic test with more data
 func TestSampleUsage3(t *testing.T) {
-	log.Printf("TestSampleUsage3: Begin +++++++++++\n")
+	t.Log("TestSampleUsage3: Begin +++++++++++")
 	wu1 := WordUsage{
 		Freq:       1,
 		RelFreq:    0.01,
@@ -442,7 +458,7 @@ func TestSampleUsage3(t *testing.T) {
 
 // Basic test with more data
 func TestSampleUsage4(t *testing.T) {
-	log.Printf("analysis.TestSampleUsage4: Begin +++++++++++\n")
+	t.Logf("analysis.TestSampleUsage4: Begin +++++++++++")
 	wu1 := WordUsage{
 		Freq:       1,
 		RelFreq:    0.01,
@@ -478,34 +494,29 @@ func TestSampleUsage4(t *testing.T) {
 	if l != expected {
 		t.Error("Expected to get length ", expected, ", got ", l)
 	}
-	log.Printf("analysis.TestSampleUsage4: End +++++++++++\n")
+	t.Log("analysis.TestSampleUsage4: End +++++++++++")
 }
 
 func TestSortedFreq(t *testing.T) {
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestSortedFreq: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
+	wdict := make(map[string]dicttypes.Word)
 	corpusLoader := mockFileCorpusLoader()
 	text := corpusLoader.ReadText("../testdata/test-trad.html")
 	_, results := ParseText(text, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig())
+			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
 	sortedWords := index.SortedFreq(results.Vocab)
 	expected := len(results.Vocab)
 	got := len(sortedWords)
 	if expected != got {
-		t.Errorf("TestSortedFreq: Expected %d, got %d", expected, got)
-		return
+		t.Fatalf("TestSortedFreq: Expected %d, got %d", expected, got)
 	}
 }
 
 func TestWriteAnalysis(t *testing.T) {
-	t.Logf("analysis.TestWriteAnalysis: Begin +++++++++++\n")
+	t.Log("analysis.TestWriteAnalysis: Begin +++++++++++")
 	term := "繁"
+	wdict := make(map[string]dicttypes.Word)
 	_, results := ParseText(term, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig())
+			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
 	srcFile := "test.txt"
 	glossFile := "test.html"
 	vocab := map[string]int{
@@ -517,91 +528,78 @@ func TestWriteAnalysis(t *testing.T) {
 	df.WriteToFile("analysis_df_test.txt", indexConfig)
 	index.ReadDocumentFrequency(indexConfig)
 	writeAnalysis(results, srcFile, glossFile, "Test Collection", "Test Doc",
-			mockOutputConfig())
-	log.Printf("analysis.TestWriteAnalysis: End +++++++++++\n")
+			mockOutputConfig(), wdict)
+	t.Log("analysis.TestWriteAnalysis: End +++++++++++")
 }
 
 func TestWriteCorpusDoc1(t *testing.T) {
-	log.Printf("analysis.TestWriteCorpusDoc1: Begin +++++++++++\n")
+	t.Log("analysis.TestWriteCorpusDoc1: Begin +++++++++++")
 	corpusConfig := mockCorpusConfig()
+	wdict := make(map[string]dicttypes.Word)
 	tokens, results := ParseText("繁", "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, corpusConfig)
+			tokenizer.DictTokenizer{}, corpusConfig, wdict)
 	outfile := "../testoutput/output.html"
 	writeCorpusDoc(tokens, results.Vocab, outfile, "", "", "", "", "TXT",
-			mockOutputConfig(), corpusConfig)
-	log.Printf("analysis.TestWriteCorpusDoc1: End +++++++++++\n")
+			mockOutputConfig(), corpusConfig, wdict)
+	t.Log("analysis.TestWriteCorpusDoc1: End +++++++++++")
 }
 
 func TestWriteDoc1(t *testing.T) {
-	log.Printf("analysis.TestWriteDoc1: Begin +++++++++++\n")
+	t.Log("analysis.TestWriteDoc1: Begin +++++++++++")
+	wdict := make(map[string]dicttypes.Word)
 	tokens, results := ParseText("繁", "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig())
+			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
 	outfile := "../testoutput/output.html"
 	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
-			mockCorpusConfig())
-	log.Printf("analysis.TestWriteDoc1: End +++++++++++\n")
+			mockCorpusConfig(), wdict)
+	t.Log("analysis.TestWriteDoc1: End +++++++++++")
 }
 
 func TestWriteDoc2(t *testing.T) {
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestWriteDoc2: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
 	corpusLoader := mockFileCorpusLoader()
 	text := corpusLoader.ReadText("../testdata/test.html")
+	wdict := make(map[string]dicttypes.Word)
 	tokens, results := ParseText(text, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig())
+			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
 	if tokens.Len() != 4 {
 		t.Error("Expected to get length 4, got ", tokens.Len())
 	}
 	outfile := "../testoutput/test-gloss.html"
 	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
-			mockCorpusConfig())
+			mockCorpusConfig(), wdict)
 }
 
 func TestWriteDoc3(t *testing.T) {
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestWriteDoc3: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
+	wdict := make(map[string]dicttypes.Word)
 	corpusLoader := mockFileCorpusLoader()
 	text := corpusLoader.ReadText("../testdata/test-simplified.html")
 	tokens, results := ParseText(text, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig())
+			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
 	if tokens.Len() != 6 {
 		t.Error("Expected to get length 6, got ", tokens.Len())
 	}
 	outfile := "../testoutput/test-simplified-gloss.html"
 	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
-			mockCorpusConfig())
+			mockCorpusConfig(), wdict)
 }
 
 func TestWriteDoc4(t *testing.T) {
-	files := []string{"../testdata/testwords.txt"}
-	validator, err := mockValidator()
-	if err != nil {
-		t.Fatalf("TestWriteDoc4: Unexpected error: %v", err)
-	}
-	dictionary.ReadDict(files, validator, mockDictionaryConfig())
+	wdict := make(map[string]dicttypes.Word)
 	corpusLoader := mockFileCorpusLoader()
 	text := corpusLoader.ReadText("../testdata/test-simplified2.html")
 	tokens, results := ParseText(text, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig())
+			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
 	l := 3
 	if tokens.Len() != l {
 		for e := tokens.Front(); e != nil; e = e.Next() {
-			log.Println("analysis.TestWriteDoc4", e.Value.(string))
+			t.Logf("analysis.TestWriteDoc4: %v", e.Value.(string))
 		}
 		t.Error("TestWriteDoc4: Expected to get length ", l, ", got ",
 			tokens.Len())
 	}
 	outfile := "../testoutput/test-simplified-gloss2.html"
 	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
-			mockCorpusConfig())
+			mockCorpusConfig(), wdict)
 }
 
 func TestWriteLibraryFiles0(t *testing.T) {
@@ -614,8 +612,9 @@ func TestWriteLibraryFiles0(t *testing.T) {
 		TargetStatus: "public",
 		Loader: emptyLibLoader,
 	}
+	wdict := make(map[string]dicttypes.Word)
 	WriteLibraryFiles(lib, tokenizer.DictTokenizer{}, mockOutputConfig(),
-			mockCorpusConfig(), mockIndexConfig())
+			mockCorpusConfig(), mockIndexConfig(), wdict)
 }
 
 func TestWriteLibraryFiles1(t *testing.T) {
@@ -628,6 +627,7 @@ func TestWriteLibraryFiles1(t *testing.T) {
 		TargetStatus: "public",
 		Loader: mockLoader,
 	}
+	wdict := make(map[string]dicttypes.Word)
 	WriteLibraryFiles(lib, tokenizer.DictTokenizer{}, mockOutputConfig(),
-			mockCorpusConfig(), mockIndexConfig())
+			mockCorpusConfig(), mockIndexConfig(), wdict)
 }

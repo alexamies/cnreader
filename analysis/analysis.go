@@ -102,12 +102,6 @@ type WFResult struct {
 	Chinese, Pinyin, English, Usage string
 }
 
-// DictionaryConfig encapsulates parameters for dictionary configuration
-type DictionaryConfig struct {
-	AvoidSubDomains map[string]bool
-	DictionaryDir string
-}
-
 // Get a list of words that containst the given word
 func ContainsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
 	//log.Printf("dictionary.ContainsWord: Enter\n")

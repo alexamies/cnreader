@@ -2,14 +2,15 @@
 package index
 
 import (
-	"github.com/alexamies/chinesenotes-go/config"
-	"log"
 	"testing"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
 func TestGetHeadwordArray0(t *testing.T) {
 	keywords := Keywords{}
-	hws := GetHeadwordArray(keywords)
+	wdict := map[string]dicttypes.Word{}
+	hws := GetHeadwordArray(keywords, wdict)
 	nReturned := len(hws)
 	nExpected := 0
 	if nReturned != nExpected {
@@ -21,8 +22,8 @@ func TestGetHeadwordArray0(t *testing.T) {
 func TestGetHeadwordArray1(t *testing.T) {
 	kw := Keyword{"多", 1.1}
 	keywords := Keywords{kw}
-	dictionary.ReadDict(config.LUFileNames(), mockValidator{}, mockDictionaryConfig())
-	hws := GetHeadwordArray(keywords)
+	wdict := make(map[string]dicttypes.Word)
+	hws := GetHeadwordArray(keywords, wdict)
 	nReturned := len(hws)
 	nExpected := 1
 	if nReturned != nExpected {
@@ -95,8 +96,8 @@ func TestSortByWeight2(t *testing.T) {
 	top := keywords[0]
 	topExpected := term2
 	if top.Term != topExpected {
-		log.Printf("index.TestSortByWeight2 keywords = %v\n", keywords)
-		t.Error("index.TestSortByWeight2: topExpected ", topExpected, " got ",
-			top)
+		t.Logf("index.TestSortByWeight2 keywords = %v\n", keywords)
+		t.Errorf("index.TestSortByWeight2: topExpected %v, got %v",
+			topExpected, top)
 	}
 }

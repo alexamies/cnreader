@@ -1,6 +1,18 @@
-/* 
-Command line utility to mark up HTML files with Chinese notes.
- */
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// 
+// Command line utility to analyze corpus and mark up HTML files.
+//
 package main
 
 import (
@@ -8,8 +20,15 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"runtime/pprof"
+	"strconv"
+	"time"
+
 	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dictionary"
+	"github.com/alexamies/chinesenotes-go/dicttypes"	
 	"github.com/alexamies/chinesenotes-go/fileloader"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/analysis"
@@ -17,11 +36,6 @@ import (
 	"github.com/alexamies/cnreader/index"
 	"github.com/alexamies/cnreader/library"
 	"github.com/alexamies/cnreader/tmindex"
-	"log"
-	"os"
-	"runtime/pprof"
-	"strconv"
-	"time"
 )
 
 const conversionsFile = "data/corpus/html-conversion.csv"
@@ -108,8 +122,8 @@ func getCorpusConfig() corpus.CorpusConfig {
 	}
 }
 
-func getDictionaryConfig() analysis.DictionaryConfig {
-	return analysis.DictionaryConfig{
+func getDictionaryConfig() dicttypes.DictionaryConfig {
+	return dicttypes.DictionaryConfig{
 		AvoidSubDomains: config.AvoidSubDomains(),
 		DictionaryDir: config.DictionaryDir(),
 	}
