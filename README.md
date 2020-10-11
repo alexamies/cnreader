@@ -94,3 +94,17 @@ Edit the /etc/security/limits.conf file to increase this.
 
 ## Analyzing your own corpus
 The cnreader program looks at the file $CNREADER_HOME/data/corpus/collections.csv and analyzes the lists of texts under there. To analyze your own corpus, create a new directory tree with your own collections.csv file and set the environment variable CNREADER_HOME to the top of that directory.
+
+## Testing
+
+Run unit tests with the command
+
+```shell
+go test ./... -cover
+```
+
+Run an integration test with the command
+
+```shell
+go test -integration ./...
+```

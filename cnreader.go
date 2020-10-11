@@ -54,7 +54,7 @@ type htmlConversion struct {
 	Title string
 }
 
-func init() {
+func initApp() {
 	projectHome = os.Getenv("CNREADER_HOME")
 	log.Printf("config.init: projectHome: '%s'\n", projectHome)
 	if len(projectHome) == 0 {
@@ -182,6 +182,8 @@ func main() {
 				"this file")
 	flag.Parse()
 
+	initApp()
+
 	outputConfig := getHTMLOutPutConfig()
 	corpusConfig := getCorpusConfig()
 	indexConfig := getIndexConfig()
@@ -274,8 +276,11 @@ func main() {
 		}
 	} else {
 		log.Println("main: Writing out entire corpus")
-		analysis.WriteCorpusAll(fileLibraryLoader, dictTokenizer, outputConfig,
+		err := analysis.WriteCorpusAll(fileLibraryLoader, dictTokenizer, outputConfig,
 				corpusConfig, indexConfig, wdict)
+		if err != nil {
+			log.Fatalf("main: Writing out corpus, err: %v\n", err)
+		}
 	}
 
 	// Memory profiling

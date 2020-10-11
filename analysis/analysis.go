@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -349,7 +350,8 @@ func span(w dicttypes.Word, text string) string {
 //   results: vocabulary analysis results
 func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 		dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig,
-		wdict map[string]dicttypes.Word) (tokens list.List, results CollectionAResults) {
+		wdict map[string]dicttypes.Word) (list.List, *CollectionAResults) {
+	tokens := list.List{}
 	vocab := map[string]int{}
 	bigrams := map[string]int{}
 	bigramMap := ngram.BigramFreqMap{}
@@ -415,7 +417,7 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 	}
 	dl := index.DocLength{document.GlossFile, wc}
 	dlArray := []index.DocLength{dl}
-	results = CollectionAResults{
+	results := CollectionAResults{
 		Vocab:				vocab,
 		Bigrams:			bigrams,
 		Usage:				usage,
@@ -426,7 +428,7 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 		UnknownChars:		unknownChars,
 		DocLengthArray:		dlArray,
 	}
-	return tokens, results
+	return tokens, &results
 }
 
 // Sample word usage for usability making sure that the list of word usage
@@ -463,7 +465,7 @@ func add(x, y int) int {
 //   results: The results of corpus analysis
 //   docFreq: document frequency for terms
 // Returns: the name of the file written to
-func writeAnalysisCorpus(results CollectionAResults,
+func writeAnalysisCorpus(results *CollectionAResults,
 		docFreq index.DocumentFrequency, outputConfig corpus.HTMLOutPutConfig,
 		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) string {
 
@@ -558,7 +560,7 @@ func writeAnalysisCorpus(results CollectionAResults,
 // collectionTitle: The title of the whole colleciton
 // docTitle: The title of this specific document
 // Returns the name of the file written to
-func writeAnalysis(results CollectionAResults, srcFile, glossFile,
+func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 		collectionTitle, docTitle string,
 		outputConfig corpus.HTMLOutPutConfig,
 		wdict map[string]dicttypes.Word) string {
@@ -697,7 +699,7 @@ func writeAnalysis(results CollectionAResults, srcFile, glossFile,
 func writeCollection(collectionEntry corpus.CollectionEntry,
 		outputConfig corpus.HTMLOutPutConfig, libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig,
-		wdict map[string]dicttypes.Word) CollectionAResults {
+		wdict map[string]dicttypes.Word) (*CollectionAResults, error) {
 
 	log.Printf("analysis.writeCollection: enter CollectionFile =" +
 			collectionEntry.CollectionFile)
@@ -722,9 +724,20 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		if strings.HasSuffix(entry.RawFile, ".html") {
 			sourceFormat = "HTML"
 		}
-		writeCorpusDoc(tokens, results.Vocab, dest, collectionEntry.GlossFile,
+		f, err := os.Create(dest)
+		if err != nil {
+			return nil, fmt.Errorf("writeCollection could not open file: %v", err)
+		}
+		defer f.Close()
+		w := bufio.NewWriter(f)
+		defer w.Flush()
+
+		err = writeCorpusDoc(tokens, results.Vocab, w, collectionEntry.GlossFile,
 				collectionEntry.Title, entry.Title, aFile, sourceFormat, outputConfig,
 				corpusConfig, wdict)
+		if err != nil {
+			return nil, fmt.Errorf("writeCollection, error writing corpus doc: %v", err)
+		}
 		aResults.AddResults(results)
 		aResults.DocFreq.AddVocabulary(results.Vocab)
 		aResults.BigramDF.AddVocabulary(results.Bigrams)
@@ -733,12 +746,12 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		aResults.BigramDocMap.AddWF(results.Bigrams, collectionEntry.GlossFile,
 				entry.GlossFile, results.WC)
 	}
-	aFile := writeAnalysis(aResults, collectionEntry.CollectionFile,
+	aFile := writeAnalysis(&aResults, collectionEntry.CollectionFile,
 		collectionEntry.GlossFile, collectionEntry.Title, "", outputConfig, wdict)
 	corpus.WriteCollectionFile(collectionEntry, aFile, outputConfig,
 			corpusConfig)
 	//log.Printf("analysis.writeCollection: exit\n")
-	return aResults
+	return &aResults, nil
 }
 
 // Write all the collections in the given corpus
@@ -748,7 +761,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		outputConfig corpus.HTMLOutPutConfig,
 		libLoader library.LibraryLoader, dictTokenizer tokenizer.Tokenizer,
 		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word) {
+		wdict map[string]dicttypes.Word) error {
 	log.Printf("analysis.WriteCorpus: enter")
 	index.Reset(indexConfig)
 	wfDocMap := index.TermFreqDocMap{}
@@ -757,15 +770,18 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	bigramDF := index.NewDocumentFrequency()
 	aResults := NewCollectionAResults()
 	for _, collectionEntry := range collections {
-		results := writeCollection(collectionEntry, outputConfig, libLoader,
+		results, err := writeCollection(collectionEntry, outputConfig, libLoader,
 				dictTokenizer, corpusConfig, wdict)
+		if err != nil {
+			return fmt.Errorf("WriteCorpus could not open file: %v", err)
+		}
 		aResults.AddResults(results)
 		docFreq.AddDocFreq(results.DocFreq)
 		bigramDF.AddDocFreq(results.BigramDF)
 		wfDocMap.Merge(results.WFDocMap)
 		bigramDocMap.Merge(results.BigramDocMap)
 	}
-	writeAnalysisCorpus(aResults, docFreq, outputConfig, indexConfig, wdict)
+	writeAnalysisCorpus(&aResults, docFreq, outputConfig, indexConfig, wdict)
 	docFreq.WriteToFile(index.DOC_FREQ_FILE, indexConfig)
 	bigramDF.WriteToFile(index.BIGRAM_DOC_FREQ_FILE, indexConfig)
 	wfDocMap.WriteToFile(docFreq, index.WF_DOC_FILE, indexConfig)
@@ -773,18 +789,23 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	index.WriteDocLengthToFile(aResults.DocLengthArray, index.DOC_LENGTH_FILE, indexConfig)
 	index.BuildIndex(indexConfig)
 	log.Printf("analysis.WriteCorpus: exit")
+	return nil
 }
 
 // Write all the collections in the default corpus (collections.csv file)
 func WriteCorpusAll(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, outputConfig corpus.HTMLOutPutConfig,
 		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word) {
+		wdict map[string]dicttypes.Word) error {
 	log.Printf("analysis.WriteCorpusAll: enter")
 	corpLoader := libLoader.GetCorpusLoader()
 	collections := corpLoader.LoadCorpus(corpus.COLLECTIONS_FILE)
-	WriteCorpus(collections, outputConfig, libLoader, dictTokenizer,
+	err := WriteCorpus(collections, outputConfig, libLoader, dictTokenizer,
 			corpusConfig, indexConfig, wdict)
+	if err != nil {
+		return fmt.Errorf("WriteCorpusAll could not open file: %v", err)
+	}
+	return nil
 }
 
 // Writes a corpus document collection to HTML, including all the entries
@@ -801,7 +822,7 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 			corpusConfig, wdict)
 }
 
-// Writes a corpus document with markup for the array of tokens
+// writeCorpusDoc writes a corpus document with markup for the array of tokens
 // tokens: A list of tokens forming the document
 // vocab: A list of word id's in the document
 // filename: The file name to write to
@@ -810,10 +831,10 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 // collectionTitle: The collection title that the corpus entry belongs to
 // aFile: The vocabulary analysis file written to or empty string for none
 // sourceFormat: TEXT, or HTML used for formatting output
-func writeCorpusDoc(tokens list.List, vocab map[string]int, filename string,
+func writeCorpusDoc(tokens list.List, vocab map[string]int, w io.Writer,
 	collectionURL string, collectionTitle string, entryTitle string,
 	aFile string, sourceFormat string, outputConfig corpus.HTMLOutPutConfig,
-		corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) {
+		corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) error {
 
 	var b bytes.Buffer
 	replacer := strings.NewReplacer("\n", "<br/>")
@@ -837,21 +858,13 @@ func writeCorpusDoc(tokens list.List, vocab map[string]int, filename string,
 	content := CorpusEntryContent{textContent, dateUpdated, collectionURL,
 		collectionTitle, entryTitle, aFile}
 
-	// Write to file
-	f, err := os.Create(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-	w := bufio.NewWriter(f)
-
 	templFile := outputConfig.TemplateDir + "/corpus-template.html"
 	tmpl := template.Must(template.New("corpus-template.html").ParseFiles(templFile))
-	err = tmpl.Execute(w, content)
+	err := tmpl.Execute(w, content)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not execute template: %v", err)
 	}
-	w.Flush()
+	return nil
 }
 
 // Writes a document with markup for the array of tokens

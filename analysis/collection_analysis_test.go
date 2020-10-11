@@ -97,7 +97,7 @@ func TestAddResults(t *testing.T) {
 	}
 
 	// Method to test
-	results.AddResults(more)
+	results.AddResults(&more)
 
 	// Check results
 	r := results.Vocab["three"]

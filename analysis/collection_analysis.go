@@ -26,7 +26,7 @@ type CollectionAResults struct {
 }
 
 // Add more results to this set of results
-func (results *CollectionAResults) AddResults(more CollectionAResults) {
+func (results *CollectionAResults) AddResults(more *CollectionAResults) {
 
 	for k, v := range more.Vocab {
 		results.Vocab[k] += v

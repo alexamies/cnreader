@@ -4,7 +4,7 @@
 package analysis
 
 import (
-	"container/list"
+	"bytes"
 	"strings"
 	"testing"
 	"time"
@@ -17,20 +17,12 @@ import (
 	"github.com/alexamies/cnreader/library"
 )
 
-func listToString(l list.List) string {
-	text := ""
-	for e := l.Front(); e != nil; e = e.Next() {
-		text += e.Value.(string)
-	}
-	return text
-}
-
 func mockCorpusConfig() corpus.CorpusConfig {
 	return corpus.CorpusConfig{
 		CorpusDataDir: "data/corpus",
 		CorpusDir: "corpus",
 		Excluded: map[string]bool{},
-		ProjectHome: "..",
+		ProjectHome: ".",
 	}
 }
 
@@ -160,12 +152,6 @@ func mockValidator() (dictionary.Validator, error) {
 	const domainList = "艺术	Art	\\N	\\N\n佛教	Buddhism	\\N	\\N\n"
 	domainReader := strings.NewReader(domainList)
 	return dictionary.NewValidator(posReader, domainReader)
-}
-
-func printList(t *testing.T, l list.List) {
-	for e := l.Front(); e != nil; e = e.Next() {
-		t.Log(e.Value)
-	}
 }
 
 func TestDecodeUsageExample1(t *testing.T) {
@@ -305,6 +291,7 @@ func TestReadText2(t *testing.T) {
 func TestParseText(t *testing.T) {
 	t.Log("TestParseText: Begin ********")
 	testCases := []struct {
+		name string
 		in  string
 		expectedFirst string
 		expectedTokens int
@@ -313,6 +300,7 @@ func TestParseText(t *testing.T) {
 		expectedCC int
 	}{
 		{
+			name: "One token",
 			in: "繁體中文", 
 			expectedFirst: "繁體中文",
 			expectedTokens: 1,
@@ -321,6 +309,7 @@ func TestParseText(t *testing.T) {
 			expectedCC: 4,
 		},
 		{
+			name: "ASCII and one token",
 			in: "a繁體中文", 
 			expectedFirst: "a",
 			expectedTokens: 2,
@@ -329,6 +318,7 @@ func TestParseText(t *testing.T) {
 			expectedCC: 4,
 		},
 		{
+			name: "Three tokens",
 			in: "前不见古人", 
 			expectedFirst: "前",
 			expectedTokens: 3,
@@ -337,9 +327,10 @@ func TestParseText(t *testing.T) {
 			expectedCC: 5,
 		},
 		{
+			name: "More tokens",
 			in: "夫起信論者，乃是...。", 
-			expectedFirst: "前",
-			expectedTokens: 4,
+			expectedFirst: "夫",
+			expectedTokens: 6,
 			expectedVocab: 4,
 			expectedWC: 4,
 			expectedCC: 7,
@@ -351,46 +342,25 @@ func TestParseText(t *testing.T) {
 		tokens, results := ParseText(tc.in, "", corpus.NewCorpusEntry(),
 			tok, mockCorpusConfig(), wdict)
 		if tokens.Len() != tc.expectedTokens {
-			t.Fatalf("expectedTokens %d, got %d", tc.expectedTokens, tokens.Len())
+			t.Fatalf("%s: expectedTokens %d, got %d", tc.name, tc.expectedTokens,
+					tokens.Len())
 		}
 		first := tokens.Front().Value.(string)
 		if tc.expectedFirst != first {
-			t.Errorf("expectedFirst: %s, got %s", tc.expectedFirst, first)
+			t.Errorf("%s: expectedFirst: %s, got %s", tc.name, tc.expectedFirst, first)
 		}
 		if tc.expectedVocab != len(results.Vocab) {
-			t.Errorf("expectedVocab = %d, got %d", tc.expectedVocab, len(results.Vocab))
+			t.Errorf("%s: expectedVocab = %d, got %d", tc.name, tc.expectedVocab,
+					len(results.Vocab))
 		}
 		if tc.expectedWC != results.WC {
-			t.Errorf("expectedWC: %d, got %d", tc.expectedWC, results.WC)
+			t.Errorf("%s: expectedWC: %d, got %d", tc.name, tc.expectedWC, results.WC)
 		}
 		if tc.expectedCC != results.CCount {
-			t.Errorf("expectedCC: %d, got %d", tc.expectedCC, results.CCount)
+			t.Errorf("%s: expectedCC: %d, got %d", tc.name, tc.expectedCC, results.CCount)
 		}
 	}
 	t.Log("TestParseText: End ******** ")
-}
-
-func TestParseText5(t *testing.T) {
-	wdict := make(map[string]dicttypes.Word)
-	corpusLoader := mockFileCorpusLoader()
-	text := corpusLoader.ReadText("../testdata/test-trad.html")
-	tokens, results := ParseText(text, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
-	tokenText := listToString(tokens)
-	if len(text) != len(tokenText) {
-		t.Error("Expected to string length ", len(text), ", got ",
-			len(tokenText))
-		printList(t, tokens)
-	}
-	if results.CCount != 49 {
-		t.Error("Expected to get char count 49, got ", results.CCount)
-		return
-	}
-	if len(results.Vocab) != 36 {
-		t.Error("Expected to get Vocab 37, got ", len(results.Vocab),
-			results.Vocab)
-		return
-	}
 }
 
 // Basic test with no data
@@ -532,16 +502,22 @@ func TestWriteAnalysis(t *testing.T) {
 	t.Log("analysis.TestWriteAnalysis: End +++++++++++")
 }
 
-func TestWriteCorpusDoc1(t *testing.T) {
-	t.Log("analysis.TestWriteCorpusDoc1: Begin +++++++++++")
+func TestWriteCorpusDoc(t *testing.T) {
+	t.Log("analysis.TestWriteCorpusDoc: Begin +++++++++++")
 	corpusConfig := mockCorpusConfig()
 	wdict := make(map[string]dicttypes.Word)
 	tokens, results := ParseText("繁", "", corpus.NewCorpusEntry(),
 			tokenizer.DictTokenizer{}, corpusConfig, wdict)
-	outfile := "../testoutput/output.html"
-	writeCorpusDoc(tokens, results.Vocab, outfile, "", "", "", "", "TXT",
+	var buf bytes.Buffer
+	err := writeCorpusDoc(tokens, results.Vocab, &buf, "", "", "", "", "TXT",
 			mockOutputConfig(), corpusConfig, wdict)
-	t.Log("analysis.TestWriteCorpusDoc1: End +++++++++++")
+	if err != nil {
+		t.Fatalf("TestWriteCorpusDoc error: %v", err)
+	}
+	if buf.Len() == 0 {
+		t.Error("TestWriteCorpusDoc buffer is empty")
+	}
+	t.Log("analysis.TestWriteCorpusDoc: End +++++++++++")
 }
 
 func TestWriteDoc1(t *testing.T) {
