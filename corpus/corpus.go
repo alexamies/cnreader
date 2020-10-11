@@ -1,6 +1,16 @@
-/*
-Package for scanning the corpus collections
-*/
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//Package for scanning the corpus collections
 package corpus
 
 import (
@@ -13,8 +23,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"text/template"
-	"time"
 )
 
 type CollectionEntry struct {
@@ -28,16 +36,6 @@ const COLLECTIONS_FILE = "collections.csv"
 // An entry in a collection
 type CorpusEntry struct {
 	RawFile, GlossFile, Title, ColTitle string
-}
-
-// HTMLOutPutConfig encapsulates parameters for writing output to HTML
-type HTMLOutPutConfig struct {
-	ContainsByDomain string
-	Domain string
-	GoStaticDir string
-	TemplateDir string
-	VocabFormat string
-	WebDir string
 }
 
 // CorpusConfig encapsulates parameters for corpus configuration
@@ -318,36 +316,4 @@ func readText(filename string) string {
 	}
 	//fmt.Printf("ReadText: read text %s\n", text)
 	return text
-}
-
-// Writes a HTML file describing the collection
-// Parameter
-// collectionFile: The name of the file describing the collection
-// baseDir: The base directory for writing the file
-func WriteCollectionFile(entry CollectionEntry, analysisFile string,
-		outputConfig HTMLOutPutConfig, corpusConfig CorpusConfig) {
-	collectionFile := entry.CollectionFile
-	//log.Printf("WriteCollectionFile: Writing collection file %s\n",
-	//			outputFile)
-	entry.CorpusEntries = loadCorpusEntries(collectionFile, entry.Title, corpusConfig)
-	entry.AnalysisFile = analysisFile
-	fName := outputConfig.WebDir + "/" + entry.GlossFile
-	f, err := os.Create(fName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-	w := bufio.NewWriter(f)
-	// Replace name of intro file with introduction text
-	entry.Intro = ReadIntroFile(entry.Intro, corpusConfig)
-	entry.DateUpdated = time.Now().Format("2006-01-02")
-	templFile := outputConfig.TemplateDir + "/collection-template.html"
-	//log.Println("WriteCollectionFile: wrote %s", fName)
-	tmpl:= template.Must(template.New(
-					"collection-template.html").ParseFiles(templFile))
-	err = tmpl.Execute(w, entry)
-	if err != nil {
-		log.Fatal(err)
-	}
-	w.Flush()
 }

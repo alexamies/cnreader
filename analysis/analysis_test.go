@@ -1,10 +1,18 @@
-/*
- * Unit tests for the analysis package
- */
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package analysis
 
 import (
-	"bytes"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +21,7 @@ import (
 	"github.com/alexamies/chinesenotes-go/dicttypes"	
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/corpus"
+	"github.com/alexamies/cnreader/generator"
 	"github.com/alexamies/cnreader/index"
 	"github.com/alexamies/cnreader/library"
 )
@@ -33,8 +42,8 @@ func mockIndexConfig() index.IndexConfig {
 	}
 }
 
-func mockOutputConfig() corpus.HTMLOutPutConfig {
-	return corpus.HTMLOutPutConfig{
+func mockOutputConfig() generator.HTMLOutPutConfig {
+	return generator.HTMLOutPutConfig{
 		ContainsByDomain: "",
 		Domain: "",
 		GoStaticDir: "static",
@@ -152,66 +161,6 @@ func mockValidator() (dictionary.Validator, error) {
 	const domainList = "艺术	Art	\\N	\\N\n佛教	Buddhism	\\N	\\N\n"
 	domainReader := strings.NewReader(domainList)
 	return dictionary.NewValidator(posReader, domainReader)
-}
-
-func TestDecodeUsageExample1(t *testing.T) {
-	s1 := "海"
-	s2 := "\\N"
-	hw := dicttypes.Word{
-		HeadwordId:          1,
-		Simplified:  s1,
-		Traditional: s2,
-		Pinyin:      "hǎi",
-		Senses:  []dicttypes.WordSense{},
-	}
-	wdict := make(map[string]dicttypes.Word)
-	highlighted := decodeUsageExample("海", hw, tokenizer.DictTokenizer{},
-			mockOutputConfig(), mockCorpusConfig(), wdict)
-	expected := "<span class='usage-highlight'>海</span>"
-	if highlighted != expected {
-		t.Error("TestDecodeUsageExample1: Expected ", expected, ", got",
-			highlighted)
-	}
-}
-
-func TestDecodeUsageExample2(t *testing.T) {
-	s1 := "海"
-	s2 := "\\N"
-	hw := dicttypes.Word{
-		HeadwordId:          1,
-		Simplified:  s1,
-		Traditional: s2,
-		Pinyin:      "hǎi",
-		Senses:  []dicttypes.WordSense{},
-	}
-	wdict := make(map[string]dicttypes.Word)
-	highlighted := decodeUsageExample("banana", hw, tokenizer.DictTokenizer{},
-			mockOutputConfig(), mockCorpusConfig(), wdict)
-	expected := "banana"
-	if highlighted != expected {
-		t.Error("TestDecodeUsageExample2: Expected ", expected, ", got",
-			highlighted)
-	}
-}
-
-func TestDecodeUsageExample3(t *testing.T) {
-	s1 := "国"
-	s2 := "國"
-	hw := dicttypes.Word{
-		HeadwordId:          1,
-		Simplified:  s1,
-		Traditional: s2,
-		Pinyin:      "guó",
-		Senses:  []dicttypes.WordSense{},
-	}
-	wdict := make(map[string]dicttypes.Word)
-	highlighted := decodeUsageExample("國", hw, tokenizer.DictTokenizer{},
-			mockOutputConfig(), mockCorpusConfig(), wdict)
-	expected := "<span class='usage-highlight'>國</span>"
-	if highlighted != expected {
-		t.Error("TestDecodeUsageExample3: Expected ", expected, ", got",
-			highlighted)
-	}
 }
 
 func TestGetChunks1(t *testing.T) {
@@ -500,24 +449,6 @@ func TestWriteAnalysis(t *testing.T) {
 	writeAnalysis(results, srcFile, glossFile, "Test Collection", "Test Doc",
 			mockOutputConfig(), wdict)
 	t.Log("analysis.TestWriteAnalysis: End +++++++++++")
-}
-
-func TestWriteCorpusDoc(t *testing.T) {
-	t.Log("analysis.TestWriteCorpusDoc: Begin +++++++++++")
-	corpusConfig := mockCorpusConfig()
-	wdict := make(map[string]dicttypes.Word)
-	tokens, results := ParseText("繁", "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, corpusConfig, wdict)
-	var buf bytes.Buffer
-	err := writeCorpusDoc(tokens, results.Vocab, &buf, "", "", "", "", "TXT",
-			mockOutputConfig(), corpusConfig, wdict)
-	if err != nil {
-		t.Fatalf("TestWriteCorpusDoc error: %v", err)
-	}
-	if buf.Len() == 0 {
-		t.Error("TestWriteCorpusDoc buffer is empty")
-	}
-	t.Log("analysis.TestWriteCorpusDoc: End +++++++++++")
 }
 
 func TestWriteDoc1(t *testing.T) {

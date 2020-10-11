@@ -15,6 +15,7 @@ package main
 import (
 	"container/list"
 	"flag"
+	"fmt"
 	"os"
 	"testing"
 
@@ -56,11 +57,14 @@ func testFileCorpusLoader(corpusConfig corpus.CorpusConfig) corpus.FileCorpusLoa
 	}
 }
 
-// TestMain tests the main function.
+// TestMain runs integration tests if the flag -integration is set
 func TestMain(m *testing.M) {
+	flag.Parse()
 	if *integration {
+		fmt.Println("Running integration test")
 		os.Exit(m.Run())
 	}
+	fmt.Println("Skipping integration test")
 }
 
 func TestIntegration(t *testing.T) {

@@ -1,6 +1,16 @@
-/*
-Library for Chinese vocabulary analysis
-*/
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package for Chinese vocabulary analysis of a corpus
 package analysis
 
 import (
@@ -8,7 +18,6 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strings"
@@ -20,6 +29,7 @@ import (
 	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/corpus"
+	"github.com/alexamies/cnreader/generator"
 	"github.com/alexamies/cnreader/index"
 	"github.com/alexamies/cnreader/ngram"
 	"github.com/alexamies/cnreader/library"
@@ -59,11 +69,6 @@ type AnalysisResults struct {
 	UnkownnChars            []index.SortedWordItem
 	DateUpdated             string
 	MaxWFOutput             int
-}
-
-// The content for a corpus entry
-type CorpusEntryContent struct {
-	CorpusText, DateUpdated, CollectionURL, CollectionTitle, EntryTitle, AnalysisFile string
 }
 
 // Dictionary entry content struct used for writing a dictionary entry to HTML
@@ -170,32 +175,6 @@ func FilterByDomain(hws []dicttypes.Word, domain string) []dicttypes.Word {
 	return headwords
 }
 
-// decodeUsageExample formats usage example text into links with highlight
-//   Return
-//      marked up text with links and highlight
-func decodeUsageExample(usageText string, headword dicttypes.Word,
-		dictTokenizer tokenizer.Tokenizer, outputConfig corpus.HTMLOutPutConfig,
-		corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) string {
-	tokens, _ := ParseText(usageText, "", corpus.NewCorpusEntry(),
-			dictTokenizer, corpusConfig, wdict)
-	replacementText := ""
-	for e := tokens.Front(); e != nil; e = e.Next() {
-		word := e.Value.(string)
-		if word == headword.Simplified || word == headword.Traditional {
-			replacementText = replacementText +
-				"<span class='usage-highlight'>" + word + "</span>"
-		} else {
-			ws, ok := wdict[word]
-			if ok {
-				replacementText = replacementText + hyperlink(ws, word, outputConfig.VocabFormat)
-			} else {
-				replacementText = replacementText + word
-			}
-		}
-	}
-	return replacementText
-}
-
 // Breaks text into a list of CJK and non CJK strings
 func GetChunks(text string) list.List {
 	var chunks list.List
@@ -291,53 +270,6 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 	log.Printf("WordFrequencies: character count = %d\n", ccount)
 
 	return VocabAnalysis{usageMap, wfTotal, wcTotal, collocations}
-}
-
-// Constructs a hyperlink for a headword, including Pinyin and English in the
-// title attribute for the link mouseover
-func hyperlink(w dicttypes.Word, text, vocabFormat string) string {
-	classTxt := "vocabulary"
-	if w.IsProperNoun() {
-		classTxt = classTxt + " propernoun"
-	}
-	pinyin := w.Pinyin
-	english := ""
-	if len(w.Senses) > 0 {
-		english = w.Senses[0].English
-	}
-	if len(w.Senses) > 1 {
-		english = ""
-		for i, entry := range w.Senses {
-			english += fmt.Sprintf("%d. %s, ", i + 1, entry.English)
-		}
-		english = english[0:len(english)-2]
-	}
-	return fmt.Sprintf(vocabFormat, pinyin, english, classTxt,
-			w.HeadwordId, text)
-}
-
-// span constructs a HTML span element for a headword
-// in the title attribute for the mouseover and headword id in the microdata
-// 'data' attrbute.
-func span(w dicttypes.Word, text string) string {
-	classTxt := "vocabulary"
-	if w.IsProperNoun() {
-		classTxt = classTxt + " propernoun"
-	}
-	pinyin := w.Pinyin
-	english := ""
-	if len(w.Senses) > 0 {
-		english = w.Senses[0].English
-	}
-	if len(w.Senses) > 1 {
-		english = ""
-		for i, entry := range w.Senses {
-			english += fmt.Sprintf("%d. %s, ", i + 1, entry.English)
-		}
-		english = english[0:len(english)-2]
-	}
-	vocabFormat := `<span title="%s | %s" class="%s" itemprop="HeadwordId" value="%d">%s</span>`
-	return fmt.Sprintf(vocabFormat, pinyin, english, classTxt, w.HeadwordId, text)
 }
 
 // Parses a Chinese text into words
@@ -466,7 +398,7 @@ func add(x, y int) int {
 //   docFreq: document frequency for terms
 // Returns: the name of the file written to
 func writeAnalysisCorpus(results *CollectionAResults,
-		docFreq index.DocumentFrequency, outputConfig corpus.HTMLOutPutConfig,
+		docFreq index.DocumentFrequency, outputConfig generator.HTMLOutPutConfig,
 		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) string {
 
 	// If the web/analysis directory does not exist, then skip the analysis
@@ -562,7 +494,7 @@ func writeAnalysisCorpus(results *CollectionAResults,
 // Returns the name of the file written to
 func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 		collectionTitle, docTitle string,
-		outputConfig corpus.HTMLOutPutConfig,
+		outputConfig generator.HTMLOutPutConfig,
 		wdict map[string]dicttypes.Word) string {
 
 	//log.Printf("analysis.writeAnalysis: enter")
@@ -697,7 +629,7 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 // collectionEntry: the CollectionEntry struct
 // baseDir: The base directory to use
 func writeCollection(collectionEntry corpus.CollectionEntry,
-		outputConfig corpus.HTMLOutPutConfig, libLoader library.LibraryLoader,
+		outputConfig generator.HTMLOutPutConfig, libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig,
 		wdict map[string]dicttypes.Word) (*CollectionAResults, error) {
 
@@ -716,7 +648,7 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		//		"empty, input file: %s, output file: %s\n", src, dest)
 		//}
 		text := corpLoader.ReadText(src)
-		tokens, results := ParseText(text, collectionEntry.Title, &entry,
+		_, results := ParseText(text, collectionEntry.Title, &entry,
 				dictTokenizer, corpusConfig, wdict)
 		aFile := writeAnalysis(results, entry.RawFile, entry.GlossFile,
 			collectionEntry.Title, entry.Title, outputConfig, wdict)
@@ -732,7 +664,8 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		w := bufio.NewWriter(f)
 		defer w.Flush()
 
-		err = writeCorpusDoc(tokens, results.Vocab, w, collectionEntry.GlossFile,
+		textTokens := dictTokenizer.Tokenize(text)
+		err = generator.WriteCorpusDoc(textTokens, results.Vocab, w, collectionEntry.GlossFile,
 				collectionEntry.Title, entry.Title, aFile, sourceFormat, outputConfig,
 				corpusConfig, wdict)
 		if err != nil {
@@ -748,9 +681,12 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	}
 	aFile := writeAnalysis(&aResults, collectionEntry.CollectionFile,
 		collectionEntry.GlossFile, collectionEntry.Title, "", outputConfig, wdict)
-	corpus.WriteCollectionFile(collectionEntry, aFile, outputConfig,
-			corpusConfig)
-	//log.Printf("analysis.writeCollection: exit\n")
+	introText := corpus.ReadIntroFile(collectionEntry.Intro, corpusConfig)
+	err := generator.WriteCollectionFile(collectionEntry, aFile, outputConfig,
+			corpusConfig, corpusEntries, introText)
+	if err != nil {
+		return nil, fmt.Errorf("Error writing collection file: %v ", err)
+	}
 	return &aResults, nil
 }
 
@@ -758,7 +694,7 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 // collections: The set of collections to write to HTML
 // baseDir: The base directory to use to write the files
 func WriteCorpus(collections []corpus.CollectionEntry,
-		outputConfig corpus.HTMLOutPutConfig,
+		outputConfig generator.HTMLOutPutConfig,
 		libLoader library.LibraryLoader, dictTokenizer tokenizer.Tokenizer,
 		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig,
 		wdict map[string]dicttypes.Word) error {
@@ -794,7 +730,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 
 // Write all the collections in the default corpus (collections.csv file)
 func WriteCorpusAll(libLoader library.LibraryLoader,
-		dictTokenizer tokenizer.Tokenizer, outputConfig corpus.HTMLOutPutConfig,
+		dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
 		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig,
 		wdict map[string]dicttypes.Word) error {
 	log.Printf("analysis.WriteCorpusAll: enter")
@@ -812,7 +748,7 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 // contained in the collection
 // collectionFile: the name of the collection file
 func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
-			dictTokenizer tokenizer.Tokenizer, outputConfig corpus.HTMLOutPutConfig,
+			dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
 			corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) {
 	collectionEntry, err := libLoader.GetCorpusLoader().GetCollectionEntry(collectionFile)
 	if err != nil {
@@ -820,51 +756,6 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 	}
 	writeCollection(collectionEntry, outputConfig, libLoader, dictTokenizer,
 			corpusConfig, wdict)
-}
-
-// writeCorpusDoc writes a corpus document with markup for the array of tokens
-// tokens: A list of tokens forming the document
-// vocab: A list of word id's in the document
-// filename: The file name to write to
-// HTML template to use
-// collectionURL: the URL of the collection that the corpus text belongs to
-// collectionTitle: The collection title that the corpus entry belongs to
-// aFile: The vocabulary analysis file written to or empty string for none
-// sourceFormat: TEXT, or HTML used for formatting output
-func writeCorpusDoc(tokens list.List, vocab map[string]int, w io.Writer,
-	collectionURL string, collectionTitle string, entryTitle string,
-	aFile string, sourceFormat string, outputConfig corpus.HTMLOutPutConfig,
-		corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) error {
-
-	var b bytes.Buffer
-	replacer := strings.NewReplacer("\n", "<br/>")
-
-	// Iterate over text chunks
-	for e := tokens.Front(); e != nil; e = e.Next() {
-		chunk := e.Value.(string)
-		//fmt.Printf("WriteDoc: Word %s\n", word)
-		if entries, ok := wdict[chunk]; ok && !corpus.IsExcluded(corpusConfig.Excluded, chunk) {
-			fmt.Fprintf(&b, span(entries, chunk))
-		} else {
-			if sourceFormat != "HTML" {
-				chunk = replacer.Replace(chunk)
-			}
-			b.WriteString(chunk)
-		}
-	}
-
-	textContent := b.String()
-	dateUpdated := time.Now().Format("2006-01-02")
-	content := CorpusEntryContent{textContent, dateUpdated, collectionURL,
-		collectionTitle, entryTitle, aFile}
-
-	templFile := outputConfig.TemplateDir + "/corpus-template.html"
-	tmpl := template.Must(template.New("corpus-template.html").ParseFiles(templFile))
-	err := tmpl.Execute(w, content)
-	if err != nil {
-		return fmt.Errorf("could not execute template: %v", err)
-	}
-	return nil
 }
 
 // Writes a document with markup for the array of tokens
@@ -962,7 +853,7 @@ func writeHTMLDoc(tokens list.List, vocab map[string]int, filename,
 
 // Writes dictionary headword entries
 func WriteHwFiles(loader library.LibraryLoader,
-		dictTokenizer tokenizer.Tokenizer, outputConfig corpus.HTMLOutPutConfig,
+		dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
 		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig,
 		wdict map[string]dicttypes.Word) {
 	log.Printf("analysis.WriteHwFiles: Begin +++++++++++\n")
@@ -1033,8 +924,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 		// Decorate useage text
 		hlUsageArr := []WordUsage{}
 		for _, wu := range *usageArrPtr {
-			hlText := decodeUsageExample(wu.Example, hw, dictTokenizer, outputConfig,
-					corpusConfig, wdict)
+			hlText := generator.DecodeUsageExample(wu.Example, hw, dictTokenizer, outputConfig, wdict)
 			hlWU := WordUsage{
 				Freq:       wu.Freq,
 				RelFreq:    wu.RelFreq,
@@ -1080,7 +970,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 // Writes a HTML files describing the corpora in the library, both public and
 // for the translation portal (requiring login)
 func writeLibraryFile(lib library.Library, corpora []library.CorpusData,
-		outputFile string, outputConfig corpus.HTMLOutPutConfig) {
+		outputFile string, outputConfig generator.HTMLOutPutConfig) {
 	log.Printf("analysis.writeLibraryFile: with %d corpora, outputFile = %s, " +
 			"TargetStatus = %s", len(corpora), outputFile, lib.TargetStatus)
 	libData := library.LibraryData{
@@ -1110,7 +1000,7 @@ func writeLibraryFile(lib library.Library, corpora []library.CorpusData,
 // Writes a HTML file describing the corpora in the library and for each corpus
 // in the library
 func WriteLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
-			outputConfig corpus.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
+			outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
 			indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) {
 	corpora := lib.Loader.LoadLibrary()
 	libraryOutFile := outputConfig.WebDir + "/library.html"

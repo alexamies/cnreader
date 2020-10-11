@@ -33,6 +33,7 @@ import (
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/analysis"
 	"github.com/alexamies/cnreader/corpus"
+	"github.com/alexamies/cnreader/generator"
 	"github.com/alexamies/cnreader/index"
 	"github.com/alexamies/cnreader/library"
 	"github.com/alexamies/cnreader/tmindex"
@@ -54,18 +55,16 @@ type htmlConversion struct {
 	Title string
 }
 
-func initApp() {
-	projectHome = os.Getenv("CNREADER_HOME")
-	log.Printf("config.init: projectHome: '%s'\n", projectHome)
-	if len(projectHome) == 0 {
-		projectHome = "."
-	}
-	excluded = corpus.LoadExcluded(getCorpusConfig())
+func initApp() config.AppConfig {
+	c := config.InitConfig()
+	projectHome = c.ProjectHome
+	excluded = corpus.LoadExcluded(getCorpusConfig(c))
 	df, err := index.ReadDocumentFrequency(getIndexConfig())
 	if err != nil {
 		log.Println("index.init Error reading document frequency continuing")
 	}
 	completeDF = df
+	return config.InitConfig()
 }
 
 // Gets the list of source and destination files for HTML conversion
@@ -74,7 +73,7 @@ func getHTMLConversions() []htmlConversion {
 	conversionsFile := projectHome + "/" + conversionsFile
 	convFile, err := os.Open(conversionsFile)
 	if err != nil {
-		log.Fatal("config.GetHTMLConversions fatal error: ", err)
+		log.Fatalf("getHTMLConversions.GetHTMLConversions fatal error: %v", err)
 	}
 	defer convFile.Close()
 	reader := csv.NewReader(convFile)
@@ -113,31 +112,31 @@ func getHTMLConversions() []htmlConversion {
 	return conversions
 }
 
-func getCorpusConfig() corpus.CorpusConfig {
+func getCorpusConfig(c config.AppConfig) corpus.CorpusConfig {
 	return corpus.CorpusConfig{
-		CorpusDataDir: config.CorpusDataDir(),
-		CorpusDir: config.CorpusDir(),
+		CorpusDataDir: c.CorpusDataDir(),
+		CorpusDir: c.CorpusDir(),
 		Excluded: excluded,
 		ProjectHome: projectHome,
 	}
 }
 
-func getDictionaryConfig() dicttypes.DictionaryConfig {
+func getDictionaryConfig(c config.AppConfig) dicttypes.DictionaryConfig {
 	return dicttypes.DictionaryConfig{
-		AvoidSubDomains: config.AvoidSubDomains(),
-		DictionaryDir: config.DictionaryDir(),
+		AvoidSubDomains: c.AvoidSubDomains(),
+		DictionaryDir: c.DictionaryDir(),
 	}
 }
 
-// Gets the Web directory, as used for serving HTML files
-func getHTMLOutPutConfig() corpus.HTMLOutPutConfig {
-	domain_label := config.GetVar("Domain")
+// getHTMLOutPutConfig gets the Web directory, as used for serving HTML files
+func getHTMLOutPutConfig(c config.AppConfig) generator.HTMLOutPutConfig {
+	domain_label := c.GetVar("Domain")
 	templateHome := os.Getenv("TEMPLATE_HOME")
 	//log.Printf("config.TemplateDir: templateHome: '%s'\n", templateHome)
 	if len(templateHome) == 0 {
 		templateHome = "html/templates"
 	}
-	vocabFormat := config.GetVar("VocabFormat")
+	vocabFormat := c.GetVar("VocabFormat")
 	if len(vocabFormat) == 0 {
 		vocabFormat = "<a title=\"%s | %s\" class=\"%s\" href=\"/words/%d.html\">%s</a>"
 	}
@@ -145,10 +144,10 @@ func getHTMLOutPutConfig() corpus.HTMLOutPutConfig {
 	if len(webDir) == 0 {
 		webDir = "web"
 	}
-	outputConfig := corpus.HTMLOutPutConfig{
-		ContainsByDomain: config.GetVar("ContainsByDomain"),
+	outputConfig := generator.HTMLOutPutConfig{
+		ContainsByDomain: c.GetVar("ContainsByDomain"),
 		Domain: domain_label,
-		GoStaticDir: config.GetVar("GoStaticDir"),
+		GoStaticDir: c.GetVar("GoStaticDir"),
 		TemplateDir: templateHome,
 		VocabFormat: vocabFormat,
 		WebDir: webDir,
@@ -182,21 +181,21 @@ func main() {
 				"this file")
 	flag.Parse()
 
-	initApp()
+	c := initApp()
 
-	outputConfig := getHTMLOutPutConfig()
-	corpusConfig := getCorpusConfig()
+	outputConfig := getHTMLOutPutConfig(c)
+	corpusConfig := getCorpusConfig(c)
 	indexConfig := getIndexConfig()
 
 	// Read headwords and validate
-	posFName := fmt.Sprintf("%s/%s", config.DictionaryDir(), "grammar.txt")
+	posFName := fmt.Sprintf("%s/%s", c.DictionaryDir(), "grammar.txt")
 	posFile, err := os.Open(posFName)
 	if err != nil {
 		log.Fatalf("creating opening pos file %s, %v", posFName, err)
 	}
 	defer posFile.Close()
 	posReader := bufio.NewReader(posFile)
-	domainFName := fmt.Sprintf("%s/%s", config.DictionaryDir(), "topics.txt")
+	domainFName := fmt.Sprintf("%s/%s", c.DictionaryDir(), "topics.txt")
 	domainFile, err := os.Open(domainFName)
 	if err != nil {
 		log.Fatalf("creating opening domain file %s, %v", domainFName, err)
@@ -214,7 +213,7 @@ func main() {
 		Config: corpusConfig,
 	}
 
-	wdict, err := fileloader.LoadDictFile(config.LUFileNames())
+	wdict, err := fileloader.LoadDictFile(c)
 	if err != nil {
 		log.Fatalf("Error opening dictionary: %v", err)
 	}
@@ -242,7 +241,7 @@ func main() {
 				src, dest, templateFile)
 			text := fileLibraryLoader.GetCorpusLoader().ReadText(src)
 			tokens, results := analysis.ParseText(text, "",
-					corpus.NewCorpusEntry(), dictTokenizer, getCorpusConfig(), wdict)
+					corpus.NewCorpusEntry(), dictTokenizer, getCorpusConfig(c), wdict)
 			analysis.WriteDoc(tokens, results.Vocab, dest, conversion.Template,
 					templateFile, conversion.GlossChinese, conversion.Title, corpusConfig, wdict)
 		}
