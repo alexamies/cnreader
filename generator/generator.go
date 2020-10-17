@@ -28,48 +28,57 @@ import (
 	"github.com/alexamies/cnreader/corpus"
 )
 
-const collectionTemplate = `
-<!DOCTYPE html>
-<html lang="en">
-  <body>
-    <h2>{{.Title}}</h2>
-    <p>{{.Summary}}</p>
-    <ul>
-      {{ range $element := .CorpusEntries }}
-      <li><ahref='/{{$element.GlossFile}}'>{{ $element.Title }}</a></li>
-      {{ end }}
-    </ul>
-    {{.Intro}}
-    <a href="/analysis/{{.AnalysisFile}}">vocabulary analysis</a>
-    <p>Page updated on {{.DateUpdated}}</p>
-  </body>
-</html>
-`
-const corpusTemplate = `
-<!DOCTYPE html>
-<html lang="en">
-  <body>
-    <h2>{{.CollectionTitle}}</h2>
-    <h3>{{.EntryTitle}}</h3>
-    <p>{{.CorpusText}}</p>
-    <p><a href='/analysis/{{.AnalysisFile}}'>vocabulary analysis</a></p>
-    <p>Page updated on {{.DateUpdated}}</p>
-  </body>
-</html>
-`
 // HTMLOutPutConfig holds parameters for writing output to HTML
 type HTMLOutPutConfig struct {
+
+	// Page title
+	Title string
+
+	// For rendering to HTML, if TemplateDir is not given
+	Templates map[string]*template.Template
+
+	// Used for selecting related words
 	ContainsByDomain string
+
+	// Domain that this corpus relates to, eg Modern Chinese
 	Domain string
+
+	// For linking to static assets, like CSS, etc
 	GoStaticDir string
+
+	// Containing a directory of Go templates, default to static templates if empty
 	TemplateDir string
+
+	// For formatting mouse over
 	VocabFormat string
+
+	// To write HTML files to
 	WebDir string
 }
 
 // CorpusEntryContent holds the content for a corpus entry
 type CorpusEntryContent struct {
-	CorpusText, DateUpdated, CollectionURL, CollectionTitle, EntryTitle, AnalysisFile string
+
+	// Page title
+	Title string
+
+	// Body text
+	CorpusText string
+
+	// Date that the content was updated
+	DateUpdated string
+
+	// A link to the connection of documents
+	CollectionURL string
+
+	// A title for the connection of documents
+	CollectionTitle string
+
+	// A title for this document
+	EntryTitle string
+
+	// Name of the file with analysis of this document
+	AnalysisFile string
 }
 
 // decodeUsageExample formats usage example text into links with highlight
@@ -163,15 +172,7 @@ func WriteCollectionFile(entry corpus.CollectionEntry, analysisFile string,
 	// Replace name of intro file with introduction text
 	entry.Intro = introText
 	entry.DateUpdated = time.Now().Format("2006-01-02")
-	var tmpl *template.Template
-	if len(outputConfig.TemplateDir) > 0 {
-		templFile := outputConfig.TemplateDir + "/collection-template.html"
-		tmpl = template.Must(template.New(
-					"collection-template.html").ParseFiles(templFile))
-	} else {
-		tmpl = template.Must(template.New(
-					"collection-template.html").Parse(collectionTemplate))
-	}
+	tmpl := outputConfig.Templates["collection-template.html"]
 	err = tmpl.Execute(w, entry)
 	if err != nil {
 		return fmt.Errorf("Error executing collection-template: %v ", err)
@@ -212,16 +213,18 @@ func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Wri
 
 	textContent := b.String()
 	dateUpdated := time.Now().Format("2006-01-02")
-	content := CorpusEntryContent{textContent, dateUpdated, collectionURL,
-		collectionTitle, entryTitle, aFile}
+	content := CorpusEntryContent{
+		Title: outputConfig.Title,
+		CorpusText: textContent,
+		DateUpdated: dateUpdated,
+		CollectionURL: collectionURL,
+		CollectionTitle: collectionTitle,
+		EntryTitle: entryTitle,
+		AnalysisFile: aFile}
 
-	var tmpl *template.Template
-	if len(outputConfig.TemplateDir) > 0 {
-		templFile := outputConfig.TemplateDir + "/corpus-template.html"
-		tmpl = template.Must(template.New("corpus-template.html").ParseFiles(templFile))
-	} else {
-		tmpl = template.Must(template.New(
-					"corpus-template.html").Parse(corpusTemplate))
+	tmpl := outputConfig.Templates["corpus-template.html"]
+	if tmpl == nil {
+		return fmt.Errorf("template is nul for entryTitle: %s", entryTitle)
 	}
 	err := tmpl.Execute(w, content)
 	if err != nil {

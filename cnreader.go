@@ -43,7 +43,7 @@ const conversionsFile = "data/corpus/html-conversion.csv"
 
 var (
 	// Loaded from disk in contrast to partially ready and still accumulating data
-	completeDF index.DocumentFrequency
+	completeDF *index.DocumentFrequency
 	excluded map[string]bool
 	projectHome string
 )
@@ -59,12 +59,22 @@ func initApp() config.AppConfig {
 	c := config.InitConfig()
 	projectHome = c.ProjectHome
 	excluded = corpus.LoadExcluded(getCorpusConfig(c))
-	df, err := index.ReadDocumentFrequency(getIndexConfig())
+
+	indexConfig := getIndexConfig()
+	dir := indexConfig.IndexDir
+	fname := dir + "/" + index.DocFreqFile
+	dfFile, err := os.Open(fname)
 	if err != nil {
-		log.Println("index.init Error reading document frequency continuing")
+		log.Printf("initApp: error opening word freq file (recoverable): %v", err)
 	}
-	completeDF = df
-	return config.InitConfig()
+	defer dfFile.Close()
+	df, err := index.ReadDocumentFrequency(dfFile)
+	if err != nil {
+		log.Printf("initApp: error reading document frequency (recoverable): %v", err)
+	} else {
+		completeDF = df
+	}
+	return c
 }
 
 // Gets the list of source and destination files for HTML conversion
@@ -144,7 +154,14 @@ func getHTMLOutPutConfig(c config.AppConfig) generator.HTMLOutPutConfig {
 	if len(webDir) == 0 {
 		webDir = "web"
 	}
+	title := c.GetVar("Title")
+	if len(title) == 0 {
+		title = "Chinese Notes Translation Portal"
+	}
+	templates := generator.NewTemplateMap(c)
 	outputConfig := generator.HTMLOutPutConfig{
+		Title: title,
+		Templates: templates,
 		ContainsByDomain: c.GetVar("ContainsByDomain"),
 		Domain: domain_label,
 		GoStaticDir: c.GetVar("GoStaticDir"),
@@ -217,16 +234,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error opening dictionary: %v", err)
 	}
-	err = dictionary.ValidateDict(wdict, validator,)
+	err = dictionary.ValidateDict(wdict, validator)
 	if err != nil {
 		log.Fatalf("main: unexpected error reading headwords, %v", err)
 	}
 	dictTokenizer := tokenizer.DictTokenizer{wdict}
 
 	if (*collectionFile != "") {
-		log.Printf("main: Analyzing collection %s\n", *collectionFile)
-		analysis.WriteCorpusCol(*collectionFile, fileLibraryLoader,
+		log.Printf("main: writing collection %s\n", *collectionFile)
+		err := analysis.WriteCorpusCol(*collectionFile, fileLibraryLoader,
 				dictTokenizer, outputConfig, corpusConfig, wdict)
+		if err != nil {
+			log.Fatalf("error writing collection %v\n", err)
+		}
 	} else if *html {
 		log.Printf("main: Converting all HTML files\n")
 		conversions := getHTMLConversions()
@@ -264,21 +284,24 @@ func main() {
 			TargetStatus: "public",
 			Loader: fileLibraryLoader,
 		}
-		analysis.WriteLibraryFiles(lib, dictTokenizer, outputConfig, corpusConfig,
-				indexConfig, wdict)
+		err := analysis.WriteLibraryFiles(lib, dictTokenizer, outputConfig,
+				corpusConfig, indexConfig, wdict)
+		if err != nil {
+			log.Fatalf("main: could not write library files: %v\n", err)
+		}
 	} else if *writeTMIndex {
 
-		log.Println("main: Writing translation memory index")
+		log.Println("main: writing translation memory index")
 		err := tmindex.BuildIndexes(indexConfig.IndexDir, wdict)
 		if err != nil {
-			log.Fatalf("Could not create to index file, err: %v\n", err)
+			log.Fatalf("main: could not create to index file, err: %v\n", err)
 		}
 	} else {
-		log.Println("main: Writing out entire corpus")
+		log.Println("main: writing out entire corpus")
 		err := analysis.WriteCorpusAll(fileLibraryLoader, dictTokenizer, outputConfig,
 				corpusConfig, indexConfig, wdict)
 		if err != nil {
-			log.Fatalf("main: Writing out corpus, err: %v\n", err)
+			log.Fatalf("main: writing out corpus, err: %v\n", err)
 		}
 	}
 

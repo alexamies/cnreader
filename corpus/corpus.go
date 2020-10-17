@@ -172,7 +172,7 @@ func loadCorpusCollections(cFile string, corpusConfig CorpusConfig) []Collection
 	collections := make([]CollectionEntry, 0)
 	for i, row := range rawCSVdata {
 		if len(row) < 9 {
-			log.Fatal("loadCorpusCollections: not enough rows in file ", i,
+			log.Fatal("loadCorpusCollections: not enough fields in file ", i,
 					len(row), collectionsFile)
 	  	}
 		collectionFile := row[0]

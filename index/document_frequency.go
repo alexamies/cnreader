@@ -16,15 +16,14 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
-	"log"
+	"io"
 	"math"
-	"os"
 	"strconv"
 )
 
 // File name for document index
-const DOC_FREQ_FILE = "doc_freq.txt"
-const BIGRAM_DOC_FREQ_FILE = "bigram_doc_freq.txt"
+const DocFreqFile = "doc_freq.txt"
+const BigramDocFreqFile = "bigram_doc_freq.txt"
 
 // Map from term to number of documents referencing the term
 type DocumentFrequency struct {
@@ -84,37 +83,27 @@ func (df *DocumentFrequency) IDF(term string) (val float64, ok bool) {
 	return val, ok
 }
 
-// Writes a document frequency object from a json file
-func ReadDocumentFrequency(indexConfig IndexConfig) (df DocumentFrequency, e error) {
-	dir := indexConfig.IndexDir
-
-	fname := dir + "/" + DOC_FREQ_FILE
-	dfFile, err := os.Open(fname)
-	if err != nil {
-		log.Println("index.ReadDocumentFrequency, error opening word freq file: ",
-			err)
-		return df, err
-	}
-	defer dfFile.Close()
-	reader := csv.NewReader(dfFile)
+// ReadDocumentFrequency a document frequency object from a CSV file
+func ReadDocumentFrequency(r io.Reader) (*DocumentFrequency, error) {
+	reader := csv.NewReader(r)
 	reader.FieldsPerRecord = -1
 	reader.Comma = rune('\t')
 	rawCSVdata, err := reader.ReadAll()
 	if err != nil {
-		log.Fatal("index.ReadDocumentFrequency: Could not wf file ", err)
+		return nil, fmt.Errorf("ReadDocumentFrequency: Could not wf file: %v", err)
 	}
 	dfMap := map[string]int{}
 	for i, row := range rawCSVdata {
 		w := row[0] // Chinese text for word
 		count, err := strconv.ParseInt(row[1], 10, 0)
 		if err != nil {
-			log.Println("Could not parse word count ", i, err)
-			return df, err
+			return nil, fmt.Errorf("ReadDocumentFrequency: could not parse word count %d: %v",
+					i, err)
 		}
 		dfMap[w] = int(count)
 	}
-	df = DocumentFrequency{dfMap, -1}
-	return df, err
+	df := DocumentFrequency{dfMap, -1}
+	return &df, nil
 }
 
 // term frequency - inverse document frequency for the string
@@ -132,19 +121,9 @@ func tfIdf(term string, count int, completeDF DocumentFrequency) (val float64, o
 	return val, ok
 }
 
-// Writes the document frequency to json file
-func (df *DocumentFrequency) WriteToFile(filename string, indexConfig IndexConfig) {
-	dir := indexConfig.IndexDir
-	fname := dir + "/" + filename
-	log.Println("index.DocumentFrequency.WriteToFile: N, ", df.N)
-	f, err := os.Create(fname)
-	if err != nil {
-		log.Println("index.DocumentFrequency.WriteToFile: error, ", err)
-		return
-	}
-	defer f.Close()
-
-	writer := bufio.NewWriter(f)
+// WriteToFile writes the document frequency
+func (df *DocumentFrequency) Write(w io.Writer) {
+	writer := bufio.NewWriter(w)
 	for k, v := range df.DocFreq {
 		fmt.Fprintf(writer, "%s\t%d\n", k, v)
 	}

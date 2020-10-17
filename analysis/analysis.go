@@ -718,8 +718,23 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		bigramDocMap.Merge(results.BigramDocMap)
 	}
 	writeAnalysisCorpus(&aResults, docFreq, outputConfig, indexConfig, wdict)
-	docFreq.WriteToFile(index.DOC_FREQ_FILE, indexConfig)
-	bigramDF.WriteToFile(index.BIGRAM_DOC_FREQ_FILE, indexConfig)
+
+	docFreqFName := indexConfig.IndexDir + "/" + index.DocFreqFile
+	f, err := os.Create(docFreqFName)
+	if err != nil {
+		return fmt.Errorf("error writing document frequency file %s: %v", docFreqFName, err)
+	}
+	defer f.Close()
+	docFreq.Write(f)
+
+	bigramFName := indexConfig.IndexDir + "/" + index.BigramDocFreqFile
+	bgF, err := os.Create(docFreqFName)
+	if err != nil {
+		return fmt.Errorf("error writing bigram frequency file %s: %v", bigramFName, err)
+	}
+	defer bgF.Close()
+	bigramDF.Write(bgF)
+
 	wfDocMap.WriteToFile(docFreq, index.WF_DOC_FILE, indexConfig)
 	bigramDocMap.WriteToFile(bigramDF, index.BF_DOC_FILE, indexConfig)
 	index.WriteDocLengthToFile(aResults.DocLengthArray, index.DOC_LENGTH_FILE, indexConfig)
@@ -749,13 +764,14 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 // collectionFile: the name of the collection file
 func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 			dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
-			corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) {
+			corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) error {
 	collectionEntry, err := libLoader.GetCorpusLoader().GetCollectionEntry(collectionFile)
 	if err != nil {
-		log.Fatalf("analysis.WriteCorpusCol: fatal error %v", err)
+		return fmt.Errorf("analysis.WriteCorpusCol: fatal error %v", err)
 	}
 	writeCollection(collectionEntry, outputConfig, libLoader, dictTokenizer,
 			corpusConfig, wdict)
+	return nil
 }
 
 // Writes a document with markup for the array of tokens
@@ -1000,8 +1016,8 @@ func writeLibraryFile(lib library.Library, corpora []library.CorpusData,
 // Writes a HTML file describing the corpora in the library and for each corpus
 // in the library
 func WriteLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
-			outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
-			indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) {
+		outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
+		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) error {
 	corpora := lib.Loader.LoadLibrary()
 	libraryOutFile := outputConfig.WebDir + "/library.html"
 	writeLibraryFile(lib, corpora, libraryOutFile, outputConfig)
@@ -1030,12 +1046,15 @@ func WriteLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		}
 		fName := fmt.Sprintf(c.FileName)
 		collections := lib.Loader.GetCorpusLoader().LoadCorpus(fName)
-		WriteCorpus(collections, outputConfig, lib.Loader, dictTokenizer,
+		err := WriteCorpus(collections, outputConfig, lib.Loader, dictTokenizer,
 				corpusConfig, indexConfig, wdict)
+		if err != nil {
+			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
+		}
 		corpus := library.Corpus{c.Title, "", lib.DateUpdated, collections}
 		f, err := os.Create(outputFile)
 		if err != nil {
-			log.Fatal("library.WriteLibraryFiles: could not open file", err)
+			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
 		}
 		defer f.Close()
 		w := bufio.NewWriter(f)
@@ -1044,8 +1063,9 @@ func WriteLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 					"corpus-list-template.html").ParseFiles(templFile))
 		err = tmpl.Execute(w, corpus)
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("library.WriteLibraryFiles: could exacute template: %v", err)
 		}
 		w.Flush()
 	}
+	return nil
 }

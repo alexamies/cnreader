@@ -13,6 +13,7 @@
 package index
 
 import (
+	"bytes"
 	"log"
 	"testing"
 )
@@ -130,29 +131,35 @@ func TestTfIdf(t *testing.T) {
 	}
 }
 
-// Trivial test for saving document frequency data
-func TestWriteToFile0(t *testing.T) {
-	df := NewDocumentFrequency()
-	indexconfig := mockIndexConfig()
-	df.WriteToFile("test_df0.txt", indexconfig)
-	_, err := ReadDocumentFrequency(indexconfig)
-	if err != nil {
-		t.Error("index.TestWriteToFile0: error ", err)
-	}
-}
-
-// Simple test for saving document frequency data
-func TestWriteToFile1(t *testing.T) {
-	df := NewDocumentFrequency()
+// TestWriteDocumentFrequency is a trivial test for saving document frequency data
+func TestWriteDocumentFrequency(t *testing.T) {
+	dfEmpty := NewDocumentFrequency()
+	dfSmall := NewDocumentFrequency()
 	term := "car"
 	vocab := map[string]int{
 		term: 1,
 	}
-	df.AddVocabulary(vocab)
-	indexconfig := mockIndexConfig()
-	df.WriteToFile("test_df1.txt", indexconfig)
-	_, err := ReadDocumentFrequency(indexconfig)
-	if err != nil {
-		t.Error("index.TestWriteToFile1: error ", err)
+	dfSmall.AddVocabulary(vocab)
+	type test struct {
+		name string
+		df DocumentFrequency
+  }
+  tests := []test{
+		{
+			name: "Empty index",
+			df: dfEmpty,
+		},
+		{
+			name: "Small index",
+			df: dfSmall,
+		},
+	}
+	for _, tc := range tests {
+		var buf bytes.Buffer
+		tc.df.Write(&buf)
+		_, err := ReadDocumentFrequency(&buf)
+		if err != nil {
+			t.Errorf("%s: unexpected error %v", tc.name, err)
+		}
 	}
 }

@@ -15,6 +15,7 @@ package generator
 import (
 	"bytes"
 	"testing"
+	"text/template"
 
 	"github.com/alexamies/chinesenotes-go/dicttypes"	
 	"github.com/alexamies/chinesenotes-go/tokenizer"
@@ -100,14 +101,35 @@ func TestWriteCorpusDoc(t *testing.T) {
 	tokens := dictTokenizer.Tokenize(usageText)
 	var buf bytes.Buffer
 	vocab := make(map[string]int)
-	outputConfig := HTMLOutPutConfig{}
-	err := WriteCorpusDoc(tokens, vocab, &buf, "", "", "", "", "TXT",
-			outputConfig, corpusConfig, wdict)
-	if err != nil {
-		t.Fatalf("TestWriteCorpusDoc error: %v", err)
+	noTemplates := make(map[string]*template.Template)
+	outputConfig0 := HTMLOutPutConfig{
+		Title: "A title",
+		Templates: noTemplates,
 	}
-	if buf.Len() == 0 {
-		t.Error("TestWriteCorpusDoc buffer is empty")
+	type test struct {
+		name string
+		config HTMLOutPutConfig
+		expectErr bool
+  }
+  tests := []test{
+		{
+			name: "No templates",
+			config: outputConfig0,
+			expectErr: true,
+		},
+	}
+	for _, tc := range tests {
+ 		err := WriteCorpusDoc(tokens, vocab, &buf, "", "", "", "", "TXT",
+				tc.config, corpusConfig, wdict)
+		if tc.expectErr && err == nil {
+			t.Fatalf("%s: expected error but got none", tc.name)
+		}
+		if tc.expectErr {
+			continue
+		}
+		if !tc.expectErr && err != nil {
+			t.Fatalf("%s: unexpected error: %v", tc.name, err)
+		}
 	}
 	t.Log("TestWriteCorpusDoc: End +++++++++++")
 }

@@ -13,6 +13,7 @@
 package analysis
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 	"time"
@@ -443,9 +444,9 @@ func TestWriteAnalysis(t *testing.T) {
 	}
 	df := index.NewDocumentFrequency()
 	df.AddVocabulary(vocab)
-	indexConfig := mockIndexConfig()
-	df.WriteToFile("analysis_df_test.txt", indexConfig)
-	index.ReadDocumentFrequency(indexConfig)
+	var buf bytes.Buffer
+	df.Write(&buf)
+	index.ReadDocumentFrequency(&buf)
 	writeAnalysis(results, srcFile, glossFile, "Test Collection", "Test Doc",
 			mockOutputConfig(), wdict)
 	t.Log("analysis.TestWriteAnalysis: End +++++++++++")
