@@ -41,13 +41,6 @@ import (
 
 const conversionsFile = "data/corpus/html-conversion.csv"
 
-var (
-	// Loaded from disk in contrast to partially ready and still accumulating data
-	completeDF *index.DocumentFrequency
-	excluded map[string]bool
-	projectHome string
-)
-
 // A type that holds the source and destination files for HTML conversion
 type htmlConversion struct {
 	SrcFile, DestFile, Template string
@@ -55,32 +48,56 @@ type htmlConversion struct {
 	Title string
 }
 
-func initApp() config.AppConfig {
-	c := config.InitConfig()
-	projectHome = c.ProjectHome
-	excluded = corpus.LoadExcluded(getCorpusConfig(c))
+// Initialize the app config data
+func initApp() (config.AppConfig) {
+	return config.InitConfig()
+}
 
-	indexConfig := getIndexConfig()
-	dir := indexConfig.IndexDir
-	fname := dir + "/" + index.DocFreqFile
-	dfFile, err := os.Open(fname)
+// getDocFreq gets the word document frequency
+//
+// If it cannot be read from file, it will be computed from the corpus
+func getDocFreq(c config.AppConfig) (*index.DocumentFrequency, error) {
+	fname := c.ProjectHome + "/" + library.LibraryFile
+	corpusConfig := getCorpusConfig(c)
+	fileLibraryLoader := library.FileLibraryLoader{
+		FileName: fname,
+		Config: corpusConfig,
+	}
+	indexConfig := getIndexConfig(c)
+	wdict, err := fileloader.LoadDictFile(c)
 	if err != nil {
-		log.Printf("initApp: error opening word freq file (recoverable): %v", err)
+		return nil, fmt.Errorf("getDocFreq, error opening dictionary: %v", err)
+	}
+	dictTokenizer := tokenizer.DictTokenizer{wdict}
+	dir := indexConfig.IndexDir
+	dfFile, err := os.Open(dir + "/" + index.DocFreqFile)
+	if err != nil {
+		log.Printf("getDocFreq, error opening word freq file (recoverable): %v", err)
+		df, err := analysis.GetDocFrequencies(fileLibraryLoader, dictTokenizer,
+				corpusConfig, wdict)
+		if err != nil {
+			return nil, fmt.Errorf("getDocFreq: error computing document freq: %v", err)
+		}
+		return df, nil
 	}
 	defer dfFile.Close()
 	df, err := index.ReadDocumentFrequency(dfFile)
 	if err != nil {
-		log.Printf("initApp: error reading document frequency (recoverable): %v", err)
-	} else {
-		completeDF = df
+		log.Printf("getDocFreq, error reading document frequency (recoverable): %v",
+			err)
+		df, err = analysis.GetDocFrequencies(fileLibraryLoader, dictTokenizer,
+				corpusConfig, wdict)
+		if err != nil {
+			return nil, fmt.Errorf("getDocFreq, error computing doc freq: %v", err)
+		}
 	}
-	return c
+	return df, nil
 }
 
 // Gets the list of source and destination files for HTML conversion
-func getHTMLConversions() []htmlConversion {
-	log.Printf("GetHTMLConversions: projectHome: '%s'\n", projectHome)
-	conversionsFile := projectHome + "/" + conversionsFile
+func getHTMLConversions(c config.AppConfig) []htmlConversion {
+	log.Printf("GetHTMLConversions: projectHome: '%s'\n", c.ProjectHome)
+	conversionsFile := c.ProjectHome + "/" + conversionsFile
 	convFile, err := os.Open(conversionsFile)
 	if err != nil {
 		log.Fatalf("getHTMLConversions.GetHTMLConversions fatal error: %v", err)
@@ -123,11 +140,12 @@ func getHTMLConversions() []htmlConversion {
 }
 
 func getCorpusConfig(c config.AppConfig) corpus.CorpusConfig {
+	excluded := corpus.LoadExcluded(getCorpusConfig(c))
 	return corpus.CorpusConfig{
 		CorpusDataDir: c.CorpusDataDir(),
 		CorpusDir: c.CorpusDir(),
 		Excluded: excluded,
-		ProjectHome: projectHome,
+		ProjectHome: c.ProjectHome,
 	}
 }
 
@@ -172,9 +190,9 @@ func getHTMLOutPutConfig(c config.AppConfig) generator.HTMLOutPutConfig {
 	return outputConfig
 }
 
-func getIndexConfig() index.IndexConfig {
+func getIndexConfig(c config.AppConfig) index.IndexConfig {
 	return index.IndexConfig{
-		IndexDir: projectHome + "/index",
+		IndexDir: c.ProjectHome + "/index",
 	}
 }
 
@@ -202,7 +220,7 @@ func main() {
 
 	outputConfig := getHTMLOutPutConfig(c)
 	corpusConfig := getCorpusConfig(c)
-	indexConfig := getIndexConfig()
+	indexConfig := getIndexConfig(c)
 
 	// Read headwords and validate
 	posFName := fmt.Sprintf("%s/%s", c.DictionaryDir(), "grammar.txt")
@@ -224,7 +242,7 @@ func main() {
 	}
 
 	// Setup loader for library
-	fname := projectHome + "/" + library.LibraryFile
+	fname := c.ProjectHome + "/" + library.LibraryFile
 	fileLibraryLoader := library.FileLibraryLoader{
 		FileName: fname,
 		Config: corpusConfig,
@@ -249,7 +267,7 @@ func main() {
 		}
 	} else if *html {
 		log.Printf("main: Converting all HTML files\n")
-		conversions := getHTMLConversions()
+		conversions := getHTMLConversions(c)
 		for _, conversion := range conversions {
 			src :=  outputConfig.WebDir + "/" + conversion.SrcFile
 			dest :=  outputConfig.WebDir + "/" + conversion.DestFile
@@ -271,7 +289,7 @@ func main() {
 				corpusConfig, indexConfig, wdict)
 	} else if *librarymeta {
 		log.Printf("main: Writing digital library metadata\n")
-		fname := projectHome + "/" + library.LibraryFile
+		fname := c.ProjectHome + "/" + library.LibraryFile
 		fileLibraryLoader := library.FileLibraryLoader{
 			FileName: fname,
 			Config: corpusConfig,

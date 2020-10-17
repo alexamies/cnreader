@@ -76,7 +76,7 @@ func TestFindDocsForKeyword0(t *testing.T) {
 		FileName: "File",
 		Config: mockCorpusConfig(),
 	}
-	corpusEntryMap := fileLoader.LoadAll(corpus.COLLECTIONS_FILE)
+	corpusEntryMap := fileLoader.LoadAll(corpus.CollectionsFile)
 	outfileMap := corpus.GetOutfileMap(corpusEntryMap)
 	documents := FindDocsForKeyword(hw, outfileMap)
 	if len(documents) != 0 {
@@ -100,7 +100,7 @@ func TestFindDocsForKeyword1(t *testing.T) {
 		FileName: "File",
 		Config: mockCorpusConfig(),
 	}
-	corpusEntryMap := fileLoader.LoadAll(corpus.COLLECTIONS_FILE)
+	corpusEntryMap := fileLoader.LoadAll(corpus.CollectionsFile)
 	outfileMap := corpus.GetOutfileMap(corpusEntryMap)
 	FindDocsForKeyword(hw, outfileMap)
 }

@@ -31,7 +31,7 @@ type CollectionEntry struct {
 	AnalysisFile, Format, Date, Genre string
 }
 
-const COLLECTIONS_FILE = "collections.csv"
+const CollectionsFile = "collections.csv"
 
 // An entry in a collection
 type CorpusEntry struct {
@@ -115,7 +115,7 @@ func (loader FileCorpusLoader) ReadText(fName string) string {
 func getCollectionEntry(collectionFile string, corpusConfig CorpusConfig) (CollectionEntry, error)  {
 	log.Printf("corpus.GetCollectionEntry: collectionFile: '%s'.\n",
 		collectionFile)
-	collections := loadCorpusCollections(COLLECTIONS_FILE, corpusConfig)
+	collections := loadCorpusCollections(CollectionsFile, corpusConfig)
 	for _, entry := range collections {
 		if strings.Compare(entry.CollectionFile, collectionFile) == 0 {
 			return entry, nil

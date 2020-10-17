@@ -36,7 +36,7 @@ func mockFileCorpusLoader() FileCorpusLoader {
 func TestLoadAll0(t *testing.T) {
 	t.Log("corpus.TestLoadAll: Begin unit test")
 	loader := EmptyCorpusLoader{"File"}
-	corpusEntryMap := loader.LoadAll(COLLECTIONS_FILE)
+	corpusEntryMap := loader.LoadAll(CollectionsFile)
 	if len(corpusEntryMap) != 0 {
 		t.Error("corpus.TestLoadAll0: Non zero num. corpus entries found")
 	}
@@ -46,7 +46,7 @@ func TestLoadAll0(t *testing.T) {
 func TestLoadAll1(t *testing.T) {
 	t.Log("corpus.TestLoadAll1: Begin unit test")
 	loader := MockCorpusLoader{"File"}
-	corpusEntryMap := loader.LoadAll(COLLECTIONS_FILE)
+	corpusEntryMap := loader.LoadAll(CollectionsFile)
 	if len(corpusEntryMap) != 1 {
 		t.Error("corpus.TestLoadAll1: No corpus entries found")
 	}
@@ -60,7 +60,7 @@ func TestLoadAll1(t *testing.T) {
 func TestLoadAll2(t *testing.T) {
 	t.Log("corpus.TestLoadAll2: Begin unit test")
 	fileLoader := mockFileCorpusLoader()
-	corpusEntryMap := fileLoader.LoadAll(COLLECTIONS_FILE)
+	corpusEntryMap := fileLoader.LoadAll(CollectionsFile)
 	if len(corpusEntryMap) == 0 {
 		t.Error("corpus.TestLoadAll: No corpus entries found")
 	} else {
@@ -75,7 +75,7 @@ func TestLoadAll2(t *testing.T) {
 // Test reading of files for HTML conversion
 func TestCollections(t *testing.T) {
 	t.Log("corpus.TestCollections: Begin unit test")
-	collections := loadCorpusCollections(COLLECTIONS_FILE, mockCorpusConfig())
+	collections := loadCorpusCollections(CollectionsFile, mockCorpusConfig())
 	if len(collections) == 0 {
 		t.Error("No collections found")
 	} else {

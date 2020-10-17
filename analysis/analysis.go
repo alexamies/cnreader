@@ -204,7 +204,30 @@ func GetChunks(text string) list.List {
 	return chunks
 }
 
-// Compute word frequencies, collocations, and usage for the entire corpus
+// GetWordFrequencies compute word doc frequencies for corpus
+func GetDocFrequencies(libLoader library.LibraryLoader,
+		dictTokenizer tokenizer.Tokenizer,
+		corpusConfig corpus.CorpusConfig,
+		wdict map[string]dicttypes.Word) (*index.DocumentFrequency, error) {
+	log.Printf("analysis.GetDocFrequencies: enter")
+	df := index.NewDocumentFrequency()
+	corpLoader := libLoader.GetCorpusLoader()
+	collectionEntries := corpLoader.LoadCorpus(corpus.CollectionsFile)
+	for _, col := range collectionEntries {
+		colFile := col.CollectionFile
+		corpusEntries := corpLoader.LoadCollection(colFile, col.Title)
+		for _, entry := range corpusEntries {
+			src := corpusConfig.CorpusDir + entry.RawFile
+			text := corpLoader.ReadText(src)
+			_, results := ParseText(text, col.Title, &entry, dictTokenizer,
+						corpusConfig, wdict)
+			df.AddDocFreq(results.DocFreq)
+		}
+	}
+	return &df, nil
+}
+
+// GetWordFrequencies compute word frequencies, collocations, and usage for corpus
 func GetWordFrequencies(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer,
 		corpusConfig corpus.CorpusConfig,
@@ -220,7 +243,7 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 	wfTotal := map[*index.CorpusWord]index.CorpusWordFreq{}
 
 	corpLoader := libLoader.GetCorpusLoader()
-	collectionEntries := corpLoader.LoadCorpus(corpus.COLLECTIONS_FILE)
+	collectionEntries := corpLoader.LoadCorpus(corpus.CollectionsFile)
 	for _, col := range collectionEntries {
 		colFile := col.CollectionFile
 		//log.Printf("GetWordFrequencies: input file: %s\n", colFile)
@@ -750,7 +773,7 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 		wdict map[string]dicttypes.Word) error {
 	log.Printf("analysis.WriteCorpusAll: enter")
 	corpLoader := libLoader.GetCorpusLoader()
-	collections := corpLoader.LoadCorpus(corpus.COLLECTIONS_FILE)
+	collections := corpLoader.LoadCorpus(corpus.CollectionsFile)
 	err := WriteCorpus(collections, outputConfig, libLoader, dictTokenizer,
 			corpusConfig, indexConfig, wdict)
 	if err != nil {
@@ -879,7 +902,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 	vocabAnalysis := GetWordFrequencies(loader, dictTokenizer, corpusConfig, wdict)
 	usageMap := vocabAnalysis.UsageMap
 	collocations := vocabAnalysis.Collocations
-	corpusEntryMap := loader.GetCorpusLoader().LoadAll(corpus.COLLECTIONS_FILE)
+	corpusEntryMap := loader.GetCorpusLoader().LoadAll(corpus.CollectionsFile)
 	outfileMap := corpus.GetOutfileMap(corpusEntryMap)
 	dateUpdated := time.Now().Format("2006-01-02")
 
