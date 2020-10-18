@@ -20,7 +20,7 @@ import (
 )
 
 // Word frequencies for each document
-const WF_DOC_FILE = "word_freq_doc.txt"
+const WfDocFile = "word_freq_doc.txt"
 
 // Bigram frequencies for each file
 const BF_DOC_FILE = "bigram_freq_doc.txt"

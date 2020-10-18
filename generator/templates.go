@@ -69,7 +69,7 @@ func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
   }
   if len(templDir) > 0 {
     for tName, defTmpl := range tNames {
-      fileName := "templates/" + tName
+      fileName := templDir + "/" + tName
       var tmpl *template.Template
       var err error
       tmpl, err = template.New(tName).ParseFiles(fileName)

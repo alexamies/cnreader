@@ -60,10 +60,7 @@ func initApp() (config.AppConfig) {
 func getDocFreq(c config.AppConfig) (*index.DocumentFrequency, error) {
 	fname := c.ProjectHome + "/" + library.LibraryFile
 	corpusConfig := getCorpusConfig(c)
-	fileLibraryLoader := library.FileLibraryLoader{
-		FileName: fname,
-		Config: corpusConfig,
-	}
+	libraryLoader := library.NewLibraryLoader(fname, corpusConfig)
 	indexConfig := getIndexConfig(c)
 	wdict, err := fileloader.LoadDictFile(c)
 	if err != nil {
@@ -74,7 +71,7 @@ func getDocFreq(c config.AppConfig) (*index.DocumentFrequency, error) {
 	dfFile, err := os.Open(dir + "/" + index.DocFreqFile)
 	if err != nil {
 		log.Printf("getDocFreq, error opening word freq file (recoverable): %v", err)
-		df, err := analysis.GetDocFrequencies(fileLibraryLoader, dictTokenizer,
+		df, err := analysis.GetDocFrequencies(libraryLoader, dictTokenizer,
 				wdict)
 		if err != nil {
 			return nil, fmt.Errorf("getDocFreq: error computing document freq: %v", err)
@@ -86,7 +83,7 @@ func getDocFreq(c config.AppConfig) (*index.DocumentFrequency, error) {
 	if err != nil {
 		log.Printf("getDocFreq, error reading document frequency (recoverable): %v",
 			err)
-		df, err = analysis.GetDocFrequencies(fileLibraryLoader, dictTokenizer,
+		df, err = analysis.GetDocFrequencies(libraryLoader, dictTokenizer,
 				wdict)
 		if err != nil {
 			return nil, fmt.Errorf("getDocFreq, error computing doc freq: %v", err)
@@ -203,7 +200,8 @@ func getIndexConfig(c config.AppConfig) index.IndexConfig {
 // level file pointing to the different ToC files.
 func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
-		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) error {
+		indexConfig index.IndexConfig,
+		wdict map[string]dicttypes.Word) error {
 	corpora := lib.Loader.LoadLibrary()
 	libraryOutFile := outputConfig.WebDir + "/library.html"
 	analysis.WriteLibraryFile(lib, corpora, libraryOutFile, outputConfig)
@@ -240,7 +238,7 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		if err != nil {
 			return fmt.Errorf("library.WriteLibraryFiles: could not load corpus: %v", err)
 		}
-		err = analysis.WriteCorpus(*collections, outputConfig, lib.Loader,
+		_, err = analysis.WriteCorpus(*collections, outputConfig, lib.Loader,
 				dictTokenizer, indexConfig, wdict)
 		if err != nil {
 			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
@@ -311,10 +309,7 @@ func main() {
 
 	// Setup loader for library
 	fname := c.ProjectHome + "/" + library.LibraryFile
-	fileLibraryLoader := library.FileLibraryLoader{
-		FileName: fname,
-		Config: corpusConfig,
-	}
+	libraryLoader := library.NewLibraryLoader(fname, corpusConfig)
 
 	wdict, err := fileloader.LoadDictFile(c)
 	if err != nil {
@@ -328,7 +323,7 @@ func main() {
 
 	if (*collectionFile != "") {
 		log.Printf("main: writing collection %s\n", *collectionFile)
-		err := analysis.WriteCorpusCol(*collectionFile, fileLibraryLoader,
+		err := analysis.WriteCorpusCol(*collectionFile, libraryLoader,
 				dictTokenizer, outputConfig, corpusConfig, wdict)
 		if err != nil {
 			log.Fatalf("error writing collection %v\n", err)
@@ -350,7 +345,7 @@ func main() {
 				log.Fatalf("main, could not open file: %v", err)
 			}
 			defer r.Close()
-			text := fileLibraryLoader.GetCorpusLoader().ReadText(r)
+			text := libraryLoader.GetCorpusLoader().ReadText(r)
 			tokens, results := analysis.ParseText(text, "",
 					corpus.NewCorpusEntry(), dictTokenizer, getCorpusConfig(c), wdict)
 			f, err := os.Create(dest)
@@ -366,7 +361,7 @@ func main() {
 		}
 	} else if *hwFiles {
 		log.Printf("main: Writing word entries for headwords\n")
-		err := analysis.WriteHwFiles(fileLibraryLoader, dictTokenizer, outputConfig,
+		err := analysis.WriteHwFiles(libraryLoader, dictTokenizer, outputConfig,
 				indexConfig, wdict)
 		if err != nil {
 			log.Fatalf("main, unable to write headwords: %v", err)
@@ -374,17 +369,14 @@ func main() {
 	} else if *librarymeta {
 		log.Printf("main: Writing digital library metadata\n")
 		fname := c.ProjectHome + "/" + library.LibraryFile
-		fileLibraryLoader := library.FileLibraryLoader{
-			FileName: fname,
-			Config: corpusConfig,
-		}
+		libraryLoader := library.NewLibraryLoader(fname, corpusConfig,)
 		dateUpdated := time.Now().Format("2006-01-02")
 		lib := library.Library{
 			Title: "Library",
 			Summary: "Top level collection in the Library",
 			DateUpdated: dateUpdated,
 			TargetStatus: "public",
-			Loader: fileLibraryLoader,
+			Loader: libraryLoader,
 		}
 		err := writeLibraryFiles(lib, dictTokenizer, outputConfig,
 				corpusConfig, indexConfig, wdict)
@@ -400,7 +392,7 @@ func main() {
 		}
 	} else {
 		log.Println("main: writing out entire corpus")
-		err := analysis.WriteCorpusAll(fileLibraryLoader, dictTokenizer,
+		_, err := analysis.WriteCorpusAll(libraryLoader, dictTokenizer,
 				outputConfig, indexConfig, wdict)
 		if err != nil {
 			log.Fatalf("main: writing out corpus, err: %v\n", err)

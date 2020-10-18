@@ -17,6 +17,7 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dicttypes"	
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/corpus"
@@ -88,6 +89,15 @@ func TestDecodeUsageExample(t *testing.T) {
 		if highlighted != tc.expected {
 			t.Errorf("%s: expected %s, got %s", tc.name, tc.expected, highlighted)
 		}
+	}
+}
+
+// TestNewTemplateMap building the template map
+func TestNewTemplateMap(t *testing.T) {
+	templates := NewTemplateMap(config.AppConfig{})
+	_, ok := templates["corpus-template.html"]
+	if !ok {
+		t.Error("template not found")
 	}
 }
 

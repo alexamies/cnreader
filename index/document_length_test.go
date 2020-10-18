@@ -13,6 +13,7 @@
 package index
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -20,6 +21,10 @@ import (
 func TestWriteDocLengthToFile(t *testing.T) {
 	dl := DocLength{"test.html", 42}
 	dlArray := []DocLength{dl}
-	indexconfig := mockIndexConfig()
-	WriteDocLengthToFile(dlArray, "doc_length_test.tsv", indexconfig)
+	var buf bytes.Buffer
+	WriteDocLengthToFile(dlArray, &buf)
+	txt := buf.String()
+	if len(txt) == 0 {
+		t.Errorf("Nothing written to buffer")
+	}
 }

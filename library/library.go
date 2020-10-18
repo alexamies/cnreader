@@ -19,6 +19,9 @@ import (
 	"os"
 )
 
+// The library file listing the corpora
+const LibraryFile = "data/corpus/library.csv"
+
 type CorpusData struct {
 	Title, ShortName, Status, FileName string
 }
@@ -49,24 +52,31 @@ type LibraryLoader interface {
 	LoadLibrary() []CorpusData
 }
 
-// A FileLibraryLoader loads the corpora from files
-type FileLibraryLoader struct{
+// A fileLibraryLoader loads the corpora from files
+type fileLibraryLoader struct{
 	FileName string
 	Config corpus.CorpusConfig
+	CLoader corpus.CorpusLoader
 }
 
 // Implements the method from the LibraryLoader interface
-func (loader FileLibraryLoader) GetCorpusLoader() corpus.CorpusLoader {
-	return corpus.FileCorpusLoader{loader.FileName, loader.Config}
+func (loader fileLibraryLoader) GetCorpusLoader() corpus.CorpusLoader {
+	return loader.CLoader
 }
 
 // Implements the method from the LibraryLoader interface
-func (loader FileLibraryLoader) LoadLibrary() []CorpusData {
+func (loader fileLibraryLoader) LoadLibrary() []CorpusData {
 	return loadLibrary(loader.FileName)
 }
 
-// The library file listing the corpora
-const LibraryFile = "data/corpus/library.csv"
+// NewLibraryLoader creates a new LibraryLoader
+func NewLibraryLoader(fname string, config corpus.CorpusConfig) LibraryLoader {
+	return fileLibraryLoader{
+		FileName: fname,
+		Config: config,
+		CLoader: corpus.NewCorpusLoader(config),
+	}
+}
 
 // Gets the list of source and destination files for HTML conversion
 func loadLibrary(fname string) []CorpusData {

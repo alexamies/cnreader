@@ -37,6 +37,13 @@ type CorpusEntry struct {
 	RawFile, GlossFile, Title, ColTitle string
 }
 
+// iterates over CorpusEntry objects
+type CorpusEntryIter interface {
+
+	// Method to get the next CorpusEntry obect or nil if there is none
+	Next() CorpusEntry
+}
+
 // CorpusConfig encapsulates parameters for corpus configuration
 type CorpusConfig struct {
 	CorpusDataDir string
@@ -59,11 +66,6 @@ type CorpusLoader interface {
 	//   A CollectionEntry encapsulating the collection or an error
 	GetCollectionEntry(fName string) (*CollectionEntry, error)
 
-	// Load all entries in all collections in a corpus
-    // Param:
-	//  r: to read a listing of the collections in CSV format
-	LoadAll(r io.Reader) (*map[string]CorpusEntry, error)
-
 	// Method to load the entries in a collection
     // Param:
     //   fName: A file name containing the entries in the collection
@@ -83,39 +85,38 @@ type CorpusLoader interface {
 }
 
 // A FileLibraryLoader loads the corpora from files
-type FileCorpusLoader struct{
-	FileName string
+type fileCorpusLoader struct{
 	Config CorpusConfig
 }
 
 // Impements the CollectionLoader interface for FileCollectionLoader
-func (loader FileCorpusLoader) GetConfig() CorpusConfig {
+func (loader fileCorpusLoader) GetConfig() CorpusConfig {
 	return loader.Config
 }
 
 // Impements the CollectionLoader interface for FileCollectionLoader
-func (loader FileCorpusLoader) GetCollectionEntry(fName string) (*CollectionEntry, error) {
-	return getCollectionEntry(loader.FileName, loader.Config)
-}
-
-// Implements the LoadAll method in the CorpusLoader interface
-func (loader FileCorpusLoader) LoadAll(r io.Reader) (*map[string]CorpusEntry, error) {
-	return loadAll(loader, r)
+func (loader fileCorpusLoader) GetCollectionEntry(fName string) (*CollectionEntry, error) {
+	return getCollectionEntry(fName, loader.Config)
 }
 
 // Implements the LoadCollection method in the CorpusLoader interface
-func (loader FileCorpusLoader) LoadCollection(r io.Reader, colTitle string) (*[]CorpusEntry, error) {
+func (loader fileCorpusLoader) LoadCollection(r io.Reader, colTitle string) (*[]CorpusEntry, error) {
 	return loadCorpusEntries(r, colTitle, loader.Config)
 }
 
 // LoadCorpus implements the CorpusLoader interface
-func (loader FileCorpusLoader) LoadCorpus(r io.Reader) (*[]CollectionEntry, error) {
+func (loader fileCorpusLoader) LoadCorpus(r io.Reader) (*[]CollectionEntry, error) {
 	return loadCorpusCollections(r, loader.Config)
 }
 
 // Implements the LoadCorpus method in the CorpusLoader interface
-func (loader FileCorpusLoader) ReadText(r io.Reader) string {
+func (loader fileCorpusLoader) ReadText(r io.Reader) string {
 	return readText(r)
+}
+
+// CorpusLoader gets the default kind of CorpusLoader
+func NewCorpusLoader(corpusConfig CorpusConfig) CorpusLoader  {
+	return fileCorpusLoader{corpusConfig}
 }
 
 // Gets the entry the collection
@@ -147,12 +148,16 @@ func getCollectionEntry(collectionFile string, corpusConfig CorpusConfig) (*Coll
 //   sourceMap: A map by source (plain) text file name
 // Returns
 //   map with keys being the output file names
-func GetOutfileMap(sourceMap map[string]CorpusEntry) map[string]CorpusEntry {
+func GetOutfileMap(loader CorpusLoader, r io.Reader) (*map[string]CorpusEntry, error) {
+	sourceMap, err := loadAll(loader, r)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to load corpus: %v", err)
+	}
 	outMap := map[string]CorpusEntry{}
-	for _, entry := range sourceMap {
+	for _, entry := range *sourceMap {
 		outMap[entry.GlossFile] = entry
 	}
-	return outMap
+	return &outMap, nil
 }
 
 // Load all corpus entries and keep them in a hash map
@@ -269,19 +274,13 @@ func NewCorpusEntry() *CorpusEntry {
 // Reads a text file introducing the collection. The file should be a plain
 // text file. HTML breaks will be added for line breaks.
 // Parameter
-// introFile: The name of the file introducing the collection
-func ReadIntroFile(introFile string, corpusConfig CorpusConfig) string {
-	//log.Printf("ReadIntroFile: Reading introduction file.\n")
-	infile, err := os.Open(corpusConfig.CorpusDataDir + "/" + introFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	reader := bufio.NewReader(infile)
+// r: with text introducing the collection
+func ReadIntroFile(r io.Reader,) string {
+	reader := bufio.NewReader(r)
 	var buffer bytes.Buffer
 	eof := false
 	for !eof {
-		var line string
-		line, err = reader.ReadString('\n')
+		line, err := reader.ReadString('\n')
 		if err == io.EOF {
 			err = nil
 			eof = true

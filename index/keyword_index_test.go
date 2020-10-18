@@ -13,57 +13,88 @@
 package index
 
 import (
-	"github.com/alexamies/cnreader/ngram"
+	"bytes"
+	"io"
 	"testing"
+
+	"github.com/alexamies/cnreader/ngram"
 )
 
-// Empty test for corpus index writing
-func TestReset(t *testing.T) {
-	Reset(mockIndexConfig())
-}
-
 // Trivial test for corpus-wide word frequency reading
-func TestBuildIndex0(t *testing.T) {
-	BuildIndex(mockIndexConfig())
-}
-
-// Trivial test for corpus-wide word frequency reading
-func TestReadWFCorpus0(t *testing.T) {
-	readWFCorpus(mockIndexConfig())
-}
-
-// Trivial test for corpus-wide word frequency reading
-func TestReadWFCorpus1(t *testing.T) {
-	w := "鐵"
-	sw := SortedWordItem{w, 1}
-	sortedWords := []SortedWordItem{sw}
-	unknownChars := []SortedWordItem{}
-	bFreq := []ngram.BigramFreq{}
-	indexConfig := mockIndexConfig()
-	WriteWFCorpus(sortedWords, unknownChars, bFreq, 1, indexConfig)
-	readWFCorpus(indexConfig)
-	entry := wf[w]
-	expected := 1
-	if entry.Count != expected {
-		t.Error("index.TestReadWFCorpus1: Expected ", expected, " got ",
-			entry.Count)
+func TestBuildIndex(t *testing.T) {
+	var wfFile bytes.Buffer
+	var wfDocReader bytes.Buffer
+	var indexWriter bytes.Buffer
+	indexStore := IndexStore{&wfFile, &wfDocReader, &indexWriter}
+	indexState, err := BuildIndex(mockIndexConfig() ,indexStore)
+	if err != nil {
+		t.Fatalf("unexpected error building index: %v", err)
+	}
+	if !indexState.KeywordIndexReady {
+		t.Errorf("KeywordIndexReady is false")
 	}
 }
 
-// Trivial test for corpus index writing
-func TestWriteWFCorpus0(t *testing.T) {
-	sortedWords := []SortedWordItem{}
-	unknownChars := []SortedWordItem{}
-	bFreq := []ngram.BigramFreq{}
-	WriteWFCorpus(sortedWords, unknownChars, bFreq, 0, mockIndexConfig())
+// Trivial test for corpus-wide word frequency reading
+func TestReadWFCorpus(t *testing.T) {
+	tests := []struct {
+		name string
+		input string
+		expectedLen int
+	}{
+		{
+			name: "empty",
+			input: "",
+			expectedLen: 0,
+		},
+		{
+			name: "single character",
+			input: "鐵\t1",
+			expectedLen: 1,
+		},
+	}
+	for _, tc := range tests {
+		var buf bytes.Buffer
+		io.WriteString(&buf, tc.input)
+		wf, err := readWFCorpus(&buf)
+		if err != nil {
+			t.Fatalf("%s, unexpected error reading word freq: %v", tc.name, err)
+		}
+		if tc.expectedLen != len(*wf) {
+			t.Errorf("%s, expectedLen %d, got %d", tc.name, tc.expectedLen, len(*wf))
+		}
+	}
 }
 
-// Simple test for corpus index writing
-func TestWriteWFCorpus1(t *testing.T) {
-	sw := SortedWordItem{"鐵", 1}
-	sortedWords := []SortedWordItem{sw}
-	uw := SortedWordItem{"𣣌", 2}
-	unknownChars := []SortedWordItem{uw}
-	bFreq := []ngram.BigramFreq{}
-	WriteWFCorpus(sortedWords, unknownChars, bFreq, 1, mockIndexConfig())
+// TestWriteWFCorpus does a trivial test for corpus index writing
+func TestWriteWFCorpus(t *testing.T) {
+	tests := []struct {
+		name string
+		input string
+		expectedLen int
+	}{
+		{
+			name: "empty",
+			input: "",
+			expectedLen: 0,
+		},
+		{
+			name: "single character",
+			input: "鐵",
+			expectedLen: 1,
+		},
+	}
+	for _, tc := range tests {
+		var wFWriter bytes.Buffer
+		var unknownCharsWriter bytes.Buffer
+		wordFreqStore := WordFreqStore{&wFWriter, &unknownCharsWriter}
+		sw := SortedWordItem{tc.input, 1}
+		sortedWords := []SortedWordItem{sw}
+		unknownChars := []SortedWordItem{}
+		bFreq := []ngram.BigramFreq{}
+		err := WriteWFCorpus(wordFreqStore, sortedWords, unknownChars, bFreq, 1, IndexConfig{})
+		if err != nil {
+			t.Fatalf("%s, unexpected error writing word freq: %v", tc.name, err)
+		}
+	}
 }

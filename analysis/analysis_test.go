@@ -14,6 +14,7 @@ package analysis
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
 
@@ -56,13 +57,6 @@ func mockDictionaryConfig() dicttypes.DictionaryConfig {
 	return dicttypes.DictionaryConfig{
 		AvoidSubDomains: map[string]bool{},
 		DictionaryDir: "data",
-	}
-}
-
-func mockFileCorpusLoader() corpus.FileCorpusLoader {
-	return corpus.FileCorpusLoader{
-		FileName: "File",
-		Config: mockCorpusConfig(),
 	}
 }
 
@@ -214,17 +208,15 @@ func TestGetChunks4(t *testing.T) {
 	}
 }
 
-func TestReadText1(t *testing.T) {
-	//log.Printf("TestReadText1: Begin ******** \n")
-	corpusLoader := mockFileCorpusLoader()
+func TestReadText(t *testing.T) {
+	corpusLoader := corpus.NewCorpusLoader(corpus.CorpusConfig{})
 	var buf bytes.Buffer
+	io.WriteString(&buf, "繁體中文")
 	text := corpusLoader.ReadText(&buf)
 	expected := "繁體中文"
-	//log.Printf("TestReadText1: Expected  '%s', got '%s'\n", expected, text)
 	if text != expected {
 		t.Error("Expected ", expected, ", got ", text)
 	}
-	//log.Printf("TestReadText1: End ******** \n")
 }
 
 func TestParseText(t *testing.T) {

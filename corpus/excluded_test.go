@@ -17,19 +17,29 @@ import (
 )
 
 // Trivial test for excluded string
-func TestIsExcluded0(t *testing.T) {
+func TestIsExcluded(t *testing.T) {
 	t.Log("corpus.TestIsExcluded0: Begin unit tests")
-	config := mockCorpusConfig()
-	if IsExcluded(config.Excluded, "") {
-		t.Error("corpus.TestIsExcluded0: Do not expect '' to be excluded")
+	excluded := make(map[string]bool)
+	excluded["如需引用文章"] = true
+	tests := []struct {
+		name string
+		input string
+		expectExcluded bool
+	}{
+		{
+			name: "empty",
+			input: "",
+			expectExcluded: false,
+		},
+		{
+			name: "has included",
+			input: "如需引用文章",
+			expectExcluded: true,
+		},
 	}
-}
-
-// Easy test for excluded string
-func TestIsExcluded1(t *testing.T) {
-	t.Log("corpus.TesIsExcluded: Begin unit tests")
-	config := mockCorpusConfig()
-	if !IsExcluded(config.Excluded, "如需引用文章") {
-		t.Error("corpus.TestIsExcluded0: Expect '如需引用文章' to be excluded")
+	for _, tc := range tests {
+		if tc.expectExcluded && !IsExcluded(excluded, tc.input) {
+			t.Errorf("%s, expected '%s' to be excluded", tc.name, tc.input)
+		}
 	}
 }

@@ -49,21 +49,16 @@ func (mock mockValidator) Validate(pos, domain string) error {
 	return nil
 }
 
-// Trivial test for document retrieval
-func TestFindForKeyword0(t *testing.T) {
-	BuildIndex(mockIndexConfig())
-	documents := FindForKeyword("你")
-	t.Logf("index.TestFindForKeyword0 %v", documents)
-}
-
 // Trivial test for loading index
-func TestLoadKeywordIndex0(t *testing.T) {
-	LoadKeywordIndex(mockIndexConfig())
-}
-
-// Trivial test for loading index
-func TestFindDocsForKeyword0(t *testing.T) {
-	BuildIndex(mockIndexConfig())
+func TestFindDocsForKeyword(t *testing.T) {
+	var wfFile bytes.Buffer
+	var wfDocReader bytes.Buffer
+	var indexWriter bytes.Buffer
+	indexStore := IndexStore{&wfFile, &wfDocReader, &indexWriter}
+	indexState, err := BuildIndex(mockIndexConfig(), indexStore)
+	if err != nil {
+		t.Fatalf("index.TestFindDocsForKeyword: error building index: %v", err)
+	}
 	s1 := "海"
 	s2 := "\\N"
 	hw := dicttypes.Word{
@@ -73,18 +68,14 @@ func TestFindDocsForKeyword0(t *testing.T) {
 		Pinyin:      "hǎi",
 		Senses:  []dicttypes.WordSense{},
 	}
-	fileLoader := corpus.FileCorpusLoader{
-		FileName: "File",
-		Config: mockCorpusConfig(),
-	}
+	corpusLoader := corpus.NewCorpusLoader(corpus.CorpusConfig{})
 	var buf bytes.Buffer
-	corpusEntryMap, err := fileLoader.LoadAll(&buf)
+	outfileMap, err := corpus.GetOutfileMap(corpusLoader, &buf)
 	if err != nil {
-		t.Fatalf("index.TestFindDocsForKeyword0: error: %v", err)
+		t.Fatalf("index.TestFindDocsForKeyword: error: %v", err)
 	}
-	outfileMap := corpus.GetOutfileMap(*corpusEntryMap)
-	documents := FindDocsForKeyword(hw, outfileMap)
+	documents := FindDocsForKeyword(hw, *outfileMap, *indexState)
 	if len(documents) != 0 {
-		t.Error("index.TestFindDocsForKeyword0: expectedd no documents")
+		t.Errorf("index.TestFindDocsForKeyword: expected no documents: %d", len(documents))
 	}
 }

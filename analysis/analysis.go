@@ -474,13 +474,13 @@ func add(x, y int) int {
 // Returns: the name of the file written to
 func writeAnalysisCorpus(results *CollectionAResults,
 		docFreq index.DocumentFrequency, outputConfig generator.HTMLOutPutConfig,
-		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) string {
+		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) error {
 
 	// If the web/analysis directory does not exist, then skip the analysis
 	analysisDir := outputConfig.WebDir + "/analysis/"
 	_, err := os.Stat(analysisDir)
 	if err != nil {
-		return ""
+		return fmt.Errorf("writeAnalysisCorpus, could not open analysisDir: %v", err)
 	}
 
 	// Parse template and organize template parameters
@@ -535,29 +535,47 @@ func writeAnalysisCorpus(results *CollectionAResults,
 	}
 	tmpl, err := template.New("corpus-summary-analysis-template.html").Funcs(funcs).ParseFiles(tmplFile)
 	if (err != nil || tmpl == nil) {
-		log.Printf("writeAnalysisCorpus: Error getting template %v)", tmplFile)
-		return ""
+		return fmt.Errorf("writeAnalysisCorpus: Error getting template %s: %v", tmplFile, err)
 	}
 	basename := "corpus_analysis.html"
 	filename := analysisDir + basename
 	f, err := os.Create(filename)
 	if err != nil {
-		log.Printf("writeAnalysisCorpus: error creating file %v", err)
-		return ""
+		return fmt.Errorf("writeAnalysisCorpus: error creating file %v", err)
 	}
 	defer f.Close()
 	w := bufio.NewWriter(f)
 	err = tmpl.Execute(w, aResults)
 	if err != nil {
-		log.Printf("writeAnalysisCorpus: error executing template%v", err)
+		return fmt.Errorf("writeAnalysisCorpus: error executing template%v", err)
 	}
 	w.Flush()
-	log.Printf("writeAnalysisCorpus: finished executing template%v", err)
 
 	// Write results to plain text files
-	index.WriteWFCorpus(sortedWords, sortedUnknownWords, bFreq, results.WC, indexConfig)
+	fname := indexConfig.IndexDir + "/" + index.WfCorpusFile
+	wfFile, err := os.Create(fname)
+	if err != nil {
+		return fmt.Errorf("Could not open wfFile: %v", err)
+	}
+	defer wfFile.Close()
+	unknownCharsFile, err := os.Create(indexConfig.IndexDir + "/" + index.UnknownCharsFile)
+	if err != nil {
+		return fmt.Errorf("Could not open write unknownCharsFile: %v", err)
+	}
+	defer unknownCharsFile.Close()
+	ngramFile, err := os.Create(indexConfig.IndexDir + "/" + index.NgramCorpusFile)
+	if err != nil {
+		return fmt.Errorf("Could not open write ngramFile: %v", err)
+	}
+	defer ngramFile.Close()
+	wordFreqStore := index.WordFreqStore{wfFile, unknownCharsFile, ngramFile}
+	err = index.WriteWFCorpus(wordFreqStore, sortedWords, sortedUnknownWords,
+			bFreq, results.WC, indexConfig)
+	if err != nil {
+		return fmt.Errorf("Could not write inddex: %v", err)
+	}
 
-	return basename
+	return nil
 }
 
 // Writes a document with vocabulary analysis of the text. The name of the
@@ -769,7 +787,12 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	}
 	aFile := writeAnalysis(&aResults, collectionEntry.CollectionFile,
 		collectionEntry.GlossFile, collectionEntry.Title, "", outputConfig, wdict)
-	introText := corpus.ReadIntroFile(collectionEntry.Intro, corpusConfig)
+	infile, err := os.Open(corpusConfig.CorpusDataDir + "/" + collectionEntry.Intro)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer infile.Close()
+	introText := corpus.ReadIntroFile(infile)
 	err = generator.WriteCollectionFile(collectionEntry, aFile, outputConfig,
 			corpusConfig, *corpusEntries, introText)
 	if err != nil {
@@ -785,9 +808,8 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		outputConfig generator.HTMLOutPutConfig,
 		libLoader library.LibraryLoader, dictTokenizer tokenizer.Tokenizer,
 		indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word) error {
+		wdict map[string]dicttypes.Word) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpus: enter")
-	index.Reset(indexConfig)
 	wfDocMap := index.TermFreqDocMap{}
 	bigramDocMap := index.TermFreqDocMap{}
 	docFreq := index.NewDocumentFrequency() // used to accumulate doc frequencies
@@ -797,7 +819,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		results, err := writeCollection(collectionEntry, outputConfig, libLoader,
 				dictTokenizer, wdict)
 		if err != nil {
-			return fmt.Errorf("WriteCorpus could not open file: %v", err)
+			return nil, fmt.Errorf("WriteCorpus could not open file: %v", err)
 		}
 		aResults.AddResults(results)
 		docFreq.AddDocFreq(results.DocFreq)
@@ -805,12 +827,16 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		wfDocMap.Merge(results.WFDocMap)
 		bigramDocMap.Merge(results.BigramDocMap)
 	}
-	writeAnalysisCorpus(&aResults, docFreq, outputConfig, indexConfig, wdict)
+	err := writeAnalysisCorpus(&aResults, docFreq, outputConfig, indexConfig, wdict)
+	if err != nil {
+		return nil, fmt.Errorf("WriteCorpus could not write analysis: %v", err)
+	}
 
 	docFreqFName := indexConfig.IndexDir + "/" + index.DocFreqFile
 	f, err := os.Create(docFreqFName)
 	if err != nil {
-		return fmt.Errorf("error writing document frequency file %s: %v", docFreqFName, err)
+		return nil, fmt.Errorf("error writing document frequency file %s: %v",
+				docFreqFName, err)
 	}
 	defer f.Close()
 	docFreq.Write(f)
@@ -818,43 +844,72 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	bigramFName := indexConfig.IndexDir + "/" + index.BigramDocFreqFile
 	bgF, err := os.Create(docFreqFName)
 	if err != nil {
-		return fmt.Errorf("error writing bigram frequency file %s: %v", bigramFName, err)
+		return nil, fmt.Errorf("error writing bigram frequency file %s: %v", bigramFName, err)
 	}
 	defer bgF.Close()
 	bigramDF.Write(bgF)
 
-	wfDocMap.WriteToFile(docFreq, index.WF_DOC_FILE, indexConfig)
+	wfDocMap.WriteToFile(docFreq, index.WfDocFile, indexConfig)
 	bigramDocMap.WriteToFile(bigramDF, index.BF_DOC_FILE, indexConfig)
-	index.WriteDocLengthToFile(aResults.DocLengthArray, index.DOC_LENGTH_FILE, indexConfig)
-	index.BuildIndex(indexConfig)
-	log.Printf("analysis.WriteCorpus: exit")
-	return nil
+	docLenFN := indexConfig.IndexDir + "/" + index.DocLengthFile
+	docLenFile, err := os.Create(docLenFN)
+	if err != nil {
+		return nil, fmt.Errorf("Could not open write doc len file: %v", err)
+	}
+	defer docLenFile.Close()
+	index.WriteDocLengthToFile(aResults.DocLengthArray, docLenFile)
+
+	fname := indexConfig.IndexDir + "/" + index.WfCorpusFile
+	wfFile, err := os.Open(fname)
+	if err != nil {
+		return nil, fmt.Errorf("analysis.WriteCorpus, error opening word freq file: %f", err)
+	}
+	defer wfFile.Close()
+	wfDocFName := indexConfig.IndexDir + "/" + index.WfDocFile
+	wfDocReader, err := os.Open(wfDocFName)
+	if err != nil {
+		return nil, fmt.Errorf("analysis.WriteCorpus, error opening word freq doc file: %v", err)
+	}
+	defer wfDocReader.Close()
+	indexFN := indexConfig.IndexDir + "/" + index.KeywordIndexFile
+	indexWriter, err := os.Create(indexFN)
+	if err != nil {
+		return nil, fmt.Errorf("index.writeKeywordIndex: Could not create file: %v", err)
+	}
+	defer indexWriter.Close()
+	indexStore := index.IndexStore{wfFile, wfDocReader, indexWriter}
+	indexState, err := index.BuildIndex(indexConfig, indexStore)
+	if err != nil {
+		return nil, fmt.Errorf("error building index: %v", err)
+	}
+	log.Println("analysis.WriteCorpus: exit")
+	return indexState, nil
 }
 
 // Write all the collections in the default corpus (collections.csv file)
 func WriteCorpusAll(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
 		indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word) error {
+		wdict map[string]dicttypes.Word) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpusAll: enter")
 	corpLoader := libLoader.GetCorpusLoader()
 	corpusConfig := corpLoader.GetConfig()
 	collectionsFile := corpusConfig.CorpusDataDir + "/" + corpus.CollectionsFile
 	f, err := os.Open(collectionsFile)
 	if err != nil {
-		return fmt.Errorf("GetWordFrequencies: Error opening collection file: %v", err)
+		return nil, fmt.Errorf("GetWordFrequencies: Error opening collection file: %v", err)
 	}
 	defer f.Close()
 	collections, err := corpLoader.LoadCorpus(f)
 	if err != nil {
-		return fmt.Errorf("WriteCorpusAll could not load corpus: %v", err)
+		return nil, fmt.Errorf("WriteCorpusAll could not load corpus: %v", err)
 	}
-	err = WriteCorpus(*collections, outputConfig, libLoader, dictTokenizer,
+	indexState, err := WriteCorpus(*collections, outputConfig, libLoader, dictTokenizer,
 			indexConfig, wdict)
 	if err != nil {
-		return fmt.Errorf("WriteCorpusAll could not open file: %v", err)
+		return nil, fmt.Errorf("WriteCorpusAll could not open file: %v", err)
 	}
-	return nil
+	return indexState, nil
 }
 
 // Writes a corpus document collection to HTML, including all the entries
@@ -969,7 +1024,29 @@ func WriteHwFiles(loader library.LibraryLoader,
 		indexConfig index.IndexConfig,
 		wdict map[string]dicttypes.Word) error {
 	log.Printf("analysis.WriteHwFiles: Begin +++++++++++\n")
-	index.BuildIndex(indexConfig)
+	fname := indexConfig.IndexDir + "/" + index.WfCorpusFile
+	wfFile, err := os.Open(fname)
+	if err != nil {
+		return fmt.Errorf("analysis.WriteHwFiles, error opening word freq file: %f", err)
+	}
+	defer wfFile.Close()
+	wfDocFName := indexConfig.IndexDir + "/" + index.WfDocFile
+	wfDocReader, err := os.Open(wfDocFName)
+	if err != nil {
+		return fmt.Errorf("analysis.WriteHwFiles, error opening word freq doc file: %v", err)
+	}
+	defer wfDocReader.Close()
+	indexFN := indexConfig.IndexDir + "/" + index.KeywordIndexFile
+	indexWriter, err := os.Create(indexFN)
+	if err != nil {
+		return fmt.Errorf("index.writeKeywordIndex: Could not create file: %v", err)
+	}
+	defer indexWriter.Close()
+	indexStore := index.IndexStore{wfFile, wfDocReader, indexWriter}
+	indexState, err := index.BuildIndex(indexConfig, indexStore)
+	if err != nil {
+		return fmt.Errorf("WriteHwFiles, error building index: %v", err)
+	}
 	log.Printf("analysis.WriteHwFiles: Get headwords\n")
 	hwArray := GetHeadwords(wdict)
 	vocabAnalysis, err := GetWordFrequencies(loader, dictTokenizer, wdict)
@@ -984,11 +1061,10 @@ func WriteHwFiles(loader library.LibraryLoader,
 				corpus.CollectionsFile, err)
 	}
 	defer f.Close()
-	corpusEntryMap, err := loader.GetCorpusLoader().LoadAll(f)
+	outfileMap, err := corpus.GetOutfileMap(loader.GetCorpusLoader(), f)
 	if err != nil {
-		return fmt.Errorf("WriteHwFiles, error loading corpus: %v", err)
+		return fmt.Errorf("WriteHwFiles, Error getting outfile map: %v", err)
 	}
-	outfileMap := corpus.GetOutfileMap(*corpusEntryMap)
 	dateUpdated := time.Now().Format("2006-01-02")
 
 	// Prepare template
@@ -1063,7 +1139,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 
 		dictEntry := DictEntry {
 			Headword:     hw,
-			RelevantDocs: index.FindDocsForKeyword(hw, outfileMap),
+			RelevantDocs: index.FindDocsForKeyword(hw, *outfileMap, *indexState),
 			ContainsByDomain: containsByDomain,
 			Contains:     contains,
 			Collocations: wordCollocations,

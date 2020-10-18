@@ -54,13 +54,6 @@ func testCorpusConfig() corpus.CorpusConfig {
 	}
 }
 
-func testFileCorpusLoader(corpusConfig corpus.CorpusConfig) corpus.FileCorpusLoader {
-	return corpus.FileCorpusLoader{
-		FileName: "File",
-		Config: corpusConfig,
-	}
-}
-
 // TestMain runs integration tests if the flag -integration is set
 func TestMain(m *testing.M) {
 	flag.Parse()
@@ -75,7 +68,7 @@ func TestIntegration(t *testing.T) {
 	t.Log("TestParseText begin")
 	wdict := make(map[string]dicttypes.Word)
 	corpusConfig := testCorpusConfig()
-	corpusLoader := testFileCorpusLoader(corpusConfig)
+	corpusLoader := corpus.NewCorpusLoader(corpusConfig)
 	r, err := os.Create("testdata/test-trad.html")
 	if err != nil {
 		t.Fatalf("main, could not open file: %v", err)
@@ -102,7 +95,7 @@ func TestIntegration(t *testing.T) {
 
 func TestWriteLibraryFiles0(t *testing.T) {
 	corpConfig := corpus.CorpusConfig{}
-	fileLibLoader := library.FileLibraryLoader{"File", corpConfig}
+	fileLibLoader := library.NewLibraryLoader("File", corpConfig)
 	dateUpdated := time.Now().Format("2006-01-02")
 	corpusConfig := corpus.CorpusConfig{
 		CorpusDataDir: "data/corpus",
@@ -128,7 +121,7 @@ func TestWriteLibraryFiles0(t *testing.T) {
 		TargetStatus: "public",
 		Loader: fileLibLoader,
 	}
-	mockLoader := library.FileLibraryLoader{"Mock", corpConfig}
+	mockLoader := library.NewLibraryLoader("Mock", corpConfig)
 	mockLib := library.Library{
 		Title: "Library",
 		Summary: "Top level collection in the Library",

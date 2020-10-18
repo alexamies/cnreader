@@ -14,19 +14,14 @@
 package index
 
 import (
-	"bufio"
-	"fmt"
-	"encoding/json"
-	"io"
 	"log"
-	"os"
 
 	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"github.com/alexamies/cnreader/corpus"
 )
 
 // Maximum number of documents displayed on a web page
-const MAX_DOCS_DISPLAYED = 10
+const maxDocsDisplayed = 10
 
 // A document-specific word frequency entry record
 type RetrievalResult struct {
@@ -41,13 +36,10 @@ type IndexConfig struct {
 
 // Retrieves documents with title for a single keyword
 func FindDocsForKeyword(keyword dicttypes.Word,
-		corpusEntryMap map[string]corpus.CorpusEntry) []RetrievalResult {
+		corpusEntryMap map[string]corpus.CorpusEntry,
+		indexState IndexState) []RetrievalResult {
 	docs := make([]RetrievalResult, 0)
-	if !keywordIndexReady {
-		log.Printf("index.FindForKeyword, Warning: index not yet ready")
-		entry := RetrievalResult{"Index not ready", "", "", 0}
-		return []RetrievalResult{entry}
-	}
+	wfdoc := *indexState.wfdoc
 	// TODO - separate corpora into simplified and traditional. At the moment
 	// only traditional will work
 	kw := keyword.Simplified
@@ -59,7 +51,7 @@ func FindDocsForKeyword(keyword dicttypes.Word,
 	//log.Printf("index.FindForKeyword, len(wfdoc[kw]) %d\n", len(wfdoc[kw]))
 	for _, raw := range wfdoc[kw] {
 		//log.Printf("index.FindForKeyword, raw.Filename %s\n", raw.Filename)
-		if i < MAX_DOCS_DISPLAYED {
+		if i < maxDocsDisplayed {
 			corpusEntry, ok := corpusEntryMap[raw.Filename]
 			if !ok {
 				log.Printf("index.FindForKeyword, no entry for %s\n",
@@ -79,35 +71,6 @@ func FindDocsForKeyword(keyword dicttypes.Word,
 }
 
 // Retrieves raw results for a single keyword
-func FindForKeyword(keyword string) []WFDocEntry {
-	if !keywordIndexReady {
-		log.Printf("index.FindForKeyword, Warning: index not yet ready")
-		entry := WFDocEntry{"Index not ready", 0}
-		return []WFDocEntry{entry}
-	}
+func FindForKeyword(keyword string, wfdoc map[string][]WFDocEntry) []WFDocEntry {
 	return wfdoc[keyword]
-}
-
-// Loads the keyword index from disk
-func LoadKeywordIndex(indexConfig IndexConfig) {
-	dir := indexConfig.IndexDir
-
-	fname := dir + "/" + KEYWORD_INDEX_FILE
-	f, err := os.Open(fname)
-	if err != nil {
-		log.Printf("index.LoadKeywordIndex, error opening index file: %v\n", err)
-	}
-	defer f.Close()
-
-	r := bufio.NewReader(f)
-	dec := json.NewDecoder(r)
-	for {
-		if err := dec.Decode(&wfdoc); err == io.EOF {
-			break
-		} else if err != nil {
-			log.Fatal(err)
-		}
-	}
-	keywordIndexReady = true
-	fmt.Printf("index.LoadKeywordIndex, index loaded: %d entries", len(wfdoc))
 }

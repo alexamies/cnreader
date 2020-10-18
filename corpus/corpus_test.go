@@ -14,38 +14,10 @@ package corpus
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"testing"
 	"time"
 )
-
-// Implements the CorpusLoader interface with trivial implementation
-type EmptyCorpusLoader struct {Label string}
-
-func (loader EmptyCorpusLoader) GetConfig() CorpusConfig {
-	return CorpusConfig{}
-}
-
-func (loader EmptyCorpusLoader) GetCollectionEntry(fName string) (*CollectionEntry, error) {
-	return &CollectionEntry{}, nil
-}
-
-func (loader EmptyCorpusLoader) LoadAll(r io.Reader) (*map[string]CorpusEntry, error) {
-	return loadAll(loader, r)
-}
-
-func (loader EmptyCorpusLoader) LoadCollection(r io.Reader, colTitle string) (*[]CorpusEntry, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (loader EmptyCorpusLoader) LoadCorpus(r io.Reader) (*[]CollectionEntry, error) {
-	return &[]CollectionEntry{}, nil
-}
-
-func (loader EmptyCorpusLoader) ReadText(r io.Reader) string {
-	return ""
-}
 
 // Implements the CorpusLoader interface with mock data
 type MockCorpusLoader struct {Label string}
@@ -111,17 +83,10 @@ func mockCorpusConfig() CorpusConfig {
 	}
 }
 
-func mockFileCorpusLoader() FileCorpusLoader {
-	return FileCorpusLoader{
-		FileName: "File",
-		Config: mockCorpusConfig(),
-	}
-}
-
-// Trivial test to load a collection file
-func TestLoadAll(t *testing.T) {
-	t.Log("corpus.TestLoadAll: Begin unit test")
-	loader := EmptyCorpusLoader{"File"}
+// LoadCorpus test to load a collection file
+func TestLoadCorpus(t *testing.T) {
+	t.Log("corpus.LoadCorpus: Begin unit test")
+	loader := NewCorpusLoader(CorpusConfig{})
 	simpleCol := `#Comment
 example_collection.tsv	example_collection.html	A Book 一本書		example_collection000.txt		Literary Chinese	Prose	Classical
 `
@@ -144,7 +109,7 @@ example_collection.tsv	example_collection.html	A Book 一本書		example_collect
 	for _, tc := range tests {
 		var buf bytes.Buffer
 		io.WriteString(&buf, tc.input)
-		corpusEntryMap, err := loader.LoadAll(&buf)
+		corpusEntryMap, err := loader.LoadCorpus(&buf)
 		if err != nil {
 			t.Fatalf("%s: unexpected error: %v", tc.name, err)
 		}
@@ -163,14 +128,8 @@ func TestCollections(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: unexpected error: %v", "TestCollections", err)
 	}
-	if len(*collections) == 0 {
-		t.Error("No collections found")
-	} else {
-		genre := "Confucian"
-		colList := *collections
-		if colList[0].Genre != genre {
-			t.Error("Expected genre ", genre, ", got ", colList[0].Genre)
-		}
+	if len(*collections) != 0 {
+		t.Errorf("More than zero collections found: %d", len(*collections))
 	}
 	t.Log("corpus.TestCollections: End unit test")
 }
@@ -178,7 +137,7 @@ func TestCollections(t *testing.T) {
 // Test reading of corpus files
 func TestLoadCollection(t *testing.T) {
 	t.Log("corpus.TestLoadCollection: Begin unit test")
-	emptyLoader := EmptyCorpusLoader{"Empty"}
+	emptyLoader := NewCorpusLoader(CorpusConfig{})
 	smallCollection := `# Source file, HTML file, title
 example_collection/example_collection001.txt	example_collection/example_collection001.html	第一回 Chapter 1
 `
@@ -215,5 +174,11 @@ example_collection/example_collection001.txt	example_collection/example_collecti
 
 // Test generating collection file
 func TestReadIntroFile(t *testing.T) {
-	ReadIntroFile("erya00.txt", mockCorpusConfig())
+	expect := "令甲卒皆伏，使老弱女子乘城。"
+	var buf bytes.Buffer
+	io.WriteString(&buf, expect)
+	got := ReadIntroFile(&buf)
+	if (expect != got) {
+		t.Errorf("Expected %s, got %s", expect, got)
+	}
 }

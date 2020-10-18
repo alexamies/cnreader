@@ -19,8 +19,8 @@ import (
 )
 
 // Trivial test for document frequency
-func TestAddVocabulary0(t *testing.T) {
-	log.Println("index.DocumentFrequency.TestAddVocabulary enter")
+func TestAddVocabulary(t *testing.T) {
+	t.Logf("index.DocumentFrequency.TestAddVocabulary enter")
 	df := NewDocumentFrequency()
 	vocab := map[string]int{}
 	df.AddVocabulary(vocab)
@@ -114,7 +114,7 @@ func TestIDF3(t *testing.T) {
 	v1, ok := df.IDF(terms[1])
 	v2, ok := df.IDF(terms[2])
 	v3, ok := df.IDF(terms[3])
-	log.Printf("index.TestIDF3 idf = (%v, %v, %v, %v)\n", v0, v1, v2, v3)
+	t.Logf("index.TestIDF3 idf = (%v, %v, %v, %v)\n", v0, v1, v2, v3)
 }
 
 // Trivial test for tf-idf
