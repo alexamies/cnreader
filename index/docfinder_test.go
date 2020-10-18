@@ -13,6 +13,7 @@
 package index
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/alexamies/cnreader/corpus"
@@ -76,31 +77,14 @@ func TestFindDocsForKeyword0(t *testing.T) {
 		FileName: "File",
 		Config: mockCorpusConfig(),
 	}
-	corpusEntryMap := fileLoader.LoadAll(corpus.CollectionsFile)
-	outfileMap := corpus.GetOutfileMap(corpusEntryMap)
+	var buf bytes.Buffer
+	corpusEntryMap, err := fileLoader.LoadAll(&buf)
+	if err != nil {
+		t.Fatalf("index.TestFindDocsForKeyword0: error: %v", err)
+	}
+	outfileMap := corpus.GetOutfileMap(*corpusEntryMap)
 	documents := FindDocsForKeyword(hw, outfileMap)
 	if len(documents) != 0 {
 		t.Error("index.TestFindDocsForKeyword0: expectedd no documents")
 	}
-}
-
-// Trivial test for loading index
-func TestFindDocsForKeyword1(t *testing.T) {
-	BuildIndex(mockIndexConfig())
-	s1 := "铁"
-	s2 := "鐵"
-	hw := dicttypes.Word{
-		HeadwordId:          1,
-		Simplified:  s1,
-		Traditional: s2,
-		Pinyin:      "tiě",
-		Senses:  []dicttypes.WordSense{},
-	}
-	fileLoader := corpus.FileCorpusLoader{
-		FileName: "File",
-		Config: mockCorpusConfig(),
-	}
-	corpusEntryMap := fileLoader.LoadAll(corpus.CollectionsFile)
-	outfileMap := corpus.GetOutfileMap(corpusEntryMap)
-	FindDocsForKeyword(hw, outfileMap)
 }

@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -207,18 +208,43 @@ func GetChunks(text string) list.List {
 // GetWordFrequencies compute word doc frequencies for corpus
 func GetDocFrequencies(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer,
-		corpusConfig corpus.CorpusConfig,
 		wdict map[string]dicttypes.Word) (*index.DocumentFrequency, error) {
 	log.Printf("analysis.GetDocFrequencies: enter")
 	df := index.NewDocumentFrequency()
 	corpLoader := libLoader.GetCorpusLoader()
-	collectionEntries := corpLoader.LoadCorpus(corpus.CollectionsFile)
-	for _, col := range collectionEntries {
+	corpusConfig := corpLoader.GetConfig()
+	collectionsFile := corpusConfig.CorpusDataDir + "/" + corpus.CollectionsFile
+	f, err := os.Open(collectionsFile)
+	if err != nil {
+		return nil, fmt.Errorf("GetDocFrequencies: Error opening collection file: %v", err)
+	}
+	defer f.Close()
+	collectionEntries, err := corpLoader.LoadCorpus(f)
+	if err != nil {
+		return nil, fmt.Errorf("GetDocFrequencies: Error loading corpus: %v", err)
+	}
+	for _, col := range *collectionEntries {
 		colFile := col.CollectionFile
-		corpusEntries := corpLoader.LoadCollection(colFile, col.Title)
-		for _, entry := range corpusEntries {
+		r, err := os.Open(colFile)
+		if err != nil {
+			return nil, fmt.Errorf("GetDocFrequencies: Error opening col file %s: %v",
+					colFile, err)
+		}
+		defer r.Close()
+		corpusEntries, err := corpLoader.LoadCollection(r, col.Title)
+		if err != nil {
+			return nil, fmt.Errorf("GetDocFrequencies: Error loading collection %s: %v",
+					colFile, err)
+		}
+		for _, entry := range *corpusEntries {
 			src := corpusConfig.CorpusDir + entry.RawFile
-			text := corpLoader.ReadText(src)
+			reader, err := os.Open(src)
+			if err != nil {
+				return nil, fmt.Errorf("GetDocFrequencies: Error opening col file %s: %v",
+					src, err)
+			}
+			defer reader.Close()
+			text := corpLoader.ReadText(reader)
 			_, results := ParseText(text, col.Title, &entry, dictTokenizer,
 						corpusConfig, wdict)
 			df.AddDocFreq(results.DocFreq)
@@ -230,8 +256,7 @@ func GetDocFrequencies(libLoader library.LibraryLoader,
 // GetWordFrequencies compute word frequencies, collocations, and usage for corpus
 func GetWordFrequencies(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer,
-		corpusConfig corpus.CorpusConfig,
-		wdict map[string]dicttypes.Word) VocabAnalysis {
+		wdict map[string]dicttypes.Word) (*VocabAnalysis, error) {
 
 	log.Printf("analysis.GetWordFrequencies: enter")
 
@@ -243,14 +268,41 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 	wfTotal := map[*index.CorpusWord]index.CorpusWordFreq{}
 
 	corpLoader := libLoader.GetCorpusLoader()
-	collectionEntries := corpLoader.LoadCorpus(corpus.CollectionsFile)
-	for _, col := range collectionEntries {
+	corpusConfig := corpLoader.GetConfig()
+	collectionsFile := corpusConfig.CorpusDataDir + "/" + corpus.CollectionsFile
+	f, err := os.Open(collectionsFile)
+	if err != nil {
+		return nil, fmt.Errorf("GetWordFrequencies: Error opening collections file %s: %v",
+				collectionsFile, err)
+	}
+	defer f.Close()
+	collectionEntries, err := corpLoader.LoadCorpus(f)
+	if err != nil {
+		return nil, fmt.Errorf("GetWordFrequencies: Error reading collections file %s: %v",
+				collectionsFile, err)
+	}
+	for _, col := range *collectionEntries {
 		colFile := col.CollectionFile
-		//log.Printf("GetWordFrequencies: input file: %s\n", colFile)
-		corpusEntries := corpLoader.LoadCollection(colFile, col.Title)
-		for _, entry := range corpusEntries {
+		r, err := os.Open(colFile)
+		if err != nil {
+			return nil, fmt.Errorf("GetWordFrequencies: Error opening collection file %s: %v",
+					colFile, err)
+		}
+		defer r.Close()
+		corpusEntries, err := corpLoader.LoadCollection(r, col.Title)
+		if err != nil {
+			return nil, fmt.Errorf("GetWordFrequencies: Error loading col file %s: %v",
+					colFile, err)
+		}
+		for _, entry := range *corpusEntries {
 			src := corpusConfig.CorpusDir + entry.RawFile
-			text := corpLoader.ReadText(src)
+			reader, err := os.Open(src)
+			if err != nil {
+				return nil, fmt.Errorf("GetWordFrequencies: Error opening src file %s: %v",
+					src, err)
+			}
+			defer reader.Close()
+			text := corpLoader.ReadText(reader)
 			ccount += utf8.RuneCountInString(text)
 			_, results := ParseText(text, col.Title, &entry, dictTokenizer,
 						corpusConfig, wdict)
@@ -292,7 +344,7 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 	log.Printf("WordFrequencies: len(collocations) = %d\n", len(collocations))
 	log.Printf("WordFrequencies: character count = %d\n", ccount)
 
-	return VocabAnalysis{usageMap, wfTotal, wcTotal, collocations}
+	return &VocabAnalysis{usageMap, wfTotal, wcTotal, collocations}, nil
 }
 
 // Parses a Chinese text into words
@@ -653,24 +705,37 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 // baseDir: The base directory to use
 func writeCollection(collectionEntry corpus.CollectionEntry,
 		outputConfig generator.HTMLOutPutConfig, libLoader library.LibraryLoader,
-		dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig,
+		dictTokenizer tokenizer.Tokenizer, 
 		wdict map[string]dicttypes.Word) (*CollectionAResults, error) {
 
 	log.Printf("analysis.writeCollection: enter CollectionFile =" +
 			collectionEntry.CollectionFile)
 	corpLoader := libLoader.GetCorpusLoader()
-	corpusEntries := corpLoader.LoadCollection(collectionEntry.CollectionFile,
-		collectionEntry.Title)
+	corpusConfig := corpLoader.GetConfig()
+	cFile := corpusConfig.CorpusDataDir + "/" + collectionEntry.CollectionFile
+	f, err := os.Open(cFile)
+	if err != nil {
+		return nil, fmt.Errorf("analysis.writeCollection error opering cFile %s: %v",
+				cFile, err)
+	}
+	defer f.Close()
+	corpusEntries, err := corpLoader.LoadCollection(f, collectionEntry.Title)
+	if err != nil {
+		return nil, fmt.Errorf("analysis.writeCollection error loading cFile %s: %v",
+				cFile, err)
+	}
 	aResults := NewCollectionAResults()
-	for _, entry := range corpusEntries {
+	for _, entry := range *corpusEntries {
 		//log.Printf("analysis.writeCollection: entry.RawFile = " + entry.RawFile)
 		src := corpusConfig.CorpusDir + "/" + entry.RawFile
 		dest := outputConfig.WebDir + "/" + entry.GlossFile
-		//if collectionEntry.Title == "" {
-		//	log.Printf("analysis.writeCollection: collectionEntry.Title is " +
-		//		"empty, input file: %s, output file: %s\n", src, dest)
-		//}
-		text := corpLoader.ReadText(src)
+		r, err := os.Open(src)
+		if err != nil {
+			return nil, fmt.Errorf("analysis.writeCollection error src cFile %s: %v",
+					src, err)
+		}
+		defer r.Close()
+		text := corpLoader.ReadText(r)
 		_, results := ParseText(text, collectionEntry.Title, &entry,
 				dictTokenizer, corpusConfig, wdict)
 		aFile := writeAnalysis(results, entry.RawFile, entry.GlossFile,
@@ -705,8 +770,8 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	aFile := writeAnalysis(&aResults, collectionEntry.CollectionFile,
 		collectionEntry.GlossFile, collectionEntry.Title, "", outputConfig, wdict)
 	introText := corpus.ReadIntroFile(collectionEntry.Intro, corpusConfig)
-	err := generator.WriteCollectionFile(collectionEntry, aFile, outputConfig,
-			corpusConfig, corpusEntries, introText)
+	err = generator.WriteCollectionFile(collectionEntry, aFile, outputConfig,
+			corpusConfig, *corpusEntries, introText)
 	if err != nil {
 		return nil, fmt.Errorf("Error writing collection file: %v ", err)
 	}
@@ -719,7 +784,7 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 func WriteCorpus(collections []corpus.CollectionEntry,
 		outputConfig generator.HTMLOutPutConfig,
 		libLoader library.LibraryLoader, dictTokenizer tokenizer.Tokenizer,
-		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig,
+		indexConfig index.IndexConfig,
 		wdict map[string]dicttypes.Word) error {
 	log.Printf("analysis.WriteCorpus: enter")
 	index.Reset(indexConfig)
@@ -730,7 +795,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	aResults := NewCollectionAResults()
 	for _, collectionEntry := range collections {
 		results, err := writeCollection(collectionEntry, outputConfig, libLoader,
-				dictTokenizer, corpusConfig, wdict)
+				dictTokenizer, wdict)
 		if err != nil {
 			return fmt.Errorf("WriteCorpus could not open file: %v", err)
 		}
@@ -769,13 +834,23 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 // Write all the collections in the default corpus (collections.csv file)
 func WriteCorpusAll(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
-		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig,
+		indexConfig index.IndexConfig,
 		wdict map[string]dicttypes.Word) error {
 	log.Printf("analysis.WriteCorpusAll: enter")
 	corpLoader := libLoader.GetCorpusLoader()
-	collections := corpLoader.LoadCorpus(corpus.CollectionsFile)
-	err := WriteCorpus(collections, outputConfig, libLoader, dictTokenizer,
-			corpusConfig, indexConfig, wdict)
+	corpusConfig := corpLoader.GetConfig()
+	collectionsFile := corpusConfig.CorpusDataDir + "/" + corpus.CollectionsFile
+	f, err := os.Open(collectionsFile)
+	if err != nil {
+		return fmt.Errorf("GetWordFrequencies: Error opening collection file: %v", err)
+	}
+	defer f.Close()
+	collections, err := corpLoader.LoadCorpus(f)
+	if err != nil {
+		return fmt.Errorf("WriteCorpusAll could not load corpus: %v", err)
+	}
+	err = WriteCorpus(*collections, outputConfig, libLoader, dictTokenizer,
+			indexConfig, wdict)
 	if err != nil {
 		return fmt.Errorf("WriteCorpusAll could not open file: %v", err)
 	}
@@ -790,31 +865,32 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 			corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) error {
 	collectionEntry, err := libLoader.GetCorpusLoader().GetCollectionEntry(collectionFile)
 	if err != nil {
-		return fmt.Errorf("analysis.WriteCorpusCol: fatal error %v", err)
+		return fmt.Errorf("analysis.WriteCorpusCol:  could not get entry %v", err)
 	}
-	writeCollection(collectionEntry, outputConfig, libLoader, dictTokenizer,
-			corpusConfig, wdict)
+	_, err = writeCollection(*collectionEntry, outputConfig, libLoader,
+			dictTokenizer, wdict)
+	if err != nil {
+		return fmt.Errorf("analysis.WriteCorpusCol: error writing collection %v", err)
+	}
 	return nil
 }
 
 // Writes a document with markup for the array of tokens
 // tokens: A list of tokens forming the document
 // vocab: A list of word id's in the document
-// filename: The file name to write to
+// f: The writer to write to
 // GlossChinese: whether to convert the Chinese text in the file to hyperlinks
-func WriteDoc(tokens list.List, vocab map[string]int, filename,
+func WriteDoc(tokens list.List, vocab map[string]int, f io.Writer,
 	templateName, templateFile string, glossChinese bool, title string,
-		corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) {
+		corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) error {
 	if templateFile != `\N` {
-		writeHTMLDoc(tokens, vocab, filename, templateName, templateFile,
+		err := writeHTMLDoc(tokens, vocab, f, templateName, templateFile,
 			glossChinese, title, wdict)
-		return
+		if err != nil {
+			return fmt.Errorf("WriteDoc, error writing html doc: %v", err)
+		}
+		return nil
 	}
-	f, err := os.Create(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
 	w := bufio.NewWriter(f)
 	// Iterate over text chunks
 	for e := tokens.Front(); e != nil; e = e.Next() {
@@ -833,10 +909,14 @@ func WriteDoc(tokens list.List, vocab map[string]int, filename,
 				" class='dict-entry' data-toggle='popover'>%s</span>",
 				chunk, wordIds, chunk)
 		} else {
-			w.WriteString(chunk)
+			_, err := w.Write([]byte(chunk))
+			if err != nil {
+				return fmt.Errorf("WriteDoc, error writing doc: %v", err)
+			}
 		}
 	}
 	w.Flush()
+	return nil
 }
 
 // Writes a document with markup for the array of tokens
@@ -844,9 +924,9 @@ func WriteDoc(tokens list.List, vocab map[string]int, filename,
 // vocab: A list of word id's in the document
 // filename: The file name to write to
 // GlossChinese: whether to convert the Chinese text in the file to hyperlinks
-func writeHTMLDoc(tokens list.List, vocab map[string]int, filename,
+func writeHTMLDoc(tokens list.List, vocab map[string]int, f io.Writer,
 		templateName, templateFile string, glossChinese bool, title string,
-		wdict map[string]dicttypes.Word) {
+		wdict map[string]dicttypes.Word) error {
 	var b bytes.Buffer
 
 	// Iterate over text chunks
@@ -870,40 +950,45 @@ func writeHTMLDoc(tokens list.List, vocab map[string]int, filename,
 		}
 	}
 	dateUpdated := time.Now().Format("2006-01-02")
-	fnameParts := strings.Split(filename, "/")
-	fname := fnameParts[len(fnameParts) - 1]
-	content := HTMLContent{b.String(), dateUpdated, title, fname}
+	content := HTMLContent{b.String(), dateUpdated, title, ""}
 
 	// Prepare template
 	tmpl := template.Must(template.New(templateName).ParseFiles(templateFile))
-	f, err := os.Create(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
 	w := bufio.NewWriter(f)
-	err = tmpl.Execute(w, content)
+	err := tmpl.Execute(w, content)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("writeHTMLDoc, error executing template: %v", err)
 	}
 	w.Flush()
-	f.Close()
-
+	return nil
 }
 
 // Writes dictionary headword entries
 func WriteHwFiles(loader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
-		corpusConfig corpus.CorpusConfig, indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word) {
+		indexConfig index.IndexConfig,
+		wdict map[string]dicttypes.Word) error {
 	log.Printf("analysis.WriteHwFiles: Begin +++++++++++\n")
 	index.BuildIndex(indexConfig)
 	log.Printf("analysis.WriteHwFiles: Get headwords\n")
 	hwArray := GetHeadwords(wdict)
-	vocabAnalysis := GetWordFrequencies(loader, dictTokenizer, corpusConfig, wdict)
+	vocabAnalysis, err := GetWordFrequencies(loader, dictTokenizer, wdict)
+	if err != nil {
+		return fmt.Errorf("WriteHwFiles, error getting freq: %v", err)
+	}
 	usageMap := vocabAnalysis.UsageMap
 	collocations := vocabAnalysis.Collocations
-	corpusEntryMap := loader.GetCorpusLoader().LoadAll(corpus.CollectionsFile)
-	outfileMap := corpus.GetOutfileMap(corpusEntryMap)
+	f, err := os.Create(corpus.CollectionsFile)
+	if err != nil {
+		return fmt.Errorf("WriteHwFiles, unable to open to file %s: %v",
+				corpus.CollectionsFile, err)
+	}
+	defer f.Close()
+	corpusEntryMap, err := loader.GetCorpusLoader().LoadAll(f)
+	if err != nil {
+		return fmt.Errorf("WriteHwFiles, error loading corpus: %v", err)
+	}
+	outfileMap := corpus.GetOutfileMap(*corpusEntryMap)
 	dateUpdated := time.Now().Format("2006-01-02")
 
 	// Prepare template
@@ -989,26 +1074,26 @@ func WriteHwFiles(loader library.LibraryLoader,
 				hw.HeadwordId, ".html")
 		f, err := os.Create(filename)
 		if err != nil {
-			log.Printf("WriteHwFiles: Error creating file for hw.Id %d, "+
+			return fmt.Errorf("WriteHwFiles: Error creating file for hw.Id %d, "+
 				"Simplified %s", hw.HeadwordId, hw.Simplified)
-			log.Fatalf("hit a problem: %v", err)
 		}
 		w := bufio.NewWriter(f)
 		err = tmpl.Execute(w, dictEntry)
 		if err != nil {
-			log.Printf("analysis.WriteHwFiles: error executing template for hw.Id: %d,"+
+			return fmt.Errorf("analysis.WriteHwFiles: error executing template for hw.Id: %d,"+
 				" filename: %s, Simplified: %s", hw.HeadwordId, filename, hw.Simplified)
-			log.Fatalf("hit a different problem: %v", err)
 		}
 		w.Flush()
 		f.Close()
 		i++
 	}
+	return nil
 }
 
-// Writes a HTML files describing the corpora in the library, both public and
-// for the translation portal (requiring login)
-func writeLibraryFile(lib library.Library, corpora []library.CorpusData,
+// WriteLibraryFile writes a HTML files describing the corpora in the library.
+// 
+// This is for both public and for the translation portal (requiring login).
+func WriteLibraryFile(lib library.Library, corpora []library.CorpusData,
 		outputFile string, outputConfig generator.HTMLOutPutConfig) {
 	log.Printf("analysis.writeLibraryFile: with %d corpora, outputFile = %s, " +
 			"TargetStatus = %s", len(corpora), outputFile, lib.TargetStatus)
@@ -1034,61 +1119,4 @@ func writeLibraryFile(lib library.Library, corpora []library.CorpusData,
 	}
 	w.Flush()
 
-}
-
-// Writes a HTML file describing the corpora in the library and for each corpus
-// in the library
-func WriteLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
-		outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
-		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) error {
-	corpora := lib.Loader.LoadLibrary()
-	libraryOutFile := outputConfig.WebDir + "/library.html"
-	writeLibraryFile(lib, corpora, libraryOutFile, outputConfig)
-	portalDir := ""
-	goStaticDir := outputConfig.GoStaticDir
-	if len(goStaticDir) != 0 {
-		portalDir = corpusConfig.ProjectHome + "/" + goStaticDir
-		_, err := os.Stat(portalDir)
-		lib.TargetStatus = "translator_portal"
-		if err == nil {
-			portalLibraryFile := portalDir + "/portal_library.html"
-			writeLibraryFile(lib, corpora, portalLibraryFile, outputConfig)
-		}
-	}
-	for _, c := range corpora {
-		outputFile := ""
-		if c.Status == "public" {
-			outputFile = fmt.Sprintf("%s/%s.html", outputConfig.WebDir,
-					c.ShortName)
-		} else if c.Status == "translator_portal" {
-			outputFile = fmt.Sprintf("%s/%s.html", portalDir, c.ShortName)
-		} else {
-			log.Printf("library.WriteLibraryFiles: not sure what to do with status %v",
-				c.Status)
-			continue
-		}
-		fName := fmt.Sprintf(c.FileName)
-		collections := lib.Loader.GetCorpusLoader().LoadCorpus(fName)
-		err := WriteCorpus(collections, outputConfig, lib.Loader, dictTokenizer,
-				corpusConfig, indexConfig, wdict)
-		if err != nil {
-			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
-		}
-		corpus := library.Corpus{c.Title, "", lib.DateUpdated, collections}
-		f, err := os.Create(outputFile)
-		if err != nil {
-			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
-		}
-		defer f.Close()
-		w := bufio.NewWriter(f)
-		templFile := outputConfig.TemplateDir + "/corpus-list-template.html"
-		tmpl:= template.Must(template.New(
-					"corpus-list-template.html").ParseFiles(templFile))
-		err = tmpl.Execute(w, corpus)
-		if err != nil {
-			return fmt.Errorf("library.WriteLibraryFiles: could exacute template: %v", err)
-		}
-		w.Flush()
-	}
-	return nil
 }

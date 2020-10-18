@@ -13,8 +13,94 @@
 package corpus
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"testing"
+	"time"
 )
+
+// Implements the CorpusLoader interface with trivial implementation
+type EmptyCorpusLoader struct {Label string}
+
+func (loader EmptyCorpusLoader) GetConfig() CorpusConfig {
+	return CorpusConfig{}
+}
+
+func (loader EmptyCorpusLoader) GetCollectionEntry(fName string) (*CollectionEntry, error) {
+	return &CollectionEntry{}, nil
+}
+
+func (loader EmptyCorpusLoader) LoadAll(r io.Reader) (*map[string]CorpusEntry, error) {
+	return loadAll(loader, r)
+}
+
+func (loader EmptyCorpusLoader) LoadCollection(r io.Reader, colTitle string) (*[]CorpusEntry, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (loader EmptyCorpusLoader) LoadCorpus(r io.Reader) (*[]CollectionEntry, error) {
+	return &[]CollectionEntry{}, nil
+}
+
+func (loader EmptyCorpusLoader) ReadText(r io.Reader) string {
+	return ""
+}
+
+// Implements the CorpusLoader interface with mock data
+type MockCorpusLoader struct {Label string}
+
+func (loader MockCorpusLoader) GetCollectionEntry(fName string) (*CollectionEntry, error) {
+	entry := CorpusEntry{
+		RawFile: "corpus_doc.txt",
+		GlossFile: "corpus_doc.html",
+		Title: "corpus doc title",
+		ColTitle: "A Corpus Collection",
+	}
+	dateUpdated := time.Now().Format("2006-01-02")
+	c := CollectionEntry{
+		CollectionFile: "a_collection_file.txt",
+		GlossFile: "a_collection_file.html",
+		Title: "A Corpus Collection",
+		Summary: "A summary",
+		Intro: "An introduction",
+		DateUpdated: dateUpdated,
+		Corpus: "A Corpus",
+		CorpusEntries: []CorpusEntry{entry},
+		AnalysisFile: "collection_analysis_file.html",
+		Format: "prose",
+		Date: "1984",
+		Genre: "Science Fiction",
+	}
+	return &c, nil
+}
+
+func (loader MockCorpusLoader) GetConfig() CorpusConfig {
+	return CorpusConfig{}
+}
+
+func (loader MockCorpusLoader) LoadAll(r io.Reader) (*map[string]CorpusEntry, error) {
+	return loadAll(loader, r)
+}
+
+func (loader MockCorpusLoader) LoadCollection(r io.Reader, colTitle string) (*[]CorpusEntry, error) {
+	entry := CorpusEntry{
+		RawFile: "raw_file.txt",
+		GlossFile: "gloss_file.html",
+		Title: "Entry Title",
+		ColTitle: "Collection Title",
+	}
+	return &[]CorpusEntry{entry}, nil
+}
+
+func (loader MockCorpusLoader) LoadCorpus(r io.Reader) (*[]CollectionEntry, error) {
+	c := CollectionEntry{}
+	return &[]CollectionEntry{c}, nil
+}
+
+func (loader MockCorpusLoader) ReadText(r io.Reader) string {
+	return "你好 Hello!"
+}
 
 func mockCorpusConfig() CorpusConfig {
 	return CorpusConfig{
@@ -33,98 +119,98 @@ func mockFileCorpusLoader() FileCorpusLoader {
 }
 
 // Trivial test to load a collection file
-func TestLoadAll0(t *testing.T) {
+func TestLoadAll(t *testing.T) {
 	t.Log("corpus.TestLoadAll: Begin unit test")
 	loader := EmptyCorpusLoader{"File"}
-	corpusEntryMap := loader.LoadAll(CollectionsFile)
-	if len(corpusEntryMap) != 0 {
-		t.Error("corpus.TestLoadAll0: Non zero num. corpus entries found")
+	simpleCol := `#Comment
+example_collection.tsv	example_collection.html	A Book 一本書		example_collection000.txt		Literary Chinese	Prose	Classical
+`
+	tests := []struct {
+		name string
+		input string
+		expectedLen int
+	}{
+		{
+			name: "empty",
+			input: "",
+			expectedLen: 0,
+		},
+		{
+			name: "simple collection",
+			input: simpleCol,
+			expectedLen: 1,
+		},
 	}
-}
-
-// Easy test to load a collection file
-func TestLoadAll1(t *testing.T) {
-	t.Log("corpus.TestLoadAll1: Begin unit test")
-	loader := MockCorpusLoader{"File"}
-	corpusEntryMap := loader.LoadAll(CollectionsFile)
-	if len(corpusEntryMap) != 1 {
-		t.Error("corpus.TestLoadAll1: No corpus entries found")
-	}
-	_, ok := corpusEntryMap["raw_file.txt"]
-	if !ok {
-		t.Logf("corpus.TestLoadAll1: corpusEntryMap %v", corpusEntryMap)
-		t.Error("corpus.TestLoadAll1: Corpus entry not found")
-	}
-}
-
-func TestLoadAll2(t *testing.T) {
-	t.Log("corpus.TestLoadAll2: Begin unit test")
-	fileLoader := mockFileCorpusLoader()
-	corpusEntryMap := fileLoader.LoadAll(CollectionsFile)
-	if len(corpusEntryMap) == 0 {
-		t.Error("corpus.TestLoadAll: No corpus entries found")
-	} else {
-		for _, v := range corpusEntryMap {
-			entry := corpusEntryMap[v.RawFile]
-			t.Fatalf("corpus.TestLoadAll2: first entry: %v", entry)
+	for _, tc := range tests {
+		var buf bytes.Buffer
+		io.WriteString(&buf, tc.input)
+		corpusEntryMap, err := loader.LoadAll(&buf)
+		if err != nil {
+			t.Fatalf("%s: unexpected error: %v", tc.name, err)
+		}
+		if tc.expectedLen != len(*corpusEntryMap) {
+			t.Errorf("%s: expectedLen %d, got: %d", tc.name, tc.expectedLen,
+					len(*corpusEntryMap))
 		}
 	}
-	t.Log("corpus.TestLoadAll: End unit test")
 }
 
 // Test reading of files for HTML conversion
 func TestCollections(t *testing.T) {
 	t.Log("corpus.TestCollections: Begin unit test")
-	collections := loadCorpusCollections(CollectionsFile, mockCorpusConfig())
-	if len(collections) == 0 {
+	var buf bytes.Buffer
+	collections, err := loadCorpusCollections(&buf, mockCorpusConfig())
+	if err != nil {
+		t.Fatalf("%s: unexpected error: %v", "TestCollections", err)
+	}
+	if len(*collections) == 0 {
 		t.Error("No collections found")
 	} else {
 		genre := "Confucian"
-		if collections[0].Genre != genre {
-			t.Error("Expected genre ", genre, ", got ",
-				collections[0].Genre)
+		colList := *collections
+		if colList[0].Genre != genre {
+			t.Error("Expected genre ", genre, ", got ", colList[0].Genre)
 		}
 	}
 	t.Log("corpus.TestCollections: End unit test")
 }
 
 // Test reading of corpus files
-func TestLoadCollection0(t *testing.T) {
-	t.Log("corpus.TestLoadCollection0: Begin unit test")
+func TestLoadCollection(t *testing.T) {
+	t.Log("corpus.TestLoadCollection: Begin unit test")
 	emptyLoader := EmptyCorpusLoader{"Empty"}
-	corpusEntries := emptyLoader.LoadCollection("literary_chinese_prose.csv", "")
-	if len(corpusEntries) != 0 {
-		t.Error("Non zero corpus entries found")
+	smallCollection := `# Source file, HTML file, title
+example_collection/example_collection001.txt	example_collection/example_collection001.html	第一回 Chapter 1
+`
+	tests := []struct {
+		name string
+		input string
+		expectedLen int
+	}{
+		{
+			name: "empty",
+			input: "",
+			expectedLen: 0,
+		},
+		{
+			name: "simple collection",
+			input: smallCollection,
+			expectedLen: 1,
+		},
 	}
-	t.Log("corpus.TestLoadCollection0: End unit test")
-}
-
-// Test reading of corpus files
-func TestLoadCollection1(t *testing.T) {
-	t.Log("corpus.TestLoadCollection1: Begin unit test")
-	mockLoader := MockCorpusLoader{"Mock"}
-	corpusEntries := mockLoader.LoadCollection("literary_chinese_prose.csv", "")
-	if len(corpusEntries) != 1 {
-		t.Error("Num corpus entries found != 1")
+	for _, tc := range tests {
+		var buf bytes.Buffer
+		io.WriteString(&buf, tc.input)
+		corpusEntries, err := emptyLoader.LoadCollection(&buf, "")
+		if err != nil {
+			t.Fatalf("%s: unexpected error: %v", tc.name, err)
+		}
+		if tc.expectedLen != len(*corpusEntries) {
+			t.Errorf("%s: expectedLen %d, got: %d", tc.name, tc.expectedLen,
+					len(*corpusEntries))
+		}
 	}
-	t.Log("corpus.TestLoadCollection1: End unit test")
-}
-
-// Test reading of corpus files
-func TestLoadCollection2(t *testing.T) {
-	fileLoader := mockFileCorpusLoader()
-	corpusEntries := fileLoader.LoadCollection("literary_chinese_prose.csv", "")
-	if len(corpusEntries) == 0 {
-		t.Error("No corpus entries found")
-	}
-	if corpusEntries[0].RawFile != "classical_chinese_text-raw.html" {
-		t.Error("Expected entry classical_chinese_text-raw.html, got ",
-			corpusEntries[0].RawFile)
-	}
-	if corpusEntries[0].GlossFile != "classical_chinese_text.html" {
-		t.Error("Expected entry classical_chinese_text.html, got ",
-			corpusEntries[0].GlossFile)
-	}
+	t.Log("corpus.TestLoadCollection: End unit test")
 }
 
 // Test generating collection file

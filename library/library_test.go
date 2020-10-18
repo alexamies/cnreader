@@ -13,15 +13,54 @@
 package library
 
 import (
+	"fmt"
+	"io"
 	"testing"
+
+	"github.com/alexamies/cnreader/corpus"
 )
 
-func TestLoadLibrary0(t *testing.T) {
-	emptyLibLoader := EmptyLibraryLoader{"Empty"}
-	emptyLibLoader.LoadLibrary()
+// Implements the CorpusLoader interface with trivial implementation
+type EmptyCorpusLoader struct {Label string}
+
+func (loader EmptyCorpusLoader) GetConfig() corpus.CorpusConfig {
+	return corpus.CorpusConfig{}
 }
 
-func TestLoadLibrary1(t *testing.T) {
-	mockLoader := MockLibraryLoader{"Mock"}
-	mockLoader.LoadLibrary()
+func (loader EmptyCorpusLoader) GetCollectionEntry(fName string) (*corpus.CollectionEntry, error) {
+	return &corpus.CollectionEntry{}, nil
+}
+
+func (loader EmptyCorpusLoader) LoadAll(r io.Reader) (*map[string]corpus.CorpusEntry, error) {
+	entries := make(map[string]corpus.CorpusEntry)
+	return &entries, nil
+}
+
+func (loader EmptyCorpusLoader) LoadCollection(r io.Reader, colTitle string) (*[]corpus.CorpusEntry, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (loader EmptyCorpusLoader) LoadCorpus(r io.Reader) (*[]corpus.CollectionEntry, error) {
+	return &[]corpus.CollectionEntry{}, nil
+}
+
+func (loader EmptyCorpusLoader) ReadText(r io.Reader) string {
+	return ""
+}
+
+// Mock loader that has no data
+type EmptyLibraryLoader struct {Label string}
+
+// Implements the method from the LibraryLoader interface
+func (loader EmptyLibraryLoader) GetCorpusLoader() corpus.CorpusLoader {
+	return EmptyCorpusLoader{loader.Label}
+}
+
+func (loader EmptyLibraryLoader) LoadLibrary() []CorpusData {
+	return []CorpusData{}
+}
+
+func TestLoadLibrary(t *testing.T) {
+	emptyLibLoader := EmptyLibraryLoader{"Empty"}
+	emptyLibLoader.LoadLibrary()
 }

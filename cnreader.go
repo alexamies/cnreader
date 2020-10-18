@@ -24,6 +24,7 @@ import (
 	"os"
 	"runtime/pprof"
 	"strconv"
+	"text/template"
 	"time"
 
 	"github.com/alexamies/chinesenotes-go/config"
@@ -74,7 +75,7 @@ func getDocFreq(c config.AppConfig) (*index.DocumentFrequency, error) {
 	if err != nil {
 		log.Printf("getDocFreq, error opening word freq file (recoverable): %v", err)
 		df, err := analysis.GetDocFrequencies(fileLibraryLoader, dictTokenizer,
-				corpusConfig, wdict)
+				wdict)
 		if err != nil {
 			return nil, fmt.Errorf("getDocFreq: error computing document freq: %v", err)
 		}
@@ -86,7 +87,7 @@ func getDocFreq(c config.AppConfig) (*index.DocumentFrequency, error) {
 		log.Printf("getDocFreq, error reading document frequency (recoverable): %v",
 			err)
 		df, err = analysis.GetDocFrequencies(fileLibraryLoader, dictTokenizer,
-				corpusConfig, wdict)
+				wdict)
 		if err != nil {
 			return nil, fmt.Errorf("getDocFreq, error computing doc freq: %v", err)
 		}
@@ -196,6 +197,73 @@ func getIndexConfig(c config.AppConfig) index.IndexConfig {
 	}
 }
 
+// writeLibraryFiles writes HTML files for each file in the corpus.
+//
+// Table of contents files are also written with links including the highest
+// level file pointing to the different ToC files.
+func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
+		outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
+		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) error {
+	corpora := lib.Loader.LoadLibrary()
+	libraryOutFile := outputConfig.WebDir + "/library.html"
+	analysis.WriteLibraryFile(lib, corpora, libraryOutFile, outputConfig)
+	portalDir := ""
+	goStaticDir := outputConfig.GoStaticDir
+	if len(goStaticDir) != 0 {
+		portalDir = corpusConfig.ProjectHome + "/" + goStaticDir
+		_, err := os.Stat(portalDir)
+		lib.TargetStatus = "translator_portal"
+		if err == nil {
+			portalLibraryFile := portalDir + "/portal_library.html"
+			analysis.WriteLibraryFile(lib, corpora, portalLibraryFile, outputConfig)
+		}
+	}
+	for _, c := range corpora {
+		outputFile := ""
+		if c.Status == "public" {
+			outputFile = fmt.Sprintf("%s/%s.html", outputConfig.WebDir,
+					c.ShortName)
+		} else if c.Status == "translator_portal" {
+			outputFile = fmt.Sprintf("%s/%s.html", portalDir, c.ShortName)
+		} else {
+			log.Printf("library.WriteLibraryFiles: not sure what to do with status %v",
+				c.Status)
+			continue
+		}
+		r, err := os.Create(c.FileName)
+		if err != nil {
+			log.Fatalf("WriteHwFiles, unable to open to file %s: %v",
+				c.FileName, err)
+		}
+		defer r.Close()
+		collections, err := lib.Loader.GetCorpusLoader().LoadCorpus(r)
+		if err != nil {
+			return fmt.Errorf("library.WriteLibraryFiles: could not load corpus: %v", err)
+		}
+		err = analysis.WriteCorpus(*collections, outputConfig, lib.Loader,
+				dictTokenizer, indexConfig, wdict)
+		if err != nil {
+			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
+		}
+		corpus := library.Corpus{c.Title, "", lib.DateUpdated, *collections}
+		f, err := os.Create(outputFile)
+		if err != nil {
+			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
+		}
+		defer f.Close()
+		w := bufio.NewWriter(f)
+		templFile := outputConfig.TemplateDir + "/corpus-list-template.html"
+		tmpl:= template.Must(template.New(
+					"corpus-list-template.html").ParseFiles(templFile))
+		err = tmpl.Execute(w, corpus)
+		if err != nil {
+			return fmt.Errorf("library.WriteLibraryFiles: could exacute template: %v", err)
+		}
+		w.Flush()
+	}
+	return nil
+}
+
 // Entry point for the chinesenotes command line tool.
 // Default action is to write out all corpus entries to HTML files
 func main() {
@@ -277,16 +345,32 @@ func main() {
 			}
 			log.Printf("main: input file: %s, output file: %s, template: %s\n",
 				src, dest, templateFile)
-			text := fileLibraryLoader.GetCorpusLoader().ReadText(src)
+			r, err := os.Create(src)
+			if err != nil {
+				log.Fatalf("main, could not open file: %v", err)
+			}
+			defer r.Close()
+			text := fileLibraryLoader.GetCorpusLoader().ReadText(r)
 			tokens, results := analysis.ParseText(text, "",
 					corpus.NewCorpusEntry(), dictTokenizer, getCorpusConfig(c), wdict)
-			analysis.WriteDoc(tokens, results.Vocab, dest, conversion.Template,
+			f, err := os.Create(dest)
+			if err != nil {
+				log.Fatalf("main, unable to write to file %s: %v", dest, err)
+			}
+			defer f.Close()
+			err = analysis.WriteDoc(tokens, results.Vocab, f, conversion.Template,
 					templateFile, conversion.GlossChinese, conversion.Title, corpusConfig, wdict)
+			if err != nil {
+				log.Fatalf("main, unable to write doc %s: %v", dest, err)
+			}
 		}
 	} else if *hwFiles {
 		log.Printf("main: Writing word entries for headwords\n")
-		analysis.WriteHwFiles(fileLibraryLoader, dictTokenizer, outputConfig,
-				corpusConfig, indexConfig, wdict)
+		err := analysis.WriteHwFiles(fileLibraryLoader, dictTokenizer, outputConfig,
+				indexConfig, wdict)
+		if err != nil {
+			log.Fatalf("main, unable to write headwords: %v", err)
+		}
 	} else if *librarymeta {
 		log.Printf("main: Writing digital library metadata\n")
 		fname := c.ProjectHome + "/" + library.LibraryFile
@@ -302,7 +386,7 @@ func main() {
 			TargetStatus: "public",
 			Loader: fileLibraryLoader,
 		}
-		err := analysis.WriteLibraryFiles(lib, dictTokenizer, outputConfig,
+		err := writeLibraryFiles(lib, dictTokenizer, outputConfig,
 				corpusConfig, indexConfig, wdict)
 		if err != nil {
 			log.Fatalf("main: could not write library files: %v\n", err)
@@ -316,8 +400,8 @@ func main() {
 		}
 	} else {
 		log.Println("main: writing out entire corpus")
-		err := analysis.WriteCorpusAll(fileLibraryLoader, dictTokenizer, outputConfig,
-				corpusConfig, indexConfig, wdict)
+		err := analysis.WriteCorpusAll(fileLibraryLoader, dictTokenizer,
+				outputConfig, indexConfig, wdict)
 		if err != nil {
 			log.Fatalf("main: writing out corpus, err: %v\n", err)
 		}

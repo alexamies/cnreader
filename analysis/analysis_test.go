@@ -16,7 +16,6 @@ import (
 	"bytes"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/alexamies/chinesenotes-go/dictionary"	
 	"github.com/alexamies/chinesenotes-go/dicttypes"	
@@ -24,7 +23,6 @@ import (
 	"github.com/alexamies/cnreader/corpus"
 	"github.com/alexamies/cnreader/generator"
 	"github.com/alexamies/cnreader/index"
-	"github.com/alexamies/cnreader/library"
 )
 
 func mockCorpusConfig() corpus.CorpusConfig {
@@ -219,23 +217,14 @@ func TestGetChunks4(t *testing.T) {
 func TestReadText1(t *testing.T) {
 	//log.Printf("TestReadText1: Begin ******** \n")
 	corpusLoader := mockFileCorpusLoader()
-	text := corpusLoader.ReadText("../testdata/sampletest.txt")
+	var buf bytes.Buffer
+	text := corpusLoader.ReadText(&buf)
 	expected := "繁體中文"
 	//log.Printf("TestReadText1: Expected  '%s', got '%s'\n", expected, text)
 	if text != expected {
 		t.Error("Expected ", expected, ", got ", text)
 	}
 	//log.Printf("TestReadText1: End ******** \n")
-}
-
-func TestReadText2(t *testing.T) {
-	//log.Printf("TestReadText2: Begin ******** \n")
-	corpusLoader := mockFileCorpusLoader()
-	text := corpusLoader.ReadText("../testdata/test.html")
-	if !strings.Contains(text, "繁體中文") {
-		t.Error("Expected to contain '繁體中文', got ", text)
-	}
-	//log.Printf("TestReadText2: End ******** \n")
 }
 
 func TestParseText(t *testing.T) {
@@ -419,8 +408,7 @@ func TestSampleUsage4(t *testing.T) {
 
 func TestSortedFreq(t *testing.T) {
 	wdict := make(map[string]dicttypes.Word)
-	corpusLoader := mockFileCorpusLoader()
-	text := corpusLoader.ReadText("../testdata/test-trad.html")
+	text := "夫起信論者，乃是至極大乘甚深祕典"
 	_, results := ParseText(text, "", corpus.NewCorpusEntry(),
 			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
 	sortedWords := index.SortedFreq(results.Vocab)
@@ -452,90 +440,56 @@ func TestWriteAnalysis(t *testing.T) {
 	t.Log("analysis.TestWriteAnalysis: End +++++++++++")
 }
 
-func TestWriteDoc1(t *testing.T) {
-	t.Log("analysis.TestWriteDoc1: Begin +++++++++++")
+func TestWriteDoc(t *testing.T) {
+	t.Log("analysis.TestWriteDoc: Begin +++++++++++")
 	wdict := make(map[string]dicttypes.Word)
-	tokens, results := ParseText("繁", "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
-	outfile := "../testoutput/output.html"
-	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
-			mockCorpusConfig(), wdict)
-	t.Log("analysis.TestWriteDoc1: End +++++++++++")
-}
-
-func TestWriteDoc2(t *testing.T) {
-	corpusLoader := mockFileCorpusLoader()
-	text := corpusLoader.ReadText("../testdata/test.html")
-	wdict := make(map[string]dicttypes.Word)
-	tokens, results := ParseText(text, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
-	if tokens.Len() != 4 {
-		t.Error("Expected to get length 4, got ", tokens.Len())
-	}
-	outfile := "../testoutput/test-gloss.html"
-	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
-			mockCorpusConfig(), wdict)
-}
-
-func TestWriteDoc3(t *testing.T) {
-	wdict := make(map[string]dicttypes.Word)
-	corpusLoader := mockFileCorpusLoader()
-	text := corpusLoader.ReadText("../testdata/test-simplified.html")
-	tokens, results := ParseText(text, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
-	if tokens.Len() != 6 {
-		t.Error("Expected to get length 6, got ", tokens.Len())
-	}
-	outfile := "../testoutput/test-simplified-gloss.html"
-	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
-			mockCorpusConfig(), wdict)
-}
-
-func TestWriteDoc4(t *testing.T) {
-	wdict := make(map[string]dicttypes.Word)
-	corpusLoader := mockFileCorpusLoader()
-	text := corpusLoader.ReadText("../testdata/test-simplified2.html")
-	tokens, results := ParseText(text, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
-	l := 3
-	if tokens.Len() != l {
-		for e := tokens.Front(); e != nil; e = e.Next() {
-			t.Logf("analysis.TestWriteDoc4: %v", e.Value.(string))
+	input1 := `
+  	A test document
+    繁體中文	
+	`
+	input2 := `
+ 	  <p>A test document with simplified Chinese</p>
+    <p>简体中文</p>
+    <p>Word with multiple senses: 中</p>
+	`
+	type test struct {
+		name string
+		input string
+		expectError bool
+		expectLen int
+  }
+  tests := []test{
+		{
+			name: "One character",
+			input: "繁",
+			expectError: false,
+			expectLen: 1,
+		},
+		{
+			name: "Four characters",
+			input: input1,
+			expectError: false,
+			expectLen: 6,
+		},
+		{
+			name: "Simplified characters",
+			input: input2,
+			expectError: false,
+			expectLen: 8,
+		},
+  }
+  for _, tc := range tests {
+		tokens, results := ParseText(tc.input, "", corpus.NewCorpusEntry(),
+				tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
+		if tc.expectLen != tokens.Len() {
+			t.Errorf("%s, expected len %d, got %d", tc.name, tc.expectLen, tokens.Len())
 		}
-		t.Error("TestWriteDoc4: Expected to get length ", l, ", got ",
-			tokens.Len())
+		var buf bytes.Buffer
+		err := WriteDoc(tokens, results.Vocab, &buf, `\N`, `\N`, true, "",
+				mockCorpusConfig(), wdict)
+		if !tc.expectError && err != nil {
+			t.Errorf("%s unexpected error: %v", tc.name, err)
+		}
 	}
-	outfile := "../testoutput/test-simplified-gloss2.html"
-	WriteDoc(tokens, results.Vocab, outfile, `\N`, `\N`, true, "",
-			mockCorpusConfig(), wdict)
-}
-
-func TestWriteLibraryFiles0(t *testing.T) {
-	emptyLibLoader := library.EmptyLibraryLoader{"Empty"}
-	dateUpdated := time.Now().Format("2006-01-02")
-	lib := library.Library{
-		Title: "Library",
-		Summary: "Top level collection in the Library",
-		DateUpdated: dateUpdated,
-		TargetStatus: "public",
-		Loader: emptyLibLoader,
-	}
-	wdict := make(map[string]dicttypes.Word)
-	WriteLibraryFiles(lib, tokenizer.DictTokenizer{}, mockOutputConfig(),
-			mockCorpusConfig(), mockIndexConfig(), wdict)
-}
-
-func TestWriteLibraryFiles1(t *testing.T) {
-	mockLoader := library.MockLibraryLoader{"Mock"}
-	dateUpdated := time.Now().Format("2006-01-02")
-	lib := library.Library{
-		Title: "Library",
-		Summary: "Top level collection in the Library",
-		DateUpdated: dateUpdated,
-		TargetStatus: "public",
-		Loader: mockLoader,
-	}
-	wdict := make(map[string]dicttypes.Word)
-	WriteLibraryFiles(lib, tokenizer.DictTokenizer{}, mockOutputConfig(),
-			mockCorpusConfig(), mockIndexConfig(), wdict)
+	t.Log("analysis.TestWriteDoc: End +++++++++++")
 }
