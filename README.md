@@ -27,13 +27,16 @@ $ export PATH=$PATH:/usr/local/go/bin
 
 ## Quickstart
 
-Supply Chinese text on the command line, tokenize, and match to English
-equivalents
+Supply Chinese text on the command line. Observe tokenization and matching to
+English equivalents
 
 ```shell
 go get github.com/alexamies/cnreader
 go run github.com/alexamies/cnreader -source_text="君不見黃河之水天上來"
 ```
+
+The dictionary will be downloaded from the Internet when run like this. To
+avoid repeatedly download, clone the repo and follow the instructions below.
 
 ## Basic Use
 

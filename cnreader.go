@@ -11,7 +11,17 @@
 // limitations under the License.
 
 // 
-// Command line utility to analyze corpus and mark up HTML files.
+// Command line utility to analyze Chinese text, including corpus analysis, 
+// compilation of a full text search index, and mark up HTML files in reader
+// style.
+//
+// Quickstart
+//
+// Supply Chinese text on the command line. Observe tokenization and matching to
+// English equivalents
+//
+// go get github.com/alexamies/cnreader
+// go run github.com/alexamies/cnreader -source_text="君不見黃河之水天上來"
 //
 package main
 
@@ -317,14 +327,14 @@ func main() {
 	var hwFiles = flag.Bool("hwfiles", false, "Compute and write " +
 			"HTML entries for each headword, writing the files to the "+
 			"web/words directory.")
-	var sourceText = flag.String("source_text", "",
-			"Analyze vocabulary for source input on the command line")
-	var writeTMIndex = flag.Bool("tmindex", false, "Compute and write " +
-			"translation memory index.")
 	var librarymeta = flag.Bool("librarymeta", false, "Top level " +
 			"collection entries for the digital library.")
 	var memprofile = flag.String("memprofile", "", "write memory profile to " +
 			"this file")
+	var sourceText = flag.String("source_text", "",
+			"Analyze vocabulary for source input on the command line")
+	var writeTMIndex = flag.Bool("tmindex", false, "Compute and write " +
+			"translation memory index.")
 	flag.Parse()
 
 	// Minimal config for simple cases
