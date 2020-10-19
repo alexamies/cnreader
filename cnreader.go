@@ -20,6 +20,7 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -52,6 +53,24 @@ type htmlConversion struct {
 // Initialize the app config data
 func initApp() (config.AppConfig) {
 	return config.InitConfig()
+}
+
+// formatTokens formats text tokens as plain text
+func formatTokens(w io.Writer, tokens []tokenizer.TextToken) {
+	for _, t := range tokens {
+		fmt.Fprintf(w, "Token: %s\n", t.Token)
+		fmt.Fprintf(w, "Pinyin: %s\n", t.DictEntry.Pinyin)
+		if len(t.DictEntry.Senses) == 1 {
+			fmt.Fprintf(w, "English: %s\n\n", t.DictEntry.Senses[0].English)
+			continue
+		}
+		fmt.Fprintf(w, "English:\n")
+		for i, ws := range t.DictEntry.Senses {
+			j := i+1
+			fmt.Fprintf(w, "%d. %s\n", j, ws.English)
+		}
+		fmt.Fprintln(w)
+	} 
 }
 
 // getDocFreq gets the word document frequency
@@ -138,7 +157,23 @@ func getHTMLConversions(c config.AppConfig) []htmlConversion {
 }
 
 func getCorpusConfig(c config.AppConfig) corpus.CorpusConfig {
-	excluded := corpus.LoadExcluded(getCorpusConfig(c))
+	var excluded map[string]bool
+	if len(c.CorpusDataDir()) > 0 {
+		excludedFile := c.CorpusDataDir() + "/exclude.txt"
+		file, err := os.Open(excludedFile)
+		if err != nil {
+			log.Printf("corpus.loadExcluded: Error opening excluded words file: %v, " +
+				"skipping excluded words", err)
+		}
+		defer file.Close()
+		excludedPtr, err := corpus.LoadExcluded(file)
+		if err != nil {
+			log.Printf("corpus.loadExcluded: Error loading excluded words file: %v, " +
+				"skipping excluded words", err)
+		} else {
+			excluded = *excludedPtr
+		}
+	}
 	return corpus.CorpusConfig{
 		CorpusDataDir: c.CorpusDataDir(),
 		CorpusDir: c.CorpusDir(),
@@ -202,9 +237,17 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
 		indexConfig index.IndexConfig,
 		wdict map[string]dicttypes.Word) error {
-	corpora := lib.Loader.LoadLibrary()
+	libFle, err := os.Open(library.LibraryFile)
+	if err != nil {
+		return fmt.Errorf("writeLibraryFiles: Error opening library file: %v", err)
+	}
+	defer libFle.Close()
+	corpora, err := lib.Loader.LoadLibrary(libFle)
+	if err != nil {
+		return fmt.Errorf("writeLibraryFiles, Error loading library: %v", err)
+	}
 	libraryOutFile := outputConfig.WebDir + "/library.html"
-	analysis.WriteLibraryFile(lib, corpora, libraryOutFile, outputConfig)
+	analysis.WriteLibraryFile(lib, *corpora, libraryOutFile, outputConfig)
 	portalDir := ""
 	goStaticDir := outputConfig.GoStaticDir
 	if len(goStaticDir) != 0 {
@@ -213,10 +256,10 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		lib.TargetStatus = "translator_portal"
 		if err == nil {
 			portalLibraryFile := portalDir + "/portal_library.html"
-			analysis.WriteLibraryFile(lib, corpora, portalLibraryFile, outputConfig)
+			analysis.WriteLibraryFile(lib, *corpora, portalLibraryFile, outputConfig)
 		}
 	}
-	for _, c := range corpora {
+	for _, c := range *corpora {
 		outputFile := ""
 		if c.Status == "public" {
 			outputFile = fmt.Sprintf("%s/%s.html", outputConfig.WebDir,
@@ -267,28 +310,51 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 func main() {
 	// Command line flags
 	var collectionFile = flag.String("collection", "", 
-		"Enhance HTML markup and do vocabulary analysis for all the files " +
-		"listed in given collection.")
+			"Enhance HTML markup and do vocabulary analysis for all the files " +
+			"listed in given collection.")
 	var html = flag.Bool("html", false, "Enhance HTML markup for all files " +
-		"listed in data/corpus/html-conversion.csv")
+			"listed in data/corpus/html-conversion.csv")
 	var hwFiles = flag.Bool("hwfiles", false, "Compute and write " +
-		"HTML entries for each headword, writing the files to the "+
-		"web/words directory.")
+			"HTML entries for each headword, writing the files to the "+
+			"web/words directory.")
+	var sourceText = flag.String("source_text", "",
+			"Analyze vocabulary for source input on the command line")
 	var writeTMIndex = flag.Bool("tmindex", false, "Compute and write " +
-		"translation memory index.")
+			"translation memory index.")
 	var librarymeta = flag.Bool("librarymeta", false, "Top level " +
-		"collection entries for the digital library.")
+			"collection entries for the digital library.")
 	var memprofile = flag.String("memprofile", "", "write memory profile to " +
-				"this file")
+			"this file")
 	flag.Parse()
 
+	// Minimal config for simple cases
 	c := initApp()
+	var wdict map[string]dicttypes.Word
+	var err error
+	if len(c.LUFileNames) > 0 {
+		wdict, err = fileloader.LoadDictFile(c)
+	} else {
+		const url = "https://github.com/alexamies/chinesenotes.com/blob/master/data/words.txt?raw=true"
+		wdict, err = fileloader.LoadDictURL(c, url)
+	}
+	if err != nil {
+		log.Fatalf("Error opening dictionary: %v", err)
+	}
+	dictTokenizer := tokenizer.DictTokenizer{wdict}
+
+	// Simple case, no validation done
+	if len(*sourceText) > 0 {
+		tokens := dictTokenizer.Tokenize(*sourceText)
+		fmt.Println("Analysis of input text:")
+		formatTokens(os.Stdout, tokens)
+		os.Exit(0)
+	} 
 
 	outputConfig := getHTMLOutPutConfig(c)
 	corpusConfig := getCorpusConfig(c)
 	indexConfig := getIndexConfig(c)
 
-	// Read headwords and validate
+	// Validate
 	posFName := fmt.Sprintf("%s/%s", c.DictionaryDir(), "grammar.txt")
 	posFile, err := os.Open(posFName)
 	if err != nil {
@@ -304,24 +370,20 @@ func main() {
 	domainReader := bufio.NewReader(domainFile)
 	validator, err := dictionary.NewValidator(posReader, domainReader)
 	if err != nil {
-		log.Fatalf("creatting dictionary validator: %v", err)
+		log.Fatalf("creating dictionary validator: %v", err)
 	}
 
 	// Setup loader for library
 	fname := c.ProjectHome + "/" + library.LibraryFile
 	libraryLoader := library.NewLibraryLoader(fname, corpusConfig)
 
-	wdict, err := fileloader.LoadDictFile(c)
-	if err != nil {
-		log.Fatalf("Error opening dictionary: %v", err)
-	}
+	// Validate dictionary for cases below
 	err = dictionary.ValidateDict(wdict, validator)
 	if err != nil {
 		log.Fatalf("main: unexpected error reading headwords, %v", err)
 	}
-	dictTokenizer := tokenizer.DictTokenizer{wdict}
 
-	if (*collectionFile != "") {
+	if len(*collectionFile) > 0 {
 		log.Printf("main: writing collection %s\n", *collectionFile)
 		err := analysis.WriteCorpusCol(*collectionFile, libraryLoader,
 				dictTokenizer, outputConfig, corpusConfig, wdict)

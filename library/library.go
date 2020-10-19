@@ -14,9 +14,10 @@ package library
 
 import (
 	"encoding/csv"
+	"fmt"
+	"io"
+
 	"github.com/alexamies/cnreader/corpus"
-	"log"
-	"os"
 )
 
 // The library file listing the corpora
@@ -42,31 +43,31 @@ type LibraryData struct {
 	Corpora []CorpusData
 }
 
-// A LibraryLoader loads teh corpora into the library
+// LibraryLoader loads teh corpora into the library
 type LibraryLoader interface {
 
-	// Method to get the corpus loader
+	// GetCorpusLoader gets the corpus loader
 	GetCorpusLoader() corpus.CorpusLoader
 
-	// Method to load the corpora in the library
-	LoadLibrary() []CorpusData
+	// LoadLibrary loads the corpora in the library
+	LoadLibrary(r io.Reader) (*[]CorpusData, error)
 }
 
-// A fileLibraryLoader loads the corpora from files
+// fileLibraryLoader loads the corpora from files
 type fileLibraryLoader struct{
 	FileName string
 	Config corpus.CorpusConfig
 	CLoader corpus.CorpusLoader
 }
 
-// Implements the method from the LibraryLoader interface
+// GetCorpusLoader implements theLibraryLoader interface
 func (loader fileLibraryLoader) GetCorpusLoader() corpus.CorpusLoader {
 	return loader.CLoader
 }
 
-// Implements the method from the LibraryLoader interface
-func (loader fileLibraryLoader) LoadLibrary() []CorpusData {
-	return loadLibrary(loader.FileName)
+// LoadLibrary implements the interface
+func (loader fileLibraryLoader) LoadLibrary(r io.Reader) (*[]CorpusData, error) {
+	return loadLibrary(r)
 }
 
 // NewLibraryLoader creates a new LibraryLoader
@@ -78,26 +79,21 @@ func NewLibraryLoader(fname string, config corpus.CorpusConfig) LibraryLoader {
 	}
 }
 
-// Gets the list of source and destination files for HTML conversion
-func loadLibrary(fname string) []CorpusData {
-	file, err := os.Open(fname)
-	if err != nil {
-		log.Fatal("library.loadLibrary: Error opening library file.", err)
-	}
-	defer file.Close()
-	reader := csv.NewReader(file)
+// loadLibrary gets the list of source and destination files for HTML conversion
+func loadLibrary(r io.Reader) (*[]CorpusData, error) {
+	reader := csv.NewReader(r)
 	reader.FieldsPerRecord = -1
 	reader.Comma = rune('\t')
 	reader.Comment = rune('#')
 	rawCSVdata, err := reader.ReadAll()
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("loadLibrary, error reading file: %v", err)
 	}
 	corpora := []CorpusData{}
 	for i, row := range rawCSVdata {
 		if len(row) < 4 {
-			log.Fatal("library.loadLibrary: not enough rows in file ", i,
-				      len(row), fname)
+			return nil, fmt.Errorf("library.loadLibrary: not enough rows in file %d, %d ", i,
+				      len(row))
 	  	}
 		title := row[0]
 		shortName := row[1]
@@ -106,5 +102,5 @@ func loadLibrary(fname string) []CorpusData {
 		corpus := CorpusData{title, shortName, status, fileName}
 		corpora = append(corpora, corpus)
 	}
-	return corpora
+	return &corpora, nil
 }

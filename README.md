@@ -25,6 +25,16 @@ something like
 $ export PATH=$PATH:/usr/local/go/bin
 ```
 
+## Quickstart
+
+Supply Chinese text on the command line, tokenize and match to English
+defintions
+
+```shell
+go get github.com/alexamies/cnreader
+go run github.com/alexamies/cnreader -source_text="君不見黃河之水天上來"
+```
+
 ## Basic Use
 
 ### Get the source code and add the directory $CNREADER_HOME/go to your GOPATH

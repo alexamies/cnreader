@@ -18,15 +18,12 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
-	"github.com/alexamies/chinesenotes-go/dicttypes"	
+	"github.com/alexamies/chinesenotes-go/config"	
+	"github.com/alexamies/chinesenotes-go/fileloader"	
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/analysis"
 	"github.com/alexamies/cnreader/corpus"
-	"github.com/alexamies/cnreader/generator"
-	"github.com/alexamies/cnreader/index"
-	"github.com/alexamies/cnreader/library"
 )
 	
 var integration = flag.Bool("integration", false, "run an integration test")
@@ -65,11 +62,17 @@ func TestMain(m *testing.M) {
 }
 
 func TestIntegration(t *testing.T) {
-	t.Log("TestParseText begin")
-	wdict := make(map[string]dicttypes.Word)
+	t.Log("TestIntegration begin")
+	appConfig := config.AppConfig{
+		LUFileNames: []string{"testdata/testwords.txt"},
+	}
+	wdict, err := fileloader.LoadDictFile(appConfig)
+	if err != nil {
+		t.Fatalf("main, could not load dict: %v", err)
+	}
 	corpusConfig := testCorpusConfig()
 	corpusLoader := corpus.NewCorpusLoader(corpusConfig)
-	r, err := os.Create("testdata/test-trad.html")
+	r, err := os.Open("testdata/test-trad.html")
 	if err != nil {
 		t.Fatalf("main, could not open file: %v", err)
 	}
@@ -84,71 +87,11 @@ func TestIntegration(t *testing.T) {
 			len(tokenText))
 		printList(t, tokens)
 	}
-	if results.CCount != 49 {
-		t.Fatalf("Expected to get char count 49, got %d", results.CCount)
+	if results.CCount != 4 {
+		t.Fatalf("Expected to get char count 4, got %d", results.CCount)
 	}
-	if len(results.Vocab) != 36 {
-		t.Errorf("Expected to get Vocab 37, got %d: %v", len(results.Vocab),
+	if len(results.Vocab) != 2 {
+		t.Errorf("Expected to get Vocab 2, got %d: %v", len(results.Vocab),
 			results.Vocab)
-	}
-}
-
-func TestWriteLibraryFiles0(t *testing.T) {
-	corpConfig := corpus.CorpusConfig{}
-	fileLibLoader := library.NewLibraryLoader("File", corpConfig)
-	dateUpdated := time.Now().Format("2006-01-02")
-	corpusConfig := corpus.CorpusConfig{
-		CorpusDataDir: "data/corpus",
-		CorpusDir: "corpus",
-		Excluded: map[string]bool{},
-		ProjectHome: ".",
-	}
-	outputConfig := generator.HTMLOutPutConfig{
-		ContainsByDomain: "",
-		Domain: "",
-		GoStaticDir: "static",
-		TemplateDir: "templates",
-		VocabFormat: "",
-		WebDir: "web-staging",
-	}
-	indexConfig := index.IndexConfig {
-		IndexDir: "index",
-	}
-	emptyLib := library.Library{
-		Title: "Library",
-		Summary: "Top level collection in the Library",
-		DateUpdated: dateUpdated,
-		TargetStatus: "public",
-		Loader: fileLibLoader,
-	}
-	mockLoader := library.NewLibraryLoader("Mock", corpConfig)
-	mockLib := library.Library{
-		Title: "Library",
-		Summary: "Top level collection in the Library",
-		DateUpdated: dateUpdated,
-		TargetStatus: "public",
-		Loader: mockLoader,
-	}
-	wdict := make(map[string]dicttypes.Word)
-	testCases := []struct {
-		name string
-		lib library.Library
-		expectErr bool
-	}{
-		{
-			name: "empty lib",
-			lib: emptyLib, 
-		},
-		{
-			name: "mock lib",
-			lib: mockLib, 
-		},
-	}
-	for _, tc := range testCases {
-		err := writeLibraryFiles(tc.lib, tokenizer.DictTokenizer{}, outputConfig,
-				corpusConfig, indexConfig, wdict)
-		if !tc.expectErr && err != nil {
-			t.Errorf("%s, unexpected error: %v", tc.name, err)
-		}
 	}
 }

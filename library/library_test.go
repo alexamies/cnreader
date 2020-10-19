@@ -13,6 +13,7 @@
 package library
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/alexamies/cnreader/corpus"
@@ -20,5 +21,9 @@ import (
 
 func TestLoadLibrary(t *testing.T) {
 	emptyLibLoader := NewLibraryLoader("", corpus.CorpusConfig{})
-	emptyLibLoader.LoadLibrary()
+	var buf bytes.Buffer
+	_, err := emptyLibLoader.LoadLibrary(&buf)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 }

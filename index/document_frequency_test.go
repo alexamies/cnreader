@@ -14,7 +14,6 @@ package index
 
 import (
 	"bytes"
-	"log"
 	"testing"
 )
 

@@ -13,14 +13,17 @@
 package corpus
 
 import (
+	"bytes"
+	"io"
 	"testing"
 )
 
 // Trivial test for excluded string
-func TestIsExcluded(t *testing.T) {
+func TestLoadExcluded(t *testing.T) {
 	t.Log("corpus.TestIsExcluded0: Begin unit tests")
-	excluded := make(map[string]bool)
-	excluded["如需引用文章"] = true
+	var buf bytes.Buffer
+	io.WriteString(&buf, "如需引用文章")
+	excluded := LoadExcluded(&buf)
 	tests := []struct {
 		name string
 		input string

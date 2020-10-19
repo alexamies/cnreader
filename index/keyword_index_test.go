@@ -87,7 +87,8 @@ func TestWriteWFCorpus(t *testing.T) {
 	for _, tc := range tests {
 		var wFWriter bytes.Buffer
 		var unknownCharsWriter bytes.Buffer
-		wordFreqStore := WordFreqStore{&wFWriter, &unknownCharsWriter}
+		var bigramWriter bytes.Buffer
+		wordFreqStore := WordFreqStore{&wFWriter, &unknownCharsWriter, &bigramWriter}
 		sw := SortedWordItem{tc.input, 1}
 		sortedWords := []SortedWordItem{sw}
 		unknownChars := []SortedWordItem{}

@@ -14,8 +14,8 @@ package corpus
 
 import (
 	"encoding/csv"
-	"log"
-	"os"
+	"fmt"
+	"io"
 )
 
 // Tests whether the string should be excluded from corpus analysis
@@ -26,30 +26,22 @@ func IsExcluded(excluded map[string]bool, text string) bool  {
 	return ok
 }
 
-func LoadExcluded(corpusConfig CorpusConfig) map[string]bool {
-	log.Print("corpus.loadExcluded enter")
+func LoadExcluded(file io.Reader) (*map[string]bool, error) {
+	// log.Print("corpus.loadExcluded enter")
 	excluded := make(map[string]bool)
-	excludedFile := corpusConfig.CorpusDataDir + "/exclude.txt"
-	file, err := os.Open(excludedFile)
-	if err != nil {
-		log.Printf("corpus.loadExcluded: Error opening excluded words file, " +
-			"skipping excluded words\n")
-		return nil
-	}
-	defer file.Close()
 	reader := csv.NewReader(file)
 	reader.FieldsPerRecord = -1
 	reader.Comma = rune('\t')
 	reader.Comment = rune('#')
 	rawCSVdata, err := reader.ReadAll()
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Error reading excluded text", err)
 	}
 	for _, row := range rawCSVdata {
 		if len(row) < 1 {
-			log.Fatal("corpus.loadExcluded: no columns in row")
-	  	}
+			return nil, fmt.Errorf("corpus.loadExcluded: no columns in row")
+	  }
 		excluded[row[0]] = true
 	}
-	return excluded
+	return &excluded, nil
 }

@@ -18,34 +18,54 @@ import (
 	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
-func TestGetHeadwordArray0(t *testing.T) {
-	keywords := Keywords{}
+func TestGetHeadwordArray(t *testing.T) {
 	wdict := map[string]dicttypes.Word{}
-	hws := GetHeadwordArray(keywords, wdict)
-	nReturned := len(hws)
-	nExpected := 0
-	if nReturned != nExpected {
-		t.Error("index.TestGetHeadwordArray0: nExpected ", nExpected, " got ",
-			nReturned)
+	simp := "多"
+	trad := "\\N"
+	pinyin := "duō"
+	wsArray := []dicttypes.WordSense{}
+	hw := dicttypes.Word{
+		HeadwordId: 1,
+		Simplified: simp,
+		Traditional: trad,
+		Pinyin: pinyin,
+		Senses: wsArray,
 	}
-}
-
-func TestGetHeadwordArray1(t *testing.T) {
-	kw := Keyword{"多", 1.1}
-	keywords := Keywords{kw}
-	wdict := make(map[string]dicttypes.Word)
-	hws := GetHeadwordArray(keywords, wdict)
-	nReturned := len(hws)
-	nExpected := 1
-	if nReturned != nExpected {
-		t.Error("index.TestGetHeadwordArray1: nExpected ", nExpected, " got ",
-			nReturned)
+	wdict["多"] = hw
+	duo := Keyword{"多", 1.1}
+	tests := []struct {
+		name string
+		keywords Keywords
+		nExpected int
+		pinyin string
+	}{
+		{
+			name: "empty",
+			keywords: Keywords{},
+			nExpected: 0,
+			pinyin: "",
+		},
+		{
+			name: "single term",
+			keywords: Keywords{duo},
+			nExpected: 1,
+			pinyin: "duō",
+		},
 	}
-	nPinyin := len(hws[0].Pinyin)
-	nPExpected := 1
-	if nPinyin != nPExpected {
-		t.Error("index.TestGetHeadwordArray1: nPExpected ", nPExpected, " got ",
-			nPinyin)
+	for _, tc := range tests {
+		hws := GetHeadwordArray(tc.keywords, wdict)
+		nReturned := len(hws)
+		if tc.nExpected != nReturned {
+			t.Errorf("%s: nExpected %d, got %d", tc.name, tc.nExpected, nReturned)
+			continue
+		}
+		if tc.nExpected == 0 {
+			continue
+		}
+		gotPinyin := hws[0].Pinyin
+		if tc.pinyin != gotPinyin {
+			t.Errorf("%s, expected tc.pinyin %s, got %s", tc.name, tc.pinyin, gotPinyin)
+		}
 	}
 }
 
