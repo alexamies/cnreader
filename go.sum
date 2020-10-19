@@ -31,6 +31,8 @@ github.com/alexamies/chinesenotes-go v0.0.25 h1:jbyz8A0retk8MFixfMhuY4QlAsP0uCyx
 github.com/alexamies/chinesenotes-go v0.0.25/go.mod h1:xdg4UNXw3YWPGmeovyPsb7X8zilnOLT5sJ4NzBcqtx4=
 github.com/alexamies/chinesenotes-go v0.0.26 h1:/vbG57zyNha48Irxg5AJAuttAdBWASxrJszEikbevFE=
 github.com/alexamies/chinesenotes-go v0.0.26/go.mod h1:eIkRqDhFheNU9ZLOrBvqIovBVVSpDvExwvFJ/+oyzcU=
+github.com/alexamies/chinesenotes-go v0.0.27 h1:Pt4GpHfjxzSg+fLhBFypuG+/DUx63/YaGMT2CsM0YlY=
+github.com/alexamies/chinesenotes-go v0.0.27/go.mod h1:eIkRqDhFheNU9ZLOrBvqIovBVVSpDvExwvFJ/+oyzcU=
 github.com/alexamies/cnreader v0.0.0-20201011025456-29192240cd79/go.mod h1:1qBivAbUOyAsUhJK6MkaNmJts3kfT/HQn/UtN7ItPI8=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
