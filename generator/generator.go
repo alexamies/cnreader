@@ -10,7 +10,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//Package for generating HTML files
+// Package for generating HTML files
+// This includes HTML templates embedded in source for zero-config usage.
+// Custom templates can be provided by setting the TemplateDir variable
+// in the config.yaml file or the TEMPLATE_HOME env variable.
 package generator
 
 import (
@@ -81,6 +84,11 @@ type CorpusEntryContent struct {
 	AnalysisFile string
 }
 
+// HTMLContent holds content for the template
+type HTMLContent struct {
+	Content, DateUpdated, Title, FileName string
+}
+
 // decodeUsageExample formats usage example text into links with highlight
 //   Return
 //      marked up text with links and highlight
@@ -127,6 +135,31 @@ func hyperlink(w dicttypes.Word, text, vocabFormat string) string {
 	}
 	return fmt.Sprintf(vocabFormat, pinyin, english, classTxt,
 			w.HeadwordId, text)
+}
+
+// MarkVocabLink constructs a hyperlink for a headword, including Pinyin and English in the
+// title attribute for the link mouseover
+func MarkVocabLink(w dicttypes.Word, text string) string {
+	const vocabFormat = "<a title='%s | %s' class='%s' href='/words/%d.html'>%s</a>"
+	return hyperlink(w, text, vocabFormat)
+}
+
+// MarkVocabSummary constructs a Summary HTML element for a headword.
+func MarkVocabSummary(w dicttypes.Word, text string) string {
+	vocabFormat := `<details><summary>%s</summary>%s %s</details>`
+	pinyin := w.Pinyin
+	english := ""
+	if len(w.Senses) > 0 {
+		english = w.Senses[0].English
+	}
+	if len(w.Senses) > 1 {
+		english = ""
+		for i, entry := range w.Senses {
+			english += fmt.Sprintf("%d. %s, ", i + 1, entry.English)
+		}
+		english = english[0:len(english)-2]
+	}
+	return fmt.Sprintf(vocabFormat, text, pinyin, english)
 }
 
 // span constructs a HTML span element for a headword
@@ -230,5 +263,37 @@ func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Wri
 	if err != nil {
 		return fmt.Errorf("could not execute template: %v", err)
 	}
+	return nil
+}
+
+// WriteDoc writes a document with markup for the array of tokens
+// tokens: A list of tokens forming the document
+// vocab: A list of word id's in the document
+// f: The writer to write to
+// GlossChinese: whether to convert the Chinese text in the file to markVocabs
+func WriteDoc(tokens []tokenizer.TextToken, f io.Writer, tmpl template.Template,
+		glossChinese bool, title string,
+		markVocab func(dicttypes.Word, string) string) error {
+	var b bytes.Buffer
+	for _, e := range tokens {
+		chunk := e.Token
+		word := e.DictEntry
+		if !glossChinese {
+			fmt.Fprintf(&b, chunk)
+		} else if len(word.Senses) > 0 {
+			markedText := markVocab(word, chunk)
+			fmt.Fprint(&b, markedText)
+		} else {
+			fmt.Fprintf(&b, chunk)
+		}
+	}
+	dateUpdated := time.Now().Format("2006-01-02")
+	content := HTMLContent{b.String(), dateUpdated, title, ""}
+	w := bufio.NewWriter(f)
+	err := tmpl.Execute(w, content)
+	if err != nil {
+		return fmt.Errorf("WriteDoc, error executing template: %v", err)
+	}
+	w.Flush()
 	return nil
 }

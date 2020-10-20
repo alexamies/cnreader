@@ -10,12 +10,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// 
 // Command line utility to analyze Chinese text, including corpus analysis, 
 // compilation of a full text search index, and mark up HTML files in reader
-// style.
+// style. This utility is used to generate web pages for
+// https://chinesenotes.com, https://ntireader.org, and https://hbreader.org.
 //
-// Quickstart
+// Quickstart:
 //
 // Supply Chinese text on the command line. Observe tokenization and matching to
 // English equivalents
@@ -23,6 +23,7 @@
 // go get github.com/alexamies/cnreader
 // go run github.com/alexamies/cnreader -source_text="君不見黃河之水天上來"
 //
+// Follow instructions in the README.md file for setup.
 package main
 
 import (
@@ -31,6 +32,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -121,7 +123,7 @@ func getDocFreq(c config.AppConfig) (*index.DocumentFrequency, error) {
 	return df, nil
 }
 
-// Gets the list of source and destination files for HTML conversion
+// getHTMLConversions gets the list of source and destination files for HTML conversion
 func getHTMLConversions(c config.AppConfig) []htmlConversion {
 	log.Printf("GetHTMLConversions: projectHome: '%s'\n", c.ProjectHome)
 	conversionsFile := c.ProjectHome + "/" + conversionsFile
@@ -166,6 +168,7 @@ func getHTMLConversions(c config.AppConfig) []htmlConversion {
 	return conversions
 }
 
+// getCorpusConfig loads the corpus configuration
 func getCorpusConfig(c config.AppConfig) corpus.CorpusConfig {
 	var excluded map[string]bool
 	if len(c.CorpusDataDir()) > 0 {
@@ -192,6 +195,7 @@ func getCorpusConfig(c config.AppConfig) corpus.CorpusConfig {
 	}
 }
 
+// getDictionaryConfig returns the dicitonary configuration
 func getDictionaryConfig(c config.AppConfig) dicttypes.DictionaryConfig {
 	return dicttypes.DictionaryConfig{
 		AvoidSubDomains: c.AvoidSubDomains(),
@@ -233,6 +237,7 @@ func getHTMLOutPutConfig(c config.AppConfig) generator.HTMLOutPutConfig {
 	return outputConfig
 }
 
+// getIndexConfig returns the index configuration
 func getIndexConfig(c config.AppConfig) index.IndexConfig {
 	return index.IndexConfig{
 		IndexDir: c.ProjectHome + "/index",
@@ -315,8 +320,9 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 	return nil
 }
 
-// Entry point for the chinesenotes command line tool.
-// Default action is to write out all corpus entries to HTML files
+// main is the entry point for the cnreader command line tool.
+//
+// The default action is to write out all corpus entries to HTML files
 func main() {
 	// Command line flags
 	var collectionFile = flag.String("collection", "", 
@@ -331,6 +337,8 @@ func main() {
 			"collection entries for the digital library.")
 	var memprofile = flag.String("memprofile", "", "write memory profile to " +
 			"this file")
+	var sourceFile = flag.String("source_file", "",
+			"Analyze vocabulary for source file and write to output.html")
 	var sourceText = flag.String("source_text", "",
 			"Analyze vocabulary for source input on the command line")
 	var writeTMIndex = flag.Bool("tmindex", false, "Compute and write " +
@@ -358,9 +366,37 @@ func main() {
 		fmt.Println("Analysis of input text:")
 		formatTokens(os.Stdout, tokens)
 		os.Exit(0)
-	} 
-
+	}
 	outputConfig := getHTMLOutPutConfig(c)
+	if len(*sourceFile) > 0 {
+		r, err := os.Open(*sourceFile)
+		if err != nil {
+			log.Fatalf("error opening input file %s, %v", *sourceFile, err)
+		}
+		b, err := ioutil.ReadAll(r)
+		if err != nil {
+			log.Fatalf("error reading input file %s, %v", *sourceFile, err)
+		}
+		tokens := dictTokenizer.Tokenize(string(b))
+		fName := "output.html"
+		f, err := os.Create(fName)
+		if err != nil {
+			log.Fatalf("error creating output file %s, %v", fName, err)
+		}
+		defer f.Close()
+		template, ok := outputConfig.Templates["texts-template.html"]
+		if !ok {
+			log.Fatal("no template found")
+		}
+		err = generator.WriteDoc(tokens, f, *template, true, "Marked up page",
+				generator.MarkVocabSummary)
+		if err != nil {
+			log.Fatalf("error creating opening pos file %s, %v", fName, err)
+		}
+		log.Printf("Output written to %s", fName)
+		os.Exit(0)
+	}
+
 	corpusConfig := getCorpusConfig(c)
 	indexConfig := getIndexConfig(c)
 
@@ -368,19 +404,19 @@ func main() {
 	posFName := fmt.Sprintf("%s/%s", c.DictionaryDir(), "grammar.txt")
 	posFile, err := os.Open(posFName)
 	if err != nil {
-		log.Fatalf("creating opening pos file %s, %v", posFName, err)
+		log.Fatalf("error creating pos file %s, %v", posFName, err)
 	}
 	defer posFile.Close()
 	posReader := bufio.NewReader(posFile)
 	domainFName := fmt.Sprintf("%s/%s", c.DictionaryDir(), "topics.txt")
 	domainFile, err := os.Open(domainFName)
 	if err != nil {
-		log.Fatalf("creating opening domain file %s, %v", domainFName, err)
+		log.Fatalf("error opening domain file %s, %v", domainFName, err)
 	}
 	domainReader := bufio.NewReader(domainFile)
 	validator, err := dictionary.NewValidator(posReader, domainReader)
 	if err != nil {
-		log.Fatalf("creating dictionary validator: %v", err)
+		log.Fatalf("error creating dictionary validator: %v", err)
 	}
 
 	// Setup loader for library
@@ -406,27 +442,24 @@ func main() {
 		for _, conversion := range conversions {
 			src :=  outputConfig.WebDir + "/" + conversion.SrcFile
 			dest :=  outputConfig.WebDir + "/" + conversion.DestFile
-			templateFile := `\N`
-			if conversion.Template != `\N` {
-				templateFile = outputConfig.TemplateDir + "/" + conversion.Template
-			}
-			log.Printf("main: input file: %s, output file: %s, template: %s\n",
-				src, dest, templateFile)
-			r, err := os.Create(src)
+			r, err := os.Open(src)
 			if err != nil {
-				log.Fatalf("main, could not open file: %v", err)
+				log.Fatalf("main, could not open file %s: %v", src, err)
 			}
 			defer r.Close()
 			text := libraryLoader.GetCorpusLoader().ReadText(r)
-			tokens, results := analysis.ParseText(text, "",
-					corpus.NewCorpusEntry(), dictTokenizer, getCorpusConfig(c), wdict)
+			tokens := dictTokenizer.Tokenize(text)
 			f, err := os.Create(dest)
 			if err != nil {
 				log.Fatalf("main, unable to write to file %s: %v", dest, err)
 			}
 			defer f.Close()
-			err = analysis.WriteDoc(tokens, results.Vocab, f, conversion.Template,
-					templateFile, conversion.GlossChinese, conversion.Title, corpusConfig, wdict)
+			template, ok := outputConfig.Templates[conversion.Template]
+			if !ok {
+				log.Fatalf("template %s found", conversion.Template)
+			}
+			err = generator.WriteDoc(tokens, f, *template, conversion.GlossChinese,
+					conversion.Title, generator.MarkVocabLink)
 			if err != nil {
 				log.Fatalf("main, unable to write doc %s: %v", dest, err)
 			}

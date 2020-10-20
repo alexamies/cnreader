@@ -35,7 +35,7 @@ func LoadExcluded(file io.Reader) (*map[string]bool, error) {
 	reader.Comment = rune('#')
 	rawCSVdata, err := reader.ReadAll()
 	if err != nil {
-		return nil, fmt.Errorf("Error reading excluded text", err)
+		return nil, fmt.Errorf("Error reading excluded text: %v", err)
 	}
 	for _, row := range rawCSVdata {
 		if len(row) < 1 {

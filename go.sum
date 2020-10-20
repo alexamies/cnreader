@@ -33,7 +33,10 @@ github.com/alexamies/chinesenotes-go v0.0.26 h1:/vbG57zyNha48Irxg5AJAuttAdBWASxr
 github.com/alexamies/chinesenotes-go v0.0.26/go.mod h1:eIkRqDhFheNU9ZLOrBvqIovBVVSpDvExwvFJ/+oyzcU=
 github.com/alexamies/chinesenotes-go v0.0.27 h1:Pt4GpHfjxzSg+fLhBFypuG+/DUx63/YaGMT2CsM0YlY=
 github.com/alexamies/chinesenotes-go v0.0.27/go.mod h1:eIkRqDhFheNU9ZLOrBvqIovBVVSpDvExwvFJ/+oyzcU=
+github.com/alexamies/chinesenotes-go v0.0.28 h1:WmH1OHlmNEe+KgGM7oi8MxJ7fA/jlvmSJ53svkf9no0=
+github.com/alexamies/chinesenotes-go v0.0.28/go.mod h1:qnwuAvsPIE4b7dZK3IlnWe12w1hD2D3Uce5G4imPhgo=
 github.com/alexamies/cnreader v0.0.0-20201011025456-29192240cd79/go.mod h1:1qBivAbUOyAsUhJK6MkaNmJts3kfT/HQn/UtN7ItPI8=
+github.com/alexamies/cnreader v0.0.0-20201018040111-ae58def97a40/go.mod h1:LxX7y9Pq7ynVZnPIy1o7j0fxd5lH9TupqukygV9Mik0=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-sql-driver/mysql v1.4.1 h1:g24URVg0OFbNUTx9qqY1IRZ9D9z3iPyi5zKhQZpNwpA=
@@ -146,6 +149,7 @@ google.golang.org/appengine v1.5.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7
 google.golang.org/appengine v1.6.1 h1:QzqyMA1tlu6CgqCDUtU9V+ZKhLFT2dkJuANu5QaxI3I=
 google.golang.org/appengine v1.6.1/go.mod h1:i06prIuMbXzDqacNJfV5OdTW448YApPu5ww/cMBSeb0=
 google.golang.org/appengine v1.6.6/go.mod h1:8WjMMxjGQR8xUklV/ARdw2HLXBOI7O7uCIDZVag1xfc=
+google.golang.org/appengine v1.6.7/go.mod h1:8WjMMxjGQR8xUklV/ARdw2HLXBOI7O7uCIDZVag1xfc=
 google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8/go.mod h1:JiN7NxoALGmiZfu7CAH4rXhgtRTLTxftemlI0sWmxmc=
 google.golang.org/genproto v0.0.0-20190307195333-5fe7a883aa19/go.mod h1:VzzqZJRnGkLBvHegQrXjBqPurQTc5/KpmUdxsrq26oE=
 google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7/go.mod h1:VzzqZJRnGkLBvHegQrXjBqPurQTc5/KpmUdxsrq26oE=

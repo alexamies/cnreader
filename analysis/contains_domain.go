@@ -19,10 +19,10 @@ import (
 )
 
 // Max number of words to display for contained in
-const MAX_CONTAINED_BY = 50
+const maxContainedBy = 50
 
-// Filters the list of headwords to only those in the configured domain
-func ContainsByDomain(contains []dicttypes.Word,
+// containsByDomain filters the list of headwords to only those in the configured domain
+func containsByDomain(contains []dicttypes.Word,
 		outputConfig generator.HTMLOutPutConfig) []dicttypes.Word {
 	domains := outputConfig.ContainsByDomain
 	containsBy := []dicttypes.Word{}
@@ -31,7 +31,7 @@ func ContainsByDomain(contains []dicttypes.Word,
 	for _, hw := range contains {
 		for _, ws := range hw.Senses {
 		  _, ok := containsSet[hw.HeadwordId]
-			if !ok && count < MAX_CONTAINED_BY && strings.Contains(domains, ws.Domain) {
+			if !ok && count < maxContainedBy && strings.Contains(domains, ws.Domain) {
 				containsBy = append(containsBy, hw)
 				containsSet[hw.HeadwordId] = true  // Do not add it twice
 				count++ // don't go over max number

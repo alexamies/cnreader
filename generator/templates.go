@@ -19,10 +19,13 @@ import (
 	"github.com/alexamies/chinesenotes-go/config"
 )
 
-// Templates from source for zero-config Quickstart
+// Templates from source for zero-config usage
 const collectionTemplate = `
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+  </head>
   <body>
     <h2>{{.Title}}</h2>
     <p>{{.Summary}}</p>
@@ -41,8 +44,11 @@ const collectionTemplate = `
 const corpusTemplate = `
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+  </head>
   <body>
-    <main
+    <main>
       <h1>{{.Title}}</h1>
       <header>
         <h2>{{.CollectionTitle}}</h2>
@@ -59,6 +65,25 @@ const corpusTemplate = `
 </html>
 `
 
+const pageTemplate = `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+  </head>
+  <body>
+    <main>
+      <h1>{{.Title}}</h1>
+      <div>
+      {{.Content}}
+      </div>
+    </main>
+    <footer>
+      <div>Page updated on {{.DateUpdated}}</div>
+    </footer>
+  <body>
+</html>
+`
 // newTemplateMap builds a template map
 func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
   templateMap := make(map[string]*template.Template)
@@ -66,6 +91,7 @@ func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
   tNames := map[string]string{
     "collection-template.html": collectionTemplate,
     "corpus-template.html": corpusTemplate,
+    "texts-template.html": pageTemplate,
   }
   if len(templDir) > 0 {
     for tName, defTmpl := range tNames {

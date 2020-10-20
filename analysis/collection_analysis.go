@@ -66,13 +66,13 @@ func (results *CollectionAResults) AddResults(more *CollectionAResults) {
 
 // Returns the subset of words that are lexical (content) words
 func (results *CollectionAResults) GetLexicalWordFreq(sortedWords []index.SortedWordItem,
-		wdict map[string]dicttypes.Word) []WFResult {
-	wfResults := make([]WFResult, 0)
+		wdict map[string]dicttypes.Word) []wFResult {
+	wfResults := make([]wFResult, 0)
 	for _, value := range sortedWords {
 		if word, ok := wdict[value.Word]; ok {
 			for _, ws := range word.Senses {
 				if !ws.IsFunctionWord() {
-					wfResults = append(wfResults, WFResult{
+					wfResults = append(wfResults, wFResult{
 						Freq:       value.Freq,
 						HeadwordId: ws.HeadwordId,
 						Chinese:    value.Word,
@@ -99,17 +99,17 @@ func (results *CollectionAResults) GetHeadwords(wdict map[string]dicttypes.Word)
 
 // Returns the subset of words that are lexical (content) words
 func (results *CollectionAResults) GetWordFreq(sortedWords []index.SortedWordItem,
-		wdict map[string]dicttypes.Word) []WFResult {
+		wdict map[string]dicttypes.Word) []wFResult {
 
-	wfResults := make([]WFResult, 0)
+	wfResults := make([]wFResult, 0)
 	maxWFOutput := len(sortedWords)
-	if maxWFOutput > MAX_WF_OUTPUT {
-		maxWFOutput = MAX_WF_OUTPUT
+	if maxWFOutput > maxWFOutput {
+		maxWFOutput = maxWFOutput
 	}
 	for _, value := range sortedWords[:maxWFOutput] {
 		if word, ok := wdict[value.Word]; ok {
 			for _, ws := range word.Senses {
-				wfResults = append(wfResults, WFResult{
+				wfResults = append(wfResults, wFResult{
 					Freq:       value.Freq,
 					HeadwordId: ws.HeadwordId,
 					Chinese:    value.Word,

@@ -35,6 +35,14 @@ go get github.com/alexamies/cnreader
 go run github.com/alexamies/cnreader -source_text="君不見黃河之水天上來"
 ```
 
+Mark up a plain text file with HTML 
+
+```shell
+go run github.com/alexamies/cnreader -source_file=testdata/sampletest.txt
+```
+
+The output will be written to `output.html`.
+
 The dictionary will be downloaded from the Internet when run like this. To
 avoid repeatedly download, clone the repo and follow the instructions below.
 

@@ -157,7 +157,7 @@ func mockValidator() (dictionary.Validator, error) {
 }
 
 func TestGetChunks1(t *testing.T) {
-	chunks := GetChunks("中文")
+	chunks := getChunks("中文")
 	if chunks.Len() != 1 {
 		t.Error("TestGetChunks1: Expected length of chunks 1, got ",
 			chunks.Len())
@@ -170,7 +170,7 @@ func TestGetChunks1(t *testing.T) {
 }
 
 func TestGetChunks2(t *testing.T) {
-	chunks := GetChunks("a中文")
+	chunks := getChunks("a中文")
 	if chunks.Len() != 2 {
 		t.Error("Expected length of chunks 2, got ", chunks.Len())
 	}
@@ -181,7 +181,7 @@ func TestGetChunks2(t *testing.T) {
 }
 
 func TestGetChunks3(t *testing.T) {
-	chunks := GetChunks("a中文b")
+	chunks := getChunks("a中文b")
 	if chunks.Len() != 3 {
 		t.Error("Expected length of chunks 3, got ", chunks.Len())
 	}
@@ -193,7 +193,7 @@ func TestGetChunks3(t *testing.T) {
 
 // Simplified Chinese
 func TestGetChunks4(t *testing.T) {
-	chunks := GetChunks("简体中文")
+	chunks := getChunks("简体中文")
 	if chunks.Len() != 1 {
 		t.Error("Simplified Chinese 简体中文: expected length of chunks 1, got ",
 			chunks.Len())
@@ -296,7 +296,7 @@ func TestParseText(t *testing.T) {
 
 // Basic test with no data
 func TestSampleUsage1(t *testing.T) {
-	usageMap := map[string]*[]WordUsage{}
+	usageMap := map[string]*[]wordUsage{}
 	usageMap = sampleUsage(usageMap)
 	l := len(usageMap)
 	expected := 0
@@ -307,7 +307,7 @@ func TestSampleUsage1(t *testing.T) {
 
 // Basic test with minimal data
 func TestSampleUsage2(t *testing.T) {
-	wu := WordUsage{
+	wu := wordUsage{
 		Freq:       1,
 		RelFreq:    0.01,
 		Word:       "大",
@@ -316,8 +316,8 @@ func TestSampleUsage2(t *testing.T) {
 		EntryTitle: "Scroll 1",
 		ColTitle:   "A Big Snake",
 	}
-	wuArray := []WordUsage{wu}
-	usageMap := map[string]*[]WordUsage{"大": &wuArray}
+	wuArray := []wordUsage{wu}
+	usageMap := map[string]*[]wordUsage{"大": &wuArray}
 	usageMap = sampleUsage(usageMap)
 	l := len(usageMap)
 	expected := 1
@@ -329,7 +329,7 @@ func TestSampleUsage2(t *testing.T) {
 // Basic test with more data
 func TestSampleUsage3(t *testing.T) {
 	t.Log("TestSampleUsage3: Begin +++++++++++")
-	wu1 := WordUsage{
+	wu1 := wordUsage{
 		Freq:       1,
 		RelFreq:    0.01,
 		Word:       "蛇",
@@ -338,7 +338,7 @@ func TestSampleUsage3(t *testing.T) {
 		EntryTitle: "Scroll 1",
 		ColTitle:   "Some Snakes",
 	}
-	wu2 := WordUsage{
+	wu2 := wordUsage{
 		Freq:       1,
 		RelFreq:    0.01,
 		Word:       "蛇",
@@ -347,8 +347,8 @@ func TestSampleUsage3(t *testing.T) {
 		EntryTitle: "Scroll 2",
 		ColTitle:   "Some Snakes",
 	}
-	wuArray := []WordUsage{wu1, wu2}
-	usageMap := map[string]*[]WordUsage{"蛇": &wuArray}
+	wuArray := []wordUsage{wu1, wu2}
+	usageMap := map[string]*[]wordUsage{"蛇": &wuArray}
 	usageMap = sampleUsage(usageMap)
 	l := len(*usageMap["蛇"])
 	expected := 2
@@ -360,7 +360,7 @@ func TestSampleUsage3(t *testing.T) {
 // Basic test with more data
 func TestSampleUsage4(t *testing.T) {
 	t.Logf("analysis.TestSampleUsage4: Begin +++++++++++")
-	wu1 := WordUsage{
+	wu1 := wordUsage{
 		Freq:       1,
 		RelFreq:    0.01,
 		Word:       "大",
@@ -369,7 +369,7 @@ func TestSampleUsage4(t *testing.T) {
 		EntryTitle: "Scroll 1",
 		ColTitle:   "Some Big Animals",
 	}
-	wu2 := WordUsage{
+	wu2 := wordUsage{
 		Freq:       1,
 		RelFreq:    0.01,
 		Word:       "大",
@@ -378,7 +378,7 @@ func TestSampleUsage4(t *testing.T) {
 		EntryTitle: "Scroll 2",
 		ColTitle:   "Some Big Animals",
 	}
-	wu3 := WordUsage{
+	wu3 := wordUsage{
 		Freq:       1,
 		RelFreq:    0.01,
 		Word:       "大",
@@ -387,8 +387,8 @@ func TestSampleUsage4(t *testing.T) {
 		EntryTitle: "Scroll 1",
 		ColTitle:   "Some Big Trees",
 	}
-	wuArray := []WordUsage{wu1, wu2, wu3}
-	usageMap := map[string]*[]WordUsage{"大": &wuArray}
+	wuArray := []wordUsage{wu1, wu2, wu3}
+	usageMap := map[string]*[]wordUsage{"大": &wuArray}
 	usageMap = sampleUsage(usageMap)
 	l := len(*usageMap["大"])
 	expected := 3
@@ -430,58 +430,4 @@ func TestWriteAnalysis(t *testing.T) {
 	writeAnalysis(results, srcFile, glossFile, "Test Collection", "Test Doc",
 			mockOutputConfig(), wdict)
 	t.Log("analysis.TestWriteAnalysis: End +++++++++++")
-}
-
-func TestWriteDoc(t *testing.T) {
-	t.Log("analysis.TestWriteDoc: Begin +++++++++++")
-	wdict := make(map[string]dicttypes.Word)
-	input1 := `
-  	A test document
-    繁體中文	
-	`
-	input2 := `
- 	  <p>A test document with simplified Chinese</p>
-    <p>简体中文</p>
-    <p>Word with multiple senses: 中</p>
-	`
-	type test struct {
-		name string
-		input string
-		expectError bool
-		expectLen int
-  }
-  tests := []test{
-		{
-			name: "One character",
-			input: "繁",
-			expectError: false,
-			expectLen: 1,
-		},
-		{
-			name: "Four characters",
-			input: input1,
-			expectError: false,
-			expectLen: 6,
-		},
-		{
-			name: "Simplified characters",
-			input: input2,
-			expectError: false,
-			expectLen: 8,
-		},
-  }
-  for _, tc := range tests {
-		tokens, results := ParseText(tc.input, "", corpus.NewCorpusEntry(),
-				tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
-		if tc.expectLen != tokens.Len() {
-			t.Errorf("%s, expected len %d, got %d", tc.name, tc.expectLen, tokens.Len())
-		}
-		var buf bytes.Buffer
-		err := WriteDoc(tokens, results.Vocab, &buf, `\N`, `\N`, true, "",
-				mockCorpusConfig(), wdict)
-		if !tc.expectError && err != nil {
-			t.Errorf("%s unexpected error: %v", tc.name, err)
-		}
-	}
-	t.Log("analysis.TestWriteDoc: End +++++++++++")
 }

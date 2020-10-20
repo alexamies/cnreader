@@ -143,3 +143,57 @@ func TestWriteCorpusDoc(t *testing.T) {
 	}
 	t.Log("TestWriteCorpusDoc: End +++++++++++")
 }
+
+func TestWriteDoc(t *testing.T) {
+	t.Log("analysis.TestWriteDoc: Begin +++++++++++")
+	wdict := make(map[string]dicttypes.Word)
+	tokenizer := tokenizer.DictTokenizer{wdict}
+	input1 := `
+  	A test document
+    繁體中文	
+	`
+	input2 := `
+ 	  <p>A test document with simplified Chinese</p>
+    <p>简体中文</p>
+    <p>Word with multiple senses: 中</p>
+	`
+	type test struct {
+		name string
+		input string
+		expectError bool
+		expectLen int
+  }
+  tests := []test{
+		{
+			name: "One character",
+			input: "繁",
+			expectError: false,
+			expectLen: 1,
+		},
+		{
+			name: "Four characters",
+			input: input1,
+			expectError: false,
+			expectLen: 31,
+		},
+		{
+			name: "Simplified characters",
+			input: input2,
+			expectError: false,
+			expectLen: 109,
+		},
+  }
+  for _, tc := range tests {
+		tokens := tokenizer.Tokenize(tc.input)
+		if tc.expectLen != len(tokens) {
+			t.Errorf("%s, expected len %d, got %d", tc.name, tc.expectLen, len(tokens))
+		}
+		var buf bytes.Buffer
+		tmpl := template.Must(template.New("page-html").Parse(``))
+		err := WriteDoc(tokens, &buf, *tmpl, true, "", MarkVocabLink)
+		if !tc.expectError && err != nil {
+			t.Errorf("%s unexpected error: %v", tc.name, err)
+		}
+	}
+	t.Log("analysis.TestWriteDoc: End +++++++++++")
+}

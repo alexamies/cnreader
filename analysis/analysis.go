@@ -10,15 +10,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package for Chinese vocabulary analysis of a corpus
+// Package for vocabulary analysis of a monolingual Chinese text corpus
+//
+// This includes
+// - reading the corpus documents from disk
+// - tokenization of the corpus into multi-character arrays
+// - computation of term and bigram frequencies
+// - compilation of an index for later full text search
+// - computation of term occurrence and usage in the corpus
 package analysis
 
 import (
 	"bufio"
-	"bytes"
 	"container/list"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strings"
@@ -38,93 +43,87 @@ import (
 
 // Maximum number of word frequency entries to output to the generated
 // HTML file
-const MAX_WF_OUTPUT = 500
+const maxWFOutput = 500
 
 // Maximum number of unknwon characters to output to the generated
 // HTML file
-const MAX_UNKOWN_OUTPUT = 50
+const maxUnknownOutput = 50
 
 // Max usage elements for a word
-const MAX_USAGE = 25
+const maxUsage = 25
 
 // Max number of occurrences of same title in a list of word usages
-const MAX_TITLE = 5
+const maxTitle = 5
 
 // Max number of keywords to display
-const MAX_KEYWORDS = 10
+const maxKeywords = 10
 
 // Maximum number of containing words to output to the generated
 // HTML file
-const MAX_CONTAINS = 50
+const maxContains = 50
 
-// Holds vocabulary analysis for a corpus text
-type AnalysisResults struct {
+// analysisResults holds vocabulary analysis for a corpus text
+type analysisResults struct {
 	Title                   string
 	WC, UniqueWords, CCount int
 	ProperNouns				[]dicttypes.Word
 	DocumentGlossary 		Glossary
 	TopKeywords				dicttypes.Words
-	WordFrequencies         []WFResult
-	LexicalWordFreq         []WFResult
+	WordFrequencies         []wFResult
+	LexicalWordFreq         []wFResult
 	BigramFreqSorted        []ngram.BigramFreq
 	UnkownnChars            []index.SortedWordItem
 	DateUpdated             string
 	MaxWFOutput             int
 }
 
-// Dictionary entry content struct used for writing a dictionary entry to HTML
+// DictEntry holds content used for writing a dictionary entry to HTML
 type DictEntry struct {
 	Headword     dicttypes.Word
 	RelevantDocs []index.RetrievalResult
 	ContainsByDomain []dicttypes.Word
 	Contains     []dicttypes.Word
 	Collocations []ngram.BigramFreq
-	UsageArr     []WordUsage
+	UsageArr     []wordUsage
 	DateUpdated  string
 }
 
-// HTML content for template
-type HTMLContent struct {
-	Content, DateUpdated, Title, FileName string
-}
-
-// Bundles up vocabulary analysis
+// VocabAnalysis bundles up vocabulary analysis
 type VocabAnalysis struct {
-	UsageMap map[string]*[]WordUsage
+	UsageMap map[string]*[]wordUsage
 	WFTotal map[*index.CorpusWord]index.CorpusWordFreq
 	WCTotal map[string]int
 	Collocations ngram.CollocationMap
 }
 
-// Word usage
-type WordUsage struct {
+// wordUsage holds details of Word usage in the corpus
+type wordUsage struct {
 	Freq                                      int
 	RelFreq                                   float64
 	Word, Example, File, EntryTitle, ColTitle string
 }
 
-// Vocabulary analysis entry for a single word
-type WFResult struct {
+// wFResult holds results of vocabulary analysis entry for a single word
+type wFResult struct {
 	Freq, HeadwordId                int
 	Chinese, Pinyin, English, Usage string
 }
 
-// Get a list of words that containst the given word
-func ContainsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
-	//log.Printf("dictionary.ContainsWord: Enter\n")
+// containsWord gets a list of words that contain the given word
+func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
+	//log.Printf("dictionary.containsWord: Enter\n")
 	contains := []dicttypes.Word{}
 	for _, hw := range headwords {
-		if len(contains) <= MAX_CONTAINS && hw.Simplified != word && strings.Contains(hw.Simplified, word) {
+		if len(contains) <= maxContains && hw.Simplified != word && strings.Contains(hw.Simplified, word) {
 			contains = append(contains, hw)
 		}
 	}
 	return contains
 }
 
-
-// Compute headword numbers for all lexical units listed in data/words.txt
+// getHeadwords compute headword numbers for all lexical units listed in data/words.txt
 // Return a sorted array of headwords
-func GetHeadwords(wdict map[string]dicttypes.Word) []dicttypes.Word {
+func getHeadwords(wdict map[string]dicttypes.Word) []dicttypes.Word {
 	hwArray := []dicttypes.Word{}
 	for _, w := range wdict {
 		hwArray = append(hwArray, w)
@@ -133,7 +132,8 @@ func GetHeadwords(wdict map[string]dicttypes.Word) []dicttypes.Word {
 	return hwArray
 }
 
-func GetHwMap(wdict map[string]dicttypes.Word) map[int]dicttypes.Word {
+// getHwMap gets a map of headword id to word
+func getHwMap(wdict map[string]dicttypes.Word) map[int]dicttypes.Word {
 	hwIdMap := make(map[int]dicttypes.Word)
 	for _, w := range wdict {
 		hwIdMap[w.HeadwordId] = w
@@ -141,48 +141,20 @@ func GetHwMap(wdict map[string]dicttypes.Word) map[int]dicttypes.Word {
 	return hwIdMap
 }
 
-// Tests whether the symbol is a CJK character, excluding punctuation
+// isCJKChar tests whether the symbol is a CJK character, excluding punctuation
 // Only looks at the first charater in the string
-func IsCJKChar(character string) bool {
+func isCJKChar(character string) bool {
 	r := []rune(character)
 	return unicode.Is(unicode.Han, r[0]) && !unicode.IsPunct(r[0])
 }
 
-// Filter the list of headwords by the given domain
-// Parameters
-//   hws: A list of headwords
-//   domain_en: the domain to filter by, ignored if empty
-// Return
-//   hw: an array of headwords matching the domain, with senses not matching the
-//       domain also removed
-func FilterByDomain(hws []dicttypes.Word, domain string) []dicttypes.Word {
-	if len(domain) == 0 {
-		return hws
-	}
-	headwords := []dicttypes.Word{}
-	for _, hw := range hws {
-		wsArr := []dicttypes.WordSense{}
-		for _, ws := range hw.Senses {
-			if ws.Domain == domain {
-				wsArr = append(wsArr, ws)
-			}
-		}
-		if len(wsArr) > 0 {
-			h := dicttypes.CloneWord(hw)
-			h.Senses = wsArr
-			headwords = append(headwords, h)
-		}
-	}
-	return headwords
-}
-
-// Breaks text into a list of CJK and non CJK strings
-func GetChunks(text string) list.List {
+// getChunks tokenizes text into a list of CJK and non CJK strings
+func getChunks(text string) list.List {
 	var chunks list.List
 	cjk := ""
 	noncjk := ""
 	for _, character := range text {
-		if IsCJKChar(string(character)) {
+		if isCJKChar(string(character)) {
 			if noncjk != "" {
 				chunks.PushBack(noncjk)
 				noncjk = ""
@@ -205,7 +177,7 @@ func GetChunks(text string) list.List {
 	return chunks
 }
 
-// GetWordFrequencies compute word doc frequencies for corpus
+// getWordFrequencies compute word doc frequencies for corpus
 func GetDocFrequencies(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer,
 		wdict map[string]dicttypes.Word) (*index.DocumentFrequency, error) {
@@ -253,16 +225,16 @@ func GetDocFrequencies(libLoader library.LibraryLoader,
 	return &df, nil
 }
 
-// GetWordFrequencies compute word frequencies, collocations, and usage for corpus
-func GetWordFrequencies(libLoader library.LibraryLoader,
+// getWordFrequencies compute word frequencies, collocations, and usage for corpus
+func getWordFrequencies(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer,
 		wdict map[string]dicttypes.Word) (*VocabAnalysis, error) {
 
-	log.Printf("analysis.GetWordFrequencies: enter")
+	log.Printf("analysis.getWordFrequencies: enter")
 
 	// Overall word frequencies per corpus
 	collocations := ngram.CollocationMap{}
-	usageMap := map[string]*[]WordUsage{}
+	usageMap := map[string]*[]wordUsage{}
 	ccount := 0 // character count
 	wcTotal := map[string]int{}
 	wfTotal := map[*index.CorpusWord]index.CorpusWordFreq{}
@@ -272,33 +244,33 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 	collectionsFile := corpusConfig.CorpusDataDir + "/" + corpus.CollectionsFile
 	f, err := os.Open(collectionsFile)
 	if err != nil {
-		return nil, fmt.Errorf("GetWordFrequencies: Error opening collections file %s: %v",
+		return nil, fmt.Errorf("getWordFrequencies: Error opening collections file %s: %v",
 				collectionsFile, err)
 	}
 	defer f.Close()
 	collectionEntries, err := corpLoader.LoadCorpus(f)
 	if err != nil {
-		return nil, fmt.Errorf("GetWordFrequencies: Error reading collections file %s: %v",
+		return nil, fmt.Errorf("getWordFrequencies: Error reading collections file %s: %v",
 				collectionsFile, err)
 	}
 	for _, col := range *collectionEntries {
 		colFile := col.CollectionFile
 		r, err := os.Open(colFile)
 		if err != nil {
-			return nil, fmt.Errorf("GetWordFrequencies: Error opening collection file %s: %v",
+			return nil, fmt.Errorf("getWordFrequencies: Error opening collection file %s: %v",
 					colFile, err)
 		}
 		defer r.Close()
 		corpusEntries, err := corpLoader.LoadCollection(r, col.Title)
 		if err != nil {
-			return nil, fmt.Errorf("GetWordFrequencies: Error loading col file %s: %v",
+			return nil, fmt.Errorf("getWordFrequencies: Error loading col file %s: %v",
 					colFile, err)
 		}
 		for _, entry := range *corpusEntries {
 			src := corpusConfig.CorpusDir + entry.RawFile
 			reader, err := os.Open(src)
 			if err != nil {
-				return nil, fmt.Errorf("GetWordFrequencies: Error opening src file %s: %v",
+				return nil, fmt.Errorf("getWordFrequencies: Error opening src file %s: %v",
 					src, err)
 			}
 			defer reader.Close()
@@ -320,11 +292,11 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 				}
 				wfTotal[cw] = *cwf
 				rel_freq := 1000.0 * float64(count) / float64(results.WC)
-				usage := WordUsage{cwf.Freq, rel_freq, word, results.Usage[word],
+				usage := wordUsage{cwf.Freq, rel_freq, word, results.Usage[word],
 					entry.GlossFile, entry.Title, col.Title}
 				usageArr, ok := usageMap[word]
 				if !ok {
-					usageArr = new([]WordUsage)
+					usageArr = new([]wordUsage)
 					usageMap[word] = usageArr
 				}
 				*usageArr = append(*usageArr, usage)
@@ -347,7 +319,7 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 	return &VocabAnalysis{usageMap, wfTotal, wcTotal, collocations}, nil
 }
 
-// Parses a Chinese text into words
+// ParseText tokenizes a Chinese text corpus document into terms
 // Parameters:
 //   text: the string to parse
 //   ColTitle: Optional parameter used for tracing collocation usage
@@ -367,8 +339,8 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 	usage := map[string]string{}
 	wc := 0
 	cc := 0
-	chunks := GetChunks(text)
-	hwIdMap := GetHwMap(wdict)
+	chunks := getChunks(text)
+	hwIdMap := getHwMap(wdict)
 	lastHWPtr := &dicttypes.Word{}
 	lastHW := *lastHWPtr
 	lastHWText := ""
@@ -377,7 +349,7 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 		chunk := e.Value.(string)
 		//fmt.Printf("ParseText: chunk %s\n", chunk)
 		characters := strings.Split(chunk, "")
-		if !IsCJKChar(characters[0]) || corpus.IsExcluded(corpusConfig.Excluded, chunk) {
+		if !isCJKChar(characters[0]) || corpus.IsExcluded(corpusConfig.Excluded, chunk) {
 			tokens.PushBack(chunk)
 			lastHWPtr = &dicttypes.Word{}
 			lastHW = *lastHWPtr
@@ -438,18 +410,18 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 	return tokens, &results
 }
 
-// Sample word usage for usability making sure that the list of word usage
-// samples is not dominated by any one title and truncating at MAX_USAGE
-// examples.
-func sampleUsage(usageMap map[string]*[]WordUsage) map[string]*[]WordUsage {
+// sampleUsage finds word usage for usability, also making sure that the list of
+// word usage samples is not dominated by any one title and truncating at
+// maxUsage examples.
+func sampleUsage(usageMap map[string]*[]wordUsage) map[string]*[]wordUsage {
 	for word, usagePtr := range usageMap {
 		sampleMap := map[string]int{}
 		usage := *usagePtr
-		usageCapped := new([]WordUsage)
+		usageCapped := new([]wordUsage)
 		j := 0
 		for _, wu := range usage {
 			count, _ := sampleMap[wu.ColTitle]
-			if count < MAX_TITLE && j < MAX_USAGE {
+			if count < maxTitle && j < maxUsage {
 				*usageCapped = append(*usageCapped, wu)
 				sampleMap[wu.ColTitle]++
 				j++
@@ -465,9 +437,9 @@ func add(x, y int) int {
 	return x + y
 }
 
-// Writes out an analysis of the entire corpus, including word frequencies
-// and other data. The output file is called 'corpus-analysis.html' in the
-// web/analysis directory.
+// writeAnalysisCorpus writes out an analysis of the entire corpus, including
+// word frequencies and other data. The output file is called
+// 'corpus-analysis.html' in the web/analysis directory.
 // Parameters:
 //   results: The results of corpus analysis
 //   docFreq: document frequency for terms
@@ -487,32 +459,32 @@ func writeAnalysisCorpus(results *CollectionAResults,
 	sortedWords := index.SortedFreq(results.Vocab)
 	wfResults := results.GetWordFreq(sortedWords, wdict)
 	maxWf := len(wfResults)
-	if maxWf > MAX_WF_OUTPUT {
-		maxWf = MAX_WF_OUTPUT
+	if maxWf > maxWFOutput {
+		maxWf = maxWFOutput
 	}
 
 	lexicalWordFreq := results.GetLexicalWordFreq(sortedWords, wdict)
 	maxLex := len(lexicalWordFreq)
-	if maxLex > MAX_WF_OUTPUT {
-		maxLex = MAX_WF_OUTPUT
+	if maxLex > maxWFOutput {
+		maxLex = maxWFOutput
 	}
 
 	sortedUnknownWords := index.SortedFreq(results.UnknownChars)
 	maxUnknown := len(sortedUnknownWords)
-	if maxUnknown > MAX_UNKOWN_OUTPUT {
-		maxUnknown = MAX_UNKOWN_OUTPUT
+	if maxUnknown > maxUnknownOutput {
+		maxUnknown = maxUnknownOutput
 	}
 
 	// Bigrams, also truncated
 	bFreq := ngram.SortedFreq(results.BigramFrequencies)
 	maxBFOutput := len(bFreq)
-	if maxBFOutput > MAX_WF_OUTPUT {
-		maxBFOutput = MAX_WF_OUTPUT
+	if maxBFOutput > maxWFOutput {
+		maxBFOutput = maxWFOutput
 	}
 
 	dateUpdated := time.Now().Format("2006-01-02")
 	title := "Terminology Extraction and Vocabulary Analysis"
-	aResults := AnalysisResults{
+	aResults := analysisResults{
 		Title:            title,
 		WC:               results.WC,
 		CCount:			  		results.CCount,
@@ -578,9 +550,9 @@ func writeAnalysisCorpus(results *CollectionAResults,
 	return nil
 }
 
-// Writes a document with vocabulary analysis of the text. The name of the
-// output file will be source file with '-analysis' appended, placed in the
-// web/analysis directory
+// writeAnalysis writes a document with vocabulary analysis of the text. The
+// name of the output file will be source file with '-analysis' appended,
+// placed in the web/analysis directory
 // results: The results of vocabulary analysis
 // collectionTitle: The title of the whole colleciton
 // docTitle: The title of this specific document
@@ -611,14 +583,14 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 
 	wfResults := results.GetWordFreq(sortedWords, wdict)
 	maxWf := len(wfResults)
-	if maxWf > MAX_WF_OUTPUT {
-		maxWf = MAX_WF_OUTPUT
+	if maxWf > maxWFOutput {
+		maxWf = maxWFOutput
 	}
 
 	lexicalWordFreq := results.GetLexicalWordFreq(sortedWords, wdict)
 	maxLex := len(lexicalWordFreq)
-	if maxLex > MAX_WF_OUTPUT {
-		maxLex = MAX_WF_OUTPUT
+	if maxLex > maxWFOutput {
+		maxLex = maxWFOutput
 	}
 
 	topKeywords := []dicttypes.Word{}
@@ -628,8 +600,8 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 		//topKeywords = dictionary.FilterByDomain(topKeywords, domain_label)
 		topKeywords = index.FilterByDomain(sortedWords, domain_label, wdict)
 		maxKeywords := len(topKeywords)
-		if maxKeywords > MAX_KEYWORDS {
-			maxKeywords = MAX_KEYWORDS
+		if maxKeywords > maxKeywords {
+			maxKeywords = maxKeywords
 		}
 		topKeywords = topKeywords[:maxKeywords]
 	}
@@ -639,15 +611,15 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 
 	sortedUnknownWords := index.SortedFreq(results.UnknownChars)
 	maxUnknown := len(sortedUnknownWords)
-	if maxUnknown > MAX_UNKOWN_OUTPUT {
-		maxUnknown = MAX_UNKOWN_OUTPUT
+	if maxUnknown > maxUnknownOutput {
+		maxUnknown = maxUnknownOutput
 	}
 
 	// Bigrams, also truncated
 	bFreq := ngram.SortedFreq(results.BigramFrequencies)
 	maxBFOutput := len(bFreq)
-	if maxBFOutput > MAX_WF_OUTPUT {
-		maxBFOutput = MAX_WF_OUTPUT
+	if maxBFOutput > maxWFOutput {
+		maxBFOutput = maxWFOutput
 	}
 
 	dateUpdated := time.Now().Format("2006-01-02")
@@ -656,7 +628,7 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 		title += ", " + docTitle
 	}
 
-	aResults := AnalysisResults{
+	aResults := analysisResults{
 		Title:            title,
 		WC:               results.WC,
 		CCount:			  results.CCount,
@@ -717,8 +689,8 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 	return basename
 }
 
-// Writes a corpus document collection to HTML, including all the entries
-// contained in the collection
+// writeCollection writes a corpus document collection to HTML, including all
+// the entries contained in the collection
 // collectionEntry: the CollectionEntry struct
 // baseDir: The base directory to use
 func writeCollection(collectionEntry corpus.CollectionEntry,
@@ -801,7 +773,7 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	return &aResults, nil
 }
 
-// Write all the collections in the given corpus
+// WriteCorpus write all the collections in the given corpus
 // collections: The set of collections to write to HTML
 // baseDir: The base directory to use to write the files
 func WriteCorpus(collections []corpus.CollectionEntry,
@@ -886,7 +858,8 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	return indexState, nil
 }
 
-// Write all the collections in the default corpus (collections.csv file)
+// WriteCorpusAll write all the collections in the default corpus
+// (collections.csv file)
 func WriteCorpusAll(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
 		indexConfig index.IndexConfig,
@@ -897,7 +870,7 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 	collectionsFile := corpusConfig.CorpusDataDir + "/" + corpus.CollectionsFile
 	f, err := os.Open(collectionsFile)
 	if err != nil {
-		return nil, fmt.Errorf("GetWordFrequencies: Error opening collection file: %v", err)
+		return nil, fmt.Errorf("getWordFrequencies: Error opening collection file: %v", err)
 	}
 	defer f.Close()
 	collections, err := corpLoader.LoadCorpus(f)
@@ -912,8 +885,8 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 	return indexState, nil
 }
 
-// Writes a corpus document collection to HTML, including all the entries
-// contained in the collection
+// WriteCorpusCol writes a corpus document collection to HTML, including all
+// the entries contained in the collection
 // collectionFile: the name of the collection file
 func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 			dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
@@ -927,94 +900,6 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 	if err != nil {
 		return fmt.Errorf("analysis.WriteCorpusCol: error writing collection %v", err)
 	}
-	return nil
-}
-
-// Writes a document with markup for the array of tokens
-// tokens: A list of tokens forming the document
-// vocab: A list of word id's in the document
-// f: The writer to write to
-// GlossChinese: whether to convert the Chinese text in the file to hyperlinks
-func WriteDoc(tokens list.List, vocab map[string]int, f io.Writer,
-	templateName, templateFile string, glossChinese bool, title string,
-		corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) error {
-	if templateFile != `\N` {
-		err := writeHTMLDoc(tokens, vocab, f, templateName, templateFile,
-			glossChinese, title, wdict)
-		if err != nil {
-			return fmt.Errorf("WriteDoc, error writing html doc: %v", err)
-		}
-		return nil
-	}
-	w := bufio.NewWriter(f)
-	// Iterate over text chunks
-	for e := tokens.Front(); e != nil; e = e.Next() {
-		chunk := e.Value.(string)
-		//fmt.Printf("WriteDoc: Word %s\n", word)
-		if word, ok := wdict[chunk]; ok && !corpus.IsExcluded(corpusConfig.Excluded, chunk) {
-			wordIds := ""
-			for _, ws := range word.Senses {
-				if wordIds == "" {
-					wordIds = fmt.Sprintf("%d", ws.Id)
-				} else {
-					wordIds = fmt.Sprintf("%s,%d", wordIds, ws.Id)
-				}
-			}
-			fmt.Fprintf(w, "<span title='%s' data-wordid='%s'"+
-				" class='dict-entry' data-toggle='popover'>%s</span>",
-				chunk, wordIds, chunk)
-		} else {
-			_, err := w.Write([]byte(chunk))
-			if err != nil {
-				return fmt.Errorf("WriteDoc, error writing doc: %v", err)
-			}
-		}
-	}
-	w.Flush()
-	return nil
-}
-
-// Writes a document with markup for the array of tokens
-// tokens: A list of tokens forming the document
-// vocab: A list of word id's in the document
-// filename: The file name to write to
-// GlossChinese: whether to convert the Chinese text in the file to hyperlinks
-func writeHTMLDoc(tokens list.List, vocab map[string]int, f io.Writer,
-		templateName, templateFile string, glossChinese bool, title string,
-		wdict map[string]dicttypes.Word) error {
-	var b bytes.Buffer
-
-	// Iterate over text chunks
-	for e := tokens.Front(); e != nil; e = e.Next() {
-		chunk := e.Value.(string)
-		//fmt.Printf("WriteDoc: Word %s\n", word)
-		if !glossChinese {
-			fmt.Fprintf(&b, chunk)
-		} else if word, ok := wdict[chunk]; ok {
-			// Regular HTML link
-			english := ""
-			if len(word.Senses) > 0 {
-				english = word.Senses[0].English
-			}
-			mouseover := fmt.Sprintf("%s | %s", word.Pinyin, english)
-			link := fmt.Sprintf("/words/%d.html", word.HeadwordId)
-			fmt.Fprintf(&b, "<a title='%s' href='%s'>%s</a>", mouseover, link,
-				chunk)
-		} else {
-			fmt.Fprintf(&b, chunk)
-		}
-	}
-	dateUpdated := time.Now().Format("2006-01-02")
-	content := HTMLContent{b.String(), dateUpdated, title, ""}
-
-	// Prepare template
-	tmpl := template.Must(template.New(templateName).ParseFiles(templateFile))
-	w := bufio.NewWriter(f)
-	err := tmpl.Execute(w, content)
-	if err != nil {
-		return fmt.Errorf("writeHTMLDoc, error executing template: %v", err)
-	}
-	w.Flush()
 	return nil
 }
 
@@ -1048,8 +933,8 @@ func WriteHwFiles(loader library.LibraryLoader,
 		return fmt.Errorf("WriteHwFiles, error building index: %v", err)
 	}
 	log.Printf("analysis.WriteHwFiles: Get headwords\n")
-	hwArray := GetHeadwords(wdict)
-	vocabAnalysis, err := GetWordFrequencies(loader, dictTokenizer, wdict)
+	hwArray := getHeadwords(wdict)
+	vocabAnalysis, err := getWordFrequencies(loader, dictTokenizer, wdict)
 	if err != nil {
 		return fmt.Errorf("WriteHwFiles, error getting freq: %v", err)
 	}
@@ -1092,11 +977,11 @@ func WriteHwFiles(loader library.LibraryLoader,
 		}
 
 		// Words that contain this word
-		contains := ContainsWord(hw.Simplified, hwArray)
+		contains := containsWord(hw.Simplified, hwArray)
 
 		// Filter contains words by domain
-		containsByDomain := ContainsByDomain(contains, outputConfig)
-		contains = Subtract(contains, containsByDomain)
+		cByDomain := containsByDomain(contains, outputConfig)
+		contains = Subtract(contains, cByDomain)
 
 		// Sorted array of collocations
 		wordCollocations := collocations.SortedCollocations(hw.HeadwordId)
@@ -1107,7 +992,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 			usageArrPtr, ok = usageMap[hw.Traditional]
 			if !ok {
 				//log.Printf("WriteHwFiles: no usage for %s", hw.Simplified)
-				usageArrPtr = &[]WordUsage{}
+				usageArrPtr = &[]wordUsage{}
 			}
 		} else {
 			usageArrTradPtr, ok := usageMap[hw.Traditional]
@@ -1122,10 +1007,10 @@ func WriteHwFiles(loader library.LibraryLoader,
 		}
 
 		// Decorate useage text
-		hlUsageArr := []WordUsage{}
+		hlUsageArr := []wordUsage{}
 		for _, wu := range *usageArrPtr {
 			hlText := generator.DecodeUsageExample(wu.Example, hw, dictTokenizer, outputConfig, wdict)
-			hlWU := WordUsage{
+			hlWU := wordUsage{
 				Freq:       wu.Freq,
 				RelFreq:    wu.RelFreq,
 				Word:       wu.Word,
@@ -1140,7 +1025,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 		dictEntry := DictEntry {
 			Headword:     hw,
 			RelevantDocs: index.FindDocsForKeyword(hw, *outfileMap, *indexState),
-			ContainsByDomain: containsByDomain,
+			ContainsByDomain: cByDomain,
 			Contains:     contains,
 			Collocations: wordCollocations,
 			UsageArr:     hlUsageArr,

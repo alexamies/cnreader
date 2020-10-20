@@ -23,7 +23,10 @@ func TestLoadExcluded(t *testing.T) {
 	t.Log("corpus.TestIsExcluded0: Begin unit tests")
 	var buf bytes.Buffer
 	io.WriteString(&buf, "如需引用文章")
-	excluded := LoadExcluded(&buf)
+	excluded, err := LoadExcluded(&buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	tests := []struct {
 		name string
 		input string
@@ -41,7 +44,7 @@ func TestLoadExcluded(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		if tc.expectExcluded && !IsExcluded(excluded, tc.input) {
+		if tc.expectExcluded && !IsExcluded(*excluded, tc.input) {
 			t.Errorf("%s, expected '%s' to be excluded", tc.name, tc.input)
 		}
 	}
