@@ -190,7 +190,8 @@ func TestWriteDoc(t *testing.T) {
 		}
 		var buf bytes.Buffer
 		tmpl := template.Must(template.New("page-html").Parse(``))
-		err := WriteDoc(tokens, &buf, *tmpl, true, "", MarkVocabLink)
+		const vocabFormat = `<details><summary>%s</summary>%s %s</details>`
+		err := WriteDoc(tokens, &buf, *tmpl, true, "", vocabFormat, MarkVocabSummary)
 		if !tc.expectError && err != nil {
 			t.Errorf("%s unexpected error: %v", tc.name, err)
 		}

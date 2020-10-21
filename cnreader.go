@@ -34,6 +34,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"runtime/pprof"
 	"strconv"
@@ -65,6 +66,49 @@ type htmlConversion struct {
 // Initialize the app config data
 func initApp() (config.AppConfig) {
 	return config.InitConfig()
+}
+
+// dlDictionary downloads and saves the dictionary to a local file.
+// Also, create a config.yaml file to track it.
+func dlDictionary(url string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("GET error: %v", err)
+	}
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading download: %v", err)
+	}
+	const fName = "data/words.txt"
+	f, err := os.Create(fName)
+	if err != nil {
+		return fmt.Errorf("could not create dictionary file %v", err)
+	}
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	_, err = w.Write(b)
+	if err != nil {
+		return fmt.Errorf("could not write dictionary file %s : %v", fName, err)
+	}
+	w.Flush()
+	const cName = "config.yaml"
+	cFile, err := os.Create(cName)
+	if err != nil {
+		return fmt.Errorf("could not create config file %s, :%v", cName, err)
+	}
+	defer cFile.Close()
+	const configContent = `# Generated configuration data
+DictionaryDir: data
+LUFiles: words.txt
+`
+	cWriter := bufio.NewWriter(cFile)
+	_, err = cWriter.WriteString(configContent)
+	if err != nil {
+		return fmt.Errorf("could not write config file %s : %v", cName, err)
+	}
+	cWriter.Flush()
+	return nil
 }
 
 // formatTokens formats text tokens as plain text
@@ -213,7 +257,7 @@ func getHTMLOutPutConfig(c config.AppConfig) generator.HTMLOutPutConfig {
 	}
 	vocabFormat := c.GetVar("VocabFormat")
 	if len(vocabFormat) == 0 {
-		vocabFormat = "<a title=\"%s | %s\" class=\"%s\" href=\"/words/%d.html\">%s</a>"
+		vocabFormat = `<a title="%s | %s" class="%s" href="/words/%d.html">%s</a>`
 	}
 	webDir := os.Getenv("WEB_DIR")
 	if len(webDir) == 0 {
@@ -328,6 +372,8 @@ func main() {
 	var collectionFile = flag.String("collection", "", 
 			"Enhance HTML markup and do vocabulary analysis for all the files " +
 			"listed in given collection.")
+	var downloadDict = flag.Bool("download_dict", false, "Download the " +
+			"dicitonary from GitHub and save it locally")
 	var html = flag.Bool("html", false, "Enhance HTML markup for all files " +
 			"listed in data/corpus/html-conversion.csv")
 	var hwFiles = flag.Bool("hwfiles", false, "Compute and write " +
@@ -345,6 +391,17 @@ func main() {
 			"translation memory index.")
 	flag.Parse()
 
+	// Download dictionary for Quickstart
+	if *downloadDict == true {
+  	const url = "https://github.com/alexamies/chinesenotes.com/blob/master/data/words.txt?raw=true"
+		fmt.Printf("Downloading and saving dictionary from %s\n", url)
+		err := dlDictionary(url)
+		if err != nil {
+			log.Fatalf("Unable to download dictionary: %v", err)
+		}
+		os.Exit(0)
+	}
+
 	// Minimal config for simple cases
 	c := initApp()
 	var wdict map[string]dicttypes.Word
@@ -360,7 +417,7 @@ func main() {
 	}
 	dictTokenizer := tokenizer.DictTokenizer{wdict}
 
-	// Simple case, no validation done
+	// Simple cases, no validation done
 	if len(*sourceText) > 0 {
 		tokens := dictTokenizer.Tokenize(*sourceText)
 		fmt.Println("Analysis of input text:")
@@ -388,8 +445,9 @@ func main() {
 		if !ok {
 			log.Fatal("no template found")
 		}
+		const vocabFormat = `<details><summary>%s</summary>%s %s</details>`
 		err = generator.WriteDoc(tokens, f, *template, true, "Marked up page",
-				generator.MarkVocabSummary)
+				vocabFormat, generator.MarkVocabSummary)
 		if err != nil {
 			log.Fatalf("error creating opening pos file %s, %v", fName, err)
 		}
@@ -458,8 +516,9 @@ func main() {
 			if !ok {
 				log.Fatalf("template %s found", conversion.Template)
 			}
+			vocabFormat := outputConfig.VocabFormat
 			err = generator.WriteDoc(tokens, f, *template, conversion.GlossChinese,
-					conversion.Title, generator.MarkVocabLink)
+					conversion.Title, vocabFormat, generator.MarkVocabLink)
 			if err != nil {
 				log.Fatalf("main, unable to write doc %s: %v", dest, err)
 			}

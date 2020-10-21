@@ -27,11 +27,23 @@ $ export PATH=$PATH:/usr/local/go/bin
 
 ## Quickstart
 
+Download the app and the dicitonary
+
+```shell
+go get github.com/alexamies/cnreader
+go run github.com/alexamies/cnreader -download_dict
+```
+
+Set an environment variable to let the app know where its home is
+
+```shell
+export CNREADER_HOME=.
+```
+
 Supply Chinese text on the command line. Observe tokenization and matching to
 English equivalents
 
 ```shell
-go get github.com/alexamies/cnreader
 go run github.com/alexamies/cnreader -source_text="君不見黃河之水天上來"
 ```
 
@@ -42,9 +54,6 @@ go run github.com/alexamies/cnreader -source_file=testdata/sampletest.txt
 ```
 
 The output will be written to `output.html`.
-
-The dictionary will be downloaded from the Internet when run like this. To
-avoid repeatedly download, clone the repo and follow the instructions below.
 
 ## Basic Use
 

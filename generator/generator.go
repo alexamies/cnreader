@@ -139,14 +139,12 @@ func hyperlink(w dicttypes.Word, text, vocabFormat string) string {
 
 // MarkVocabLink constructs a hyperlink for a headword, including Pinyin and English in the
 // title attribute for the link mouseover
-func MarkVocabLink(w dicttypes.Word, text string) string {
-	const vocabFormat = "<a title='%s | %s' class='%s' href='/words/%d.html'>%s</a>"
+func MarkVocabLink(w dicttypes.Word, text, vocabFormat string) string {
 	return hyperlink(w, text, vocabFormat)
 }
 
 // MarkVocabSummary constructs a Summary HTML element for a headword.
-func MarkVocabSummary(w dicttypes.Word, text string) string {
-	vocabFormat := `<details><summary>%s</summary>%s %s</details>`
+func MarkVocabSummary(w dicttypes.Word, text, vocabFormat string) string {
 	pinyin := w.Pinyin
 	english := ""
 	if len(w.Senses) > 0 {
@@ -272,8 +270,8 @@ func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Wri
 // f: The writer to write to
 // GlossChinese: whether to convert the Chinese text in the file to markVocabs
 func WriteDoc(tokens []tokenizer.TextToken, f io.Writer, tmpl template.Template,
-		glossChinese bool, title string,
-		markVocab func(dicttypes.Word, string) string) error {
+		glossChinese bool, title, vocabFormat string, 
+		markVocab func(dicttypes.Word, string, string) string) error {
 	var b bytes.Buffer
 	for _, e := range tokens {
 		chunk := e.Token
@@ -281,7 +279,7 @@ func WriteDoc(tokens []tokenizer.TextToken, f io.Writer, tmpl template.Template,
 		if !glossChinese {
 			fmt.Fprintf(&b, chunk)
 		} else if len(word.Senses) > 0 {
-			markedText := markVocab(word, chunk)
+			markedText := markVocab(word, chunk, vocabFormat)
 			fmt.Fprint(&b, markedText)
 		} else {
 			fmt.Fprintf(&b, chunk)
