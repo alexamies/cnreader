@@ -91,6 +91,7 @@ func dlDictionary() error {
 
 	// Files to download
 	luFiles := []string{"data/words.txt"}
+	dictionaryDir := "data"
 
 	// Check if config file exists and, if not, save a fresh one
 	const cName = "config.yaml"
@@ -106,10 +107,15 @@ func dlDictionary() error {
   	// Config is set, use it to file files to refresh
   	c := config.InitConfig()
   	luFiles = c.LUFileNames
+  	dictionaryDir = c.DictionaryDir()
   }
 
-	// Download and save dictionary file
-	for _, fName := range luFiles {
+	// Download and save dictionary files
+	posFName := dictionaryDir + "/grammar.txt"
+	topicsFName := dictionaryDir + "/topics.txt"
+	files := append(luFiles, posFName)
+	files = append(luFiles, topicsFName)
+	for _, fName := range files {
 		url := fmt.Sprintf(baseUrl, fName)
 		fmt.Printf("Downloading and saving dictionary from %s\n", url)
 		resp, err := http.Get(url)
@@ -133,6 +139,7 @@ func dlDictionary() error {
 		}
 		w.Flush()
 	}
+
 	return nil
 }
 
@@ -340,7 +347,7 @@ func getIndexConfig(c config.AppConfig) index.IndexConfig {
 func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
 		indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word) error {
+		wdict map[string]dicttypes.Word, appConfig config.AppConfig) error {
 	libFle, err := os.Open(library.LibraryFile)
 	if err != nil {
 		return fmt.Errorf("writeLibraryFiles: Error opening library file: %v", err)
@@ -386,7 +393,7 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 			return fmt.Errorf("library.WriteLibraryFiles: could not load corpus: %v", err)
 		}
 		_, err = analysis.WriteCorpus(*collections, outputConfig, lib.Loader,
-				dictTokenizer, indexConfig, wdict)
+				dictTokenizer, indexConfig, wdict, appConfig)
 		if err != nil {
 			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
 		}
@@ -533,7 +540,7 @@ func main() {
 	if len(*collectionFile) > 0 {
 		log.Printf("main: writing collection %s\n", *collectionFile)
 		err := analysis.WriteCorpusCol(*collectionFile, libraryLoader,
-				dictTokenizer, outputConfig, corpusConfig, wdict)
+				dictTokenizer, outputConfig, corpusConfig, wdict, c)
 		if err != nil {
 			log.Fatalf("error writing collection %v\n", err)
 		}
@@ -586,7 +593,7 @@ func main() {
 			Loader: libraryLoader,
 		}
 		err := writeLibraryFiles(lib, dictTokenizer, outputConfig,
-				corpusConfig, indexConfig, wdict)
+				corpusConfig, indexConfig, wdict, c)
 		if err != nil {
 			log.Fatalf("main: could not write library files: %v\n", err)
 		}
@@ -600,7 +607,7 @@ func main() {
 	} else {
 		log.Println("main: writing out entire corpus")
 		_, err := analysis.WriteCorpusAll(libraryLoader, dictTokenizer,
-				outputConfig, indexConfig, wdict)
+				outputConfig, indexConfig, wdict, c)
 		if err != nil {
 			log.Fatalf("main: writing out corpus, err: %v\n", err)
 		}

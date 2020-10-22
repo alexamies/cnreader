@@ -168,7 +168,8 @@ func loadAll(loader CorpusLoader, r io.Reader) (*map[string]CorpusEntry, error) 
 		return nil, fmt.Errorf("loadAll could not load corpus: %v", err)
 	}
 	for _, collectionEntry := range *collections {
-		f, err := os.Open(collectionEntry.CollectionFile)
+		colEntryFName := loader.GetConfig().CorpusDir + "/" + collectionEntry.CollectionFile
+		f, err := os.Open(colEntryFName)
 		if err != nil {
 			return nil, fmt.Errorf("loadAll: Error opening collection file: %v", err)
 		}
@@ -249,7 +250,7 @@ func loadCorpusEntries(r io.Reader, colTitle string,
 	reader.Comment = rune('#')
 	rawCSVdata, err := reader.ReadAll()
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("loadCorpusEntries, unable to read corpus document: %v", err)
 	}
 	corpusEntries := make([]CorpusEntry, 0)
 	for _, row := range rawCSVdata {

@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alexamies/chinesenotes-go/config"	
 	"github.com/alexamies/chinesenotes-go/dictionary"	
 	"github.com/alexamies/chinesenotes-go/dicttypes"	
 	"github.com/alexamies/chinesenotes-go/tokenizer"
@@ -50,6 +51,7 @@ func mockOutputConfig() generator.HTMLOutPutConfig {
 		TemplateDir: "templates",
 		VocabFormat: "",
 		WebDir: "web-staging",
+		Templates: generator.NewTemplateMap(config.AppConfig{}),
 	}
 }
 
@@ -427,7 +429,11 @@ func TestWriteAnalysis(t *testing.T) {
 	var buf bytes.Buffer
 	df.Write(&buf)
 	index.ReadDocumentFrequency(&buf)
-	writeAnalysis(results, srcFile, glossFile, "Test Collection", "Test Doc",
-			mockOutputConfig(), wdict)
+	var outBuf bytes.Buffer
+	err := writeAnalysis(results, srcFile, glossFile, "Test Collection", "Test Doc",
+			mockOutputConfig(), wdict, &outBuf)
+	if err != nil {
+		t.Errorf("could write analysis: %v", err)
+	}
 	t.Log("analysis.TestWriteAnalysis: End +++++++++++")
 }

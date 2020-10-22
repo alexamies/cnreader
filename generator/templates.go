@@ -84,6 +84,50 @@ const pageTemplate = `
   <body>
 </html>
 `
+
+const corpusAnalysisTemplate = `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+  </head>
+  <body>
+      <main>
+        <div>
+      <h2>{{.Title}}</h2>
+      <h3 id="lexical">Frequencies of Lexical Words</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Frequency</th>
+            <th>Chinese</th>
+            <th>Pinyin</th>
+            <th>English</th>
+            <th>Example Usage</th>
+          </tr>
+        </thead>
+        <tbody>
+        {{ range $index, $wf := .LexicalWordFreq }}
+          <tr>
+            <td>{{ add $index 1 }}</td>
+            <td>{{ $wf.Freq }}</td>
+            <td><a href="/words/{{$wf.HeadwordId}}.html">{{$wf.Chinese}}</a></td>
+            <td>{{ $wf.Pinyin }}</td>
+            <td>{{ $wf.English }}</td>
+            <td>{{ $wf.Usage }}</td>
+          </tr>
+        {{ end }}
+        </tbody>
+      </table>
+      </main>
+    <footer>
+      <div>Page updated on {{.DateUpdated}}</div>
+    </footer>
+  <body>
+</html>
+`
+
 // newTemplateMap builds a template map
 func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
   templateMap := make(map[string]*template.Template)
@@ -92,6 +136,12 @@ func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
     "collection-template.html": collectionTemplate,
     "corpus-template.html": corpusTemplate,
     "texts-template.html": pageTemplate,
+    "corpus-analysis-template.html": corpusAnalysisTemplate,
+  }
+  funcs := template.FuncMap{
+    "add": func(x, y int) int { return x + y },
+    "Deref":   func(sp *string) string { return *sp },
+    "DerefNe": func(sp *string, s string) bool { return *sp != s },
   }
   if len(templDir) > 0 {
     for tName, defTmpl := range tNames {
@@ -102,13 +152,13 @@ func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
       if err != nil {
         log.Printf("newTemplateMap: error parsing template, using default %s: %v",
             tName, err)
-        tmpl = template.Must(template.New(tName).Parse(defTmpl))
+        tmpl = template.Must(template.New(tName).Funcs(funcs).Parse(defTmpl))
       }
       templateMap[tName] = tmpl
     }
   } else {
     for tName, defTmpl := range tNames {
-      tmpl := template.Must(template.New(tName).Parse(defTmpl))
+      tmpl := template.Must(template.New(tName).Funcs(funcs).Parse(defTmpl))
       templateMap[tName] = tmpl
     }
   }

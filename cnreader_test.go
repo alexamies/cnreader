@@ -64,7 +64,7 @@ func TestMain(m *testing.M) {
 func TestIntegration(t *testing.T) {
 	t.Log("TestIntegration begin")
 	appConfig := config.AppConfig{
-		LUFileNames: []string{"data/testwords.txt"},
+		LUFileNames: []string{"data/testwords.tsv"},
 	}
 	wdict, err := fileloader.LoadDictFile(appConfig)
 	if err != nil {

@@ -24,6 +24,7 @@ import (
 	"bufio"
 	"container/list"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/corpus"
@@ -560,14 +562,7 @@ func writeAnalysisCorpus(results *CollectionAResults,
 func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 		collectionTitle, docTitle string,
 		outputConfig generator.HTMLOutPutConfig,
-		wdict map[string]dicttypes.Word) string {
-
-	//log.Printf("analysis.writeAnalysis: enter")
-	analysisDir := outputConfig.WebDir + "/analysis/"
-	_, err := os.Stat(analysisDir)
-	if err != nil {
-		return ""
-	}
+		wdict map[string]dicttypes.Word, f io.Writer) error {
 
 	// Parse template and organize template parameters
 	properNouns := makePNList(results.Vocab, wdict)
@@ -643,50 +638,20 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 		DateUpdated:      dateUpdated,
 		MaxWFOutput:      len(wfResults),
 	}
-	tmplFile := outputConfig.TemplateDir + "/corpus-analysis-template.html"
-	funcs := template.FuncMap{
-		"add": add,
-		"Deref":   func(sp *string) string { return *sp },
-		"DerefNe": func(sp *string, s string) bool { 
-			if sp != nil {
-				return *sp != s 
-			}
-			return false
-		},
-	}
-	tmpl, err := template.New("corpus-analysis-template.html").Funcs(funcs).ParseFiles(tmplFile)
-	if (err != nil ||  tmpl == nil) {
-		log.Printf("analysiswriteAnalysis: Skipping document analysis (%v)\n",
-			tmplFile)
-		return ""
+	tmpl, ok := outputConfig.Templates["corpus-analysis-template.html"]
+	if !ok {
+		return fmt.Errorf("corpus-analysis-template.html not found")
 	}
 
 	// Write output
-	i := strings.Index(srcFile, ".txt")
-	if i <= 0 {
-		i = strings.Index(srcFile, ".html")
-		if i <= 0 {
-			i = strings.Index(srcFile, ".csv")
-			if i <= 0 {
-				log.Fatal("writeAnalysis: Bad name for source file: ", srcFile)
-			}
-		}
-	}
-	basename := srcFile[:i] + "_analysis.html"
-	filename := analysisDir + basename
-	f, err := os.Create(filename)
-	if err != nil {
-		log.Fatal("analysis.writeAnalysis", err)
-	}
-	defer f.Close()
 	w := bufio.NewWriter(f)
-	err = tmpl.Execute(w, aResults)
+	err := tmpl.Execute(w, aResults)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("analysis.writeAnalysis could not execute template: %v", err)
 	}
 	w.Flush()
 
-	return basename
+	return nil
 }
 
 // writeCollection writes a corpus document collection to HTML, including all
@@ -696,7 +661,7 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 func writeCollection(collectionEntry corpus.CollectionEntry,
 		outputConfig generator.HTMLOutPutConfig, libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, 
-		wdict map[string]dicttypes.Word) (*CollectionAResults, error) {
+		wdict map[string]dicttypes.Word, c config.AppConfig) (*CollectionAResults, error) {
 
 	log.Printf("analysis.writeCollection: enter CollectionFile =" +
 			collectionEntry.CollectionFile)
@@ -728,23 +693,48 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		text := corpLoader.ReadText(r)
 		_, results := ParseText(text, collectionEntry.Title, &entry,
 				dictTokenizer, corpusConfig, wdict)
-		aFile := writeAnalysis(results, entry.RawFile, entry.GlossFile,
-			collectionEntry.Title, entry.Title, outputConfig, wdict)
+
+		srcFile := entry.RawFile
+		i := strings.Index(srcFile, ".txt")
+		if i <= 0 {
+			i = strings.Index(srcFile, ".html")
+			if i <= 0 {
+				i = strings.Index(srcFile, ".csv")
+				if i <= 0 {
+					return nil, fmt.Errorf("writeCollection: Bad name for source file: %s", srcFile)
+				}
+			}
+		}
+		basename := srcFile[:i] + "_analysis.html"
+		analysisDir :=  c.ProjectHome + "/" + outputConfig.WebDir + "/analysis/"
+		filename := analysisDir + basename
+		af, err := os.Create(filename)
+		if err != nil {
+			return nil, fmt.Errorf("writeCollection: count not create analysis file %s: %v",
+					filename, err)
+		}
+		defer af.Close()
+		err = writeAnalysis(results, entry.RawFile, entry.GlossFile,
+			collectionEntry.Title, entry.Title, outputConfig, wdict, af)
+		if err != nil {
+			return nil, fmt.Errorf("writeCollection could write analysis: %v", err)
+		}
+
 		sourceFormat := "TEXT"
 		if strings.HasSuffix(entry.RawFile, ".html") {
 			sourceFormat = "HTML"
 		}
-		f, err := os.Create(dest)
+		df, err := os.Create(dest)
 		if err != nil {
 			return nil, fmt.Errorf("writeCollection could not open file: %v", err)
 		}
 		defer f.Close()
-		w := bufio.NewWriter(f)
+		w := bufio.NewWriter(df)
 		defer w.Flush()
 
 		textTokens := dictTokenizer.Tokenize(text)
 		err = generator.WriteCorpusDoc(textTokens, results.Vocab, w, collectionEntry.GlossFile,
-				collectionEntry.Title, entry.Title, aFile, sourceFormat, outputConfig,
+				collectionEntry.Title, entry.Title, "corpus_analysis.html", sourceFormat, outputConfig,
 				corpusConfig, wdict)
 		if err != nil {
 			return nil, fmt.Errorf("writeCollection, error writing corpus doc: %v", err)
@@ -757,16 +747,42 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		aResults.BigramDocMap.AddWF(results.Bigrams, collectionEntry.GlossFile,
 				entry.GlossFile, results.WC)
 	}
-	aFile := writeAnalysis(&aResults, collectionEntry.CollectionFile,
-		collectionEntry.GlossFile, collectionEntry.Title, "", outputConfig, wdict)
+
+	srcFile := collectionEntry.CollectionFile
+	i := strings.Index(srcFile, ".txt")
+	if i <= 0 {
+		i = strings.Index(srcFile, ".html")
+		if i <= 0 {
+			i = strings.Index(srcFile, ".csv")
+			if i <= 0 {
+				return nil, fmt.Errorf("writeAnalysis: Bad name for source file: %s", srcFile)
+			}
+		}
+	}
+	basename := srcFile[:i] + "_analysis.html"
+	analysisDir :=  c.ProjectHome + "/" + outputConfig.WebDir + "/analysis/"
+	filename := analysisDir + basename
+	sf, err := os.Create(filename)
+	if err != nil {
+		return nil, fmt.Errorf("analysis.writeAnalysis: %v", err)
+	}
+	defer sf.Close()
+	err = writeAnalysis(&aResults, collectionEntry.CollectionFile,
+			collectionEntry.GlossFile, collectionEntry.Title, "",
+			outputConfig, wdict, sf)
+	if err != nil {
+		return nil, fmt.Errorf("writeCollection could write analysis: %v", err)
+	}
+
 	infile, err := os.Open(corpusConfig.CorpusDataDir + "/" + collectionEntry.Intro)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("writeCollection, could not open intro file %s: %v",
+				collectionEntry.Intro, err)
 	}
 	defer infile.Close()
 	introText := corpus.ReadIntroFile(infile)
-	err = generator.WriteCollectionFile(collectionEntry, aFile, outputConfig,
-			corpusConfig, *corpusEntries, introText)
+	err = generator.WriteCollectionFile(collectionEntry, "corpus_analysis.html",
+			outputConfig, corpusConfig, *corpusEntries, introText)
 	if err != nil {
 		return nil, fmt.Errorf("Error writing collection file: %v ", err)
 	}
@@ -780,7 +796,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		outputConfig generator.HTMLOutPutConfig,
 		libLoader library.LibraryLoader, dictTokenizer tokenizer.Tokenizer,
 		indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word) (*index.IndexState, error) {
+		wdict map[string]dicttypes.Word, c config.AppConfig) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpus: enter")
 	wfDocMap := index.TermFreqDocMap{}
 	bigramDocMap := index.TermFreqDocMap{}
@@ -789,7 +805,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	aResults := NewCollectionAResults()
 	for _, collectionEntry := range collections {
 		results, err := writeCollection(collectionEntry, outputConfig, libLoader,
-				dictTokenizer, wdict)
+				dictTokenizer, wdict, c)
 		if err != nil {
 			return nil, fmt.Errorf("WriteCorpus could not open file: %v", err)
 		}
@@ -863,7 +879,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 func WriteCorpusAll(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
 		indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word) (*index.IndexState, error) {
+		wdict map[string]dicttypes.Word, c config.AppConfig) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpusAll: enter")
 	corpLoader := libLoader.GetCorpusLoader()
 	corpusConfig := corpLoader.GetConfig()
@@ -878,7 +894,7 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 		return nil, fmt.Errorf("WriteCorpusAll could not load corpus: %v", err)
 	}
 	indexState, err := WriteCorpus(*collections, outputConfig, libLoader, dictTokenizer,
-			indexConfig, wdict)
+			indexConfig, wdict, c)
 	if err != nil {
 		return nil, fmt.Errorf("WriteCorpusAll could not open file: %v", err)
 	}
@@ -890,13 +906,15 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 // collectionFile: the name of the collection file
 func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 			dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
-			corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) error {
+			corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word,
+			c config.AppConfig) error {
+
 	collectionEntry, err := libLoader.GetCorpusLoader().GetCollectionEntry(collectionFile)
 	if err != nil {
 		return fmt.Errorf("analysis.WriteCorpusCol:  could not get entry %v", err)
 	}
 	_, err = writeCollection(*collectionEntry, outputConfig, libLoader,
-			dictTokenizer, wdict)
+			dictTokenizer, wdict, c)
 	if err != nil {
 		return fmt.Errorf("analysis.WriteCorpusCol: error writing collection %v", err)
 	}
