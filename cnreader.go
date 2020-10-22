@@ -12,7 +12,9 @@
 
 // Command line utility to analyze Chinese text, including corpus analysis, 
 // compilation of a full text search index, and mark up HTML files in reader
-// style. This utility is used to generate web pages for
+// style.
+//
+// This utility is used to generate web pages for
 // https://chinesenotes.com, https://ntireader.org, and https://hbreader.org.
 //
 // Quickstart:
@@ -21,7 +23,21 @@
 // English equivalents
 //
 // go get github.com/alexamies/cnreader
+// go run github.com/alexamies/cnreader -download_dict
 // go run github.com/alexamies/cnreader -source_text="君不見黃河之水天上來"
+//
+// Flags:
+//  -download_dict 	Download the dicitonary files from GitHub and save locally.
+//  -source_text 		Analyze vocabulary for source input on the command line
+//  -source_file 		Analyze vocabulary for source file and write to output.html.
+//  -collection 		Enhance HTML markup and do vocabulary analysis for all the
+//              		files listed in given collection.
+//  -html						Enhance HTML markup for all files listed in
+// 									data/corpus/html-conversion.csv
+//  -hwfiles				Compute and write HTML entries for each headword, writing
+// 									the files to the web/words directory.
+//  -librarymeta		collection entries for the digital library.
+// -tmindex					Compute and write translation memory index.
 //
 // Follow instructions in the README.md file for setup.
 package main
@@ -68,31 +84,60 @@ func initApp() (config.AppConfig) {
 	return config.InitConfig()
 }
 
-// dlDictionary downloads and saves the dictionary to a local file.
+// dlDictionary downloads and saves dictionary files locally.
 // Also, create a config.yaml file to track it.
-func dlDictionary(url string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("GET error: %v", err)
-	}
-	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("error reading download: %v", err)
-	}
-	const fName = "data/words.txt"
-	f, err := os.Create(fName)
-	if err != nil {
-		return fmt.Errorf("could not create dictionary file %v", err)
-	}
-	defer f.Close()
-	w := bufio.NewWriter(f)
-	_, err = w.Write(b)
-	if err != nil {
-		return fmt.Errorf("could not write dictionary file %s : %v", fName, err)
-	}
-	w.Flush()
+func dlDictionary() error {
+  const baseUrl = "https://github.com/alexamies/chinesenotes.com/blob/master/%s?raw=true"
+
+	// Files to download
+	luFiles := []string{"data/words.txt"}
+
+	// Check if config file exists and, if not, save a fresh one
 	const cName = "config.yaml"
+	fInfo, err := os.Stat(cName)
+	if os.IsNotExist(err) || !fInfo.IsDir(){
+		err := saveNewConfig(cName)
+		if err != nil {
+			return fmt.Errorf("Could not save new config file: %v", err)
+		}
+  } else if err != nil {
+  	return fmt.Errorf("Could not check existence of config file: %v", err)
+  } else {
+  	// Config is set, use it to file files to refresh
+  	c := config.InitConfig()
+  	luFiles = c.LUFileNames
+  }
+
+	// Download and save dictionary file
+	for _, fName := range luFiles {
+		url := fmt.Sprintf(baseUrl, fName)
+		fmt.Printf("Downloading and saving dictionary from %s\n", url)
+		resp, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("GET error: %v", err)
+		}
+		defer resp.Body.Close()
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("error reading download: %v", err)
+		}
+		f, err := os.Create(fName)
+		if err != nil {
+			return fmt.Errorf("could not create dictionary file %v", err)
+		}
+		defer f.Close()
+		w := bufio.NewWriter(f)
+		_, err = w.Write(b)
+		if err != nil {
+			return fmt.Errorf("could not write dictionary file %s : %v", fName, err)
+		}
+		w.Flush()
+	}
+	return nil
+}
+
+// saveNewConfig saves a fresh config.yaml file
+func saveNewConfig(cName string) error {
 	cFile, err := os.Create(cName)
 	if err != nil {
 		return fmt.Errorf("could not create config file %s, :%v", cName, err)
@@ -372,8 +417,8 @@ func main() {
 	var collectionFile = flag.String("collection", "", 
 			"Enhance HTML markup and do vocabulary analysis for all the files " +
 			"listed in given collection.")
-	var downloadDict = flag.Bool("download_dict", false, "Download the " +
-			"dicitonary from GitHub and save it locally")
+	var downloadDict = flag.Bool("download_dict", false, 
+			"Download the dicitonary files from GitHub and save locally.")
 	var html = flag.Bool("html", false, "Enhance HTML markup for all files " +
 			"listed in data/corpus/html-conversion.csv")
 	var hwFiles = flag.Bool("hwfiles", false, "Compute and write " +
@@ -382,20 +427,18 @@ func main() {
 	var librarymeta = flag.Bool("librarymeta", false, "Top level " +
 			"collection entries for the digital library.")
 	var memprofile = flag.String("memprofile", "", "write memory profile to " +
-			"this file")
+			"this file.")
 	var sourceFile = flag.String("source_file", "",
-			"Analyze vocabulary for source file and write to output.html")
+			"Analyze vocabulary for source file and write to output.html.")
 	var sourceText = flag.String("source_text", "",
-			"Analyze vocabulary for source input on the command line")
+			"Analyze vocabulary for source input on the command line.")
 	var writeTMIndex = flag.Bool("tmindex", false, "Compute and write " +
 			"translation memory index.")
 	flag.Parse()
 
 	// Download dictionary for Quickstart
 	if *downloadDict == true {
-  	const url = "https://github.com/alexamies/chinesenotes.com/blob/master/data/words.txt?raw=true"
-		fmt.Printf("Downloading and saving dictionary from %s\n", url)
-		err := dlDictionary(url)
+		err := dlDictionary()
 		if err != nil {
 			log.Fatalf("Unable to download dictionary: %v", err)
 		}
