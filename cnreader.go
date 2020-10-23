@@ -273,14 +273,15 @@ func getCorpusConfig(c config.AppConfig) corpus.CorpusConfig {
 		if err != nil {
 			log.Printf("corpus.loadExcluded: Error opening excluded words file: %v, " +
 				"skipping excluded words", err)
-		}
-		defer file.Close()
-		excludedPtr, err := corpus.LoadExcluded(file)
-		if err != nil {
-			log.Printf("corpus.loadExcluded: Error loading excluded words file: %v, " +
-				"skipping excluded words", err)
 		} else {
-			excluded = *excludedPtr
+			defer file.Close()
+			excludedPtr, err := corpus.LoadExcluded(file)
+			if err != nil {
+				log.Printf("corpus.loadExcluded: Error loading excluded words file: %v, " +
+					"skipping excluded words", err)
+			} else {
+				excluded = *excludedPtr
+			}
 		}
 	}
 	return corpus.CorpusConfig{

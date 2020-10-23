@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"text/template"
 	"time"
@@ -190,21 +189,15 @@ func span(w dicttypes.Word, text string) string {
 //   baseDir: The base directory for writing the file
 func WriteCollectionFile(entry corpus.CollectionEntry, analysisFile string,
 		outputConfig HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
-		corpusEntries []corpus.CorpusEntry, introText string) error {
+		corpusEntries []corpus.CorpusEntry, introText string, f io.Writer) error {
 	entry.CorpusEntries = corpusEntries
 	entry.AnalysisFile = analysisFile
-	fName := outputConfig.WebDir + "/" + entry.GlossFile
-	f, err := os.Create(fName)
-	if err != nil {
-		return fmt.Errorf("Error creating collection output file: %v ", err)
-	}
-	defer f.Close()
 	w := bufio.NewWriter(f)
 	// Replace name of intro file with introduction text
 	entry.Intro = introText
 	entry.DateUpdated = time.Now().Format("2006-01-02")
 	tmpl := outputConfig.Templates["collection-template.html"]
-	err = tmpl.Execute(w, entry)
+	err := tmpl.Execute(w, entry)
 	if err != nil {
 		return fmt.Errorf("Error executing collection-template: %v ", err)
 	}

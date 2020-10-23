@@ -434,11 +434,6 @@ func sampleUsage(usageMap map[string]*[]wordUsage) map[string]*[]wordUsage {
 	return usageMap
 }
 
-// For the HTML template
-func add(x, y int) int {
-	return x + y
-}
-
 // writeAnalysisCorpus writes out an analysis of the entire corpus, including
 // word frequencies and other data. The output file is called
 // 'corpus-analysis.html' in the web/analysis directory.
@@ -448,10 +443,11 @@ func add(x, y int) int {
 // Returns: the name of the file written to
 func writeAnalysisCorpus(results *CollectionAResults,
 		docFreq index.DocumentFrequency, outputConfig generator.HTMLOutPutConfig,
-		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word) error {
+		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word,
+		c config.AppConfig) error {
 
 	// If the web/analysis directory does not exist, then skip the analysis
-	analysisDir := outputConfig.WebDir + "/analysis/"
+	analysisDir := c.ProjectHome + "/" + outputConfig.WebDir + "/analysis/"
 	_, err := os.Stat(analysisDir)
 	if err != nil {
 		return fmt.Errorf("writeAnalysisCorpus, could not open analysisDir: %v", err)
@@ -501,27 +497,22 @@ func writeAnalysisCorpus(results *CollectionAResults,
 		DateUpdated:      dateUpdated,
 		MaxWFOutput:      len(wfResults),
 	}
-	tmplFile := outputConfig.TemplateDir + "/corpus-summary-analysis-template.html"
-	funcs := template.FuncMap{
-		"add": add,
-		"Deref":   func(sp *string) string { return *sp },
-		"DerefNe": func(sp *string, s string) bool { return *sp != s },
-	}
-	tmpl, err := template.New("corpus-summary-analysis-template.html").Funcs(funcs).ParseFiles(tmplFile)
-	if (err != nil || tmpl == nil) {
-		return fmt.Errorf("writeAnalysisCorpus: Error getting template %s: %v", tmplFile, err)
+	const tmplFile = "corpus-summary-analysis-template.html"
+	tmpl, ok := outputConfig.Templates[tmplFile]
+	if !ok {
+		return fmt.Errorf("writeAnalysisCorpus: no template found for %s", tmplFile)
 	}
 	basename := "corpus_analysis.html"
 	filename := analysisDir + basename
 	f, err := os.Create(filename)
 	if err != nil {
-		return fmt.Errorf("writeAnalysisCorpus: error creating file %v", err)
+		return fmt.Errorf("writeAnalysisCorpus: error creating summary analysis file %v", err)
 	}
 	defer f.Close()
 	w := bufio.NewWriter(f)
 	err = tmpl.Execute(w, aResults)
 	if err != nil {
-		return fmt.Errorf("writeAnalysisCorpus: error executing template%v", err)
+		return fmt.Errorf("writeAnalysisCorpus: error executing summary analysis template%v", err)
 	}
 	w.Flush()
 
@@ -683,7 +674,6 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	for _, entry := range *corpusEntries {
 		//log.Printf("analysis.writeCollection: entry.RawFile = " + entry.RawFile)
 		src := corpusConfig.CorpusDir + "/" + entry.RawFile
-		dest := outputConfig.WebDir + "/" + entry.GlossFile
 		r, err := os.Open(src)
 		if err != nil {
 			return nil, fmt.Errorf("analysis.writeCollection error src cFile %s: %v",
@@ -695,15 +685,9 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 				dictTokenizer, corpusConfig, wdict)
 
 		srcFile := entry.RawFile
-		i := strings.Index(srcFile, ".txt")
+		i := strings.Index(srcFile, ".")
 		if i <= 0 {
-			i = strings.Index(srcFile, ".html")
-			if i <= 0 {
-				i = strings.Index(srcFile, ".csv")
-				if i <= 0 {
-					return nil, fmt.Errorf("writeCollection: Bad name for source file: %s", srcFile)
-				}
-			}
+			return nil, fmt.Errorf("writeCollection: Bad name for source file: %s", srcFile)
 		}
 		basename := srcFile[:i] + "_analysis.html"
 		analysisDir :=  c.ProjectHome + "/" + outputConfig.WebDir + "/analysis/"
@@ -724,9 +708,11 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		if strings.HasSuffix(entry.RawFile, ".html") {
 			sourceFormat = "HTML"
 		}
+		dest := c.ProjectHome + "/" + outputConfig.WebDir + "/" + entry.GlossFile
 		df, err := os.Create(dest)
 		if err != nil {
-			return nil, fmt.Errorf("writeCollection could not open file: %v", err)
+			return nil, fmt.Errorf("writeCollection could not open dest file %s: %v",
+					dest, err)
 		}
 		defer f.Close()
 		w := bufio.NewWriter(df)
@@ -749,15 +735,10 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	}
 
 	srcFile := collectionEntry.CollectionFile
-	i := strings.Index(srcFile, ".txt")
+	i := strings.Index(srcFile, ".")
 	if i <= 0 {
-		i = strings.Index(srcFile, ".html")
-		if i <= 0 {
-			i = strings.Index(srcFile, ".csv")
-			if i <= 0 {
-				return nil, fmt.Errorf("writeAnalysis: Bad name for source file: %s", srcFile)
-			}
-		}
+		return nil, fmt.Errorf("writeAnalysis: no period in source file name: %s",
+				srcFile)
 	}
 	basename := srcFile[:i] + "_analysis.html"
 	analysisDir :=  c.ProjectHome + "/" + outputConfig.WebDir + "/analysis/"
@@ -774,15 +755,23 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		return nil, fmt.Errorf("writeCollection could write analysis: %v", err)
 	}
 
-	infile, err := os.Open(corpusConfig.CorpusDataDir + "/" + collectionEntry.Intro)
+	introFN := corpusConfig.CorpusDir + "/" + collectionEntry.Intro
+	infile, err := os.Open(introFN)
 	if err != nil {
 		return nil, fmt.Errorf("writeCollection, could not open intro file %s: %v",
 				collectionEntry.Intro, err)
 	}
 	defer infile.Close()
 	introText := corpus.ReadIntroFile(infile)
+	colFN := c.ProjectHome + "/" + outputConfig.WebDir + "/" + collectionEntry.GlossFile
+	log.Printf("writeCollection, Writing %s", colFN)
+	colF, err := os.Create(colFN)
+	if err != nil {
+		return nil, fmt.Errorf("Error creating collection output file: %v ", err)
+	}
+	defer colF.Close()
 	err = generator.WriteCollectionFile(collectionEntry, "corpus_analysis.html",
-			outputConfig, corpusConfig, *corpusEntries, introText)
+			outputConfig, corpusConfig, *corpusEntries, introText, colF)
 	if err != nil {
 		return nil, fmt.Errorf("Error writing collection file: %v ", err)
 	}
@@ -807,7 +796,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		results, err := writeCollection(collectionEntry, outputConfig, libLoader,
 				dictTokenizer, wdict, c)
 		if err != nil {
-			return nil, fmt.Errorf("WriteCorpus could not open file: %v", err)
+			return nil, fmt.Errorf("WriteCorpus could not write collection: %v", err)
 		}
 		aResults.AddResults(results)
 		docFreq.AddDocFreq(results.DocFreq)
@@ -815,7 +804,8 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		wfDocMap.Merge(results.WFDocMap)
 		bigramDocMap.Merge(results.BigramDocMap)
 	}
-	err := writeAnalysisCorpus(&aResults, docFreq, outputConfig, indexConfig, wdict)
+	err := writeAnalysisCorpus(&aResults, docFreq, outputConfig, indexConfig,
+			wdict, c)
 	if err != nil {
 		return nil, fmt.Errorf("WriteCorpus could not write analysis: %v", err)
 	}

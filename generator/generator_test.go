@@ -145,7 +145,7 @@ func TestWriteCorpusDoc(t *testing.T) {
 }
 
 func TestWriteDoc(t *testing.T) {
-	t.Log("analysis.TestWriteDoc: Begin +++++++++++")
+	t.Log("generator.TestWriteDoc: Begin +++++++++++")
 	wdict := make(map[string]dicttypes.Word)
 	tokenizer := tokenizer.DictTokenizer{wdict}
 	input1 := `
@@ -196,5 +196,34 @@ func TestWriteDoc(t *testing.T) {
 			t.Errorf("%s unexpected error: %v", tc.name, err)
 		}
 	}
-	t.Log("analysis.TestWriteDoc: End +++++++++++")
+	t.Log("generator.TestWriteDoc: End +++++++++++")
+}
+
+func TestWriteCollectionFile(t *testing.T) {
+	t.Log("generator.TestWriteCollectionFile: Begin +++++++++++")
+	type test struct {
+		name string
+		entry corpus.CollectionEntry
+  }
+  tests := []test{
+		{
+			name: "Empty",
+			entry: corpus.CollectionEntry{},
+		},
+  }
+  for _, tc := range tests {
+		var buf bytes.Buffer
+		entries := []corpus.CorpusEntry{}
+		outputConfig := HTMLOutPutConfig{}
+		outputConfig.Templates = NewTemplateMap(config.AppConfig{})
+		err := WriteCollectionFile(tc.entry, "corpus_analysis.html",
+			outputConfig, corpus.CorpusConfig{}, entries, "introText", &buf)
+		if err != nil {
+			t.Errorf("%s unexpected error: %v", tc.name, err)
+		}
+		if len(buf.String()) == 0 {
+			t.Errorf("%s no data written", tc.name)
+		}
+	}
+	t.Log("generator.TestWriteDoc: End +++++++++++")
 }
