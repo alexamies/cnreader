@@ -755,8 +755,11 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		return nil, fmt.Errorf("Error creating collection output file: %v ", err)
 	}
 	defer colF.Close()
-	err = generator.WriteCollectionFile(collectionEntry, "corpus_analysis.html",
-			outputConfig, corpusConfig, *corpusEntries, introText, colF)
+	collectionEntry.CorpusEntries = *corpusEntries
+	collectionEntry.AnalysisFile = "analysis/corpus_analysis.html"
+	collectionEntry.Intro = introText
+	err = generator.WriteCollectionFile(collectionEntry, outputConfig,
+			corpusConfig, colF)
 	if err != nil {
 		return nil, fmt.Errorf("Error writing collection file: %v ", err)
 	}
@@ -856,7 +859,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 
 	textsFN := c.ProjectHome
 	if len(outputConfig.GoStaticDir) > 0 {
-		textsFN = "/" + outputConfig.GoStaticDir
+		textsFN = textsFN + "/" + outputConfig.GoStaticDir
 	}
 	textsFN += "/texts.html"
 	collListWriter, err := os.Create(textsFN)
@@ -897,7 +900,7 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 	indexState, err := WriteCorpus(*collections, outputConfig, libLoader, dictTokenizer,
 			indexConfig, wdict, c, corpusConfig)
 	if err != nil {
-		return nil, fmt.Errorf("WriteCorpusAll could not open file: %v", err)
+		return nil, fmt.Errorf("WriteCorpusAll error: %v", err)
 	}
 	return indexState, nil
 }

@@ -31,11 +31,11 @@ const collectionTemplate = `
     <p>{{.Summary}}</p>
     <ul>
       {{ range $element := .CorpusEntries }}
-      <li><a href="/{{$element.GlossFile}}"">{{ $element.Title }}</a></li>
+      <li><a href="/{{$element.GlossFile}}">{{ $element.Title }}</a></li>
       {{ end }}
     </ul>
-    {{.Intro}}
-    <a href="/analysis/{{.AnalysisFile}}">vocabulary analysis</a>
+    <p>{{.Intro}}</p>
+    <a href="{{.AnalysisFile}}">vocabulary analysis</a>
     <p>Page updated on {{.DateUpdated}}</p>
   </body>
 </html>
@@ -111,7 +111,7 @@ const corpusAnalysisTemplate = `
           <tr>
             <td>{{ add $index 1 }}</td>
             <td>{{ $wf.Freq }}</td>
-            <td><a href="/words/{{$wf.HeadwordId}}.html">{{$wf.Chinese}}</a></td>
+            <td>{{$wf.Chinese}}</td>
             <td>{{ $wf.Pinyin }}</td>
             <td>{{ $wf.English }}</td>
             <td>{{ $wf.Usage }}</td>
@@ -136,32 +136,13 @@ const textsTemplate = `
   <body>
     <main>
       <h2>{{.Title}}</h2>
-      <h3 id="lexical">Frequencies of Lexical Words</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>Frequency</th>
-            <th>Chinese</th>
-            <th>Pinyin</th>
-            <th>English</th>
-            <th>Example Usage</th>
-          </tr>
-        </thead>
-        <tbody>
-        {{ range $index, $wf := .LexicalWordFreq }}
-          <tr>
-            <td>{{ add $index 1 }}</td>
-            <td>{{ $wf.Freq }}</td>
-            <td><a href="/words/{{$wf.HeadwordId}}.html">{{$wf.Chinese}}</a></td>
-            <td>{{ $wf.Pinyin }}</td>
-            <td>{{ $wf.English }}</td>
-            <td>{{ $wf.Usage }}</td>
-          </tr>
+      <ul>
+        {{ range $index, $entry := .ColIEntries }}
+          <li><a href="{{ $entry.GlossFile }}">{{ $entry.Title }}</a></li>
         {{ end }}
-        </tbody>
-      </table>
-      </main>
+      </ul>
+      <p><a href="{{ .AnalysisPage }}">Corpus vocabulary analysis</a></p>
+    </main>
     <footer>
       <div>Page updated on {{.DateUpdated}}</div>
     </footer>
@@ -216,9 +197,10 @@ func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
   templateMap := make(map[string]*template.Template)
   templDir := appConfig.GetVar("TemplateDir")
   tNames := map[string]string{
+    "about-template.html": pageTemplate,
     "collection-template.html": collectionTemplate,
     "corpus-template.html": corpusTemplate,
-    "texts-template.html": pageTemplate,
+    "texts-template.html": textsTemplate,
     "corpus-analysis-template.html": corpusAnalysisTemplate,
     "corpus-summary-analysis-template.html": corpusSummaryAnalysisTemplate,
   }

@@ -193,20 +193,28 @@ func span(w dicttypes.Word, text string) string {
 // Parameters:
 //   collectionFile: The name of the file describing the collection
 //   baseDir: The base directory for writing the file
-func WriteCollectionFile(entry corpus.CollectionEntry, analysisFile string,
+func WriteCollectionFile(colEntry corpus.CollectionEntry,
 		outputConfig HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
-		corpusEntries []corpus.CorpusEntry, introText string, f io.Writer) error {
-	entry.CorpusEntries = corpusEntries
-	entry.AnalysisFile = analysisFile
+		f io.Writer) error {
 	if len(outputConfig.GoStaticDir) > 0 {
-		entry.GlossFile = outputConfig.GoStaticDir + "/" + entry.GlossFile
+		colEntry.GlossFile = outputConfig.GoStaticDir + "/" + colEntry.GlossFile
+		entries := []corpus.CorpusEntry{}
+		for _, entry := range colEntry.CorpusEntries {
+			e := corpus.CorpusEntry{
+				RawFile: entry.RawFile,
+				GlossFile: outputConfig.GoStaticDir + "/" + entry.GlossFile,
+				Title: entry.Title,
+				ColTitle: entry.ColTitle,
+			}
+			entries = append(entries, e)
+		}
+		colEntry.CorpusEntries = entries
 	}
 	w := bufio.NewWriter(f)
 	// Replace name of intro file with introduction text
-	entry.Intro = introText
-	entry.DateUpdated = time.Now().Format("2006-01-02")
+	colEntry.DateUpdated = time.Now().Format("2006-01-02")
 	tmpl := outputConfig.Templates["collection-template.html"]
-	err := tmpl.Execute(w, entry)
+	err := tmpl.Execute(w, colEntry)
 	if err != nil {
 		return fmt.Errorf("Error executing collection-template: %v ", err)
 	}

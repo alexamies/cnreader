@@ -520,7 +520,7 @@ func main() {
 	posFName := fmt.Sprintf("%s/%s", c.DictionaryDir(), "grammar.txt")
 	posFile, err := os.Open(posFName)
 	if err != nil {
-		log.Fatalf("error creating pos file %s, %v", posFName, err)
+		log.Fatalf("error opening pos file %s, %v", posFName, err)
 	}
 	defer posFile.Close()
 	posReader := bufio.NewReader(posFile)

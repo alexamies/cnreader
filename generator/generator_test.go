@@ -14,8 +14,10 @@ package generator
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 	"text/template"
+	"time"
 
 	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dicttypes"	
@@ -201,29 +203,94 @@ func TestWriteDoc(t *testing.T) {
 
 func TestWriteCollectionFile(t *testing.T) {
 	t.Log("generator.TestWriteCollectionFile: Begin +++++++++++")
+	ch1 := corpus.CorpusEntry{
+		RawFile: "chapter1.txt",
+		GlossFile: "chapter1.html",
+		Title: "Chapte 1",
+		ColTitle: "A Book",
+	}
+	colEntry := corpus.CollectionEntry{
+		CollectionFile: "",
+		GlossFile: "",
+		Title: "A Book",
+		Summary: "A very good book",
+		Intro: "An intro",
+		DateUpdated: time.Now().Format("2006-01-02"),
+		Corpus: "",
+		CorpusEntries: []corpus.CorpusEntry{ch1},
+		AnalysisFile: "",
+		Format: "Prose",
+		Date: "100 BCE",
+		Genre: "Historic",
+	}
+	outputConfig := HTMLOutPutConfig{
+		Title: "My App",
+		Templates: NewTemplateMap(config.AppConfig{}),
+		ContainsByDomain: "",
+		Domain: "",
+		GoStaticDir: "web",
+		TemplateDir: "",
+		VocabFormat: "",
+		WebDir: "web-staging",
+	}
 	type test struct {
 		name string
 		entry corpus.CollectionEntry
+		wantToInclude string
   }
   tests := []test{
 		{
 			name: "Empty",
 			entry: corpus.CollectionEntry{},
+			wantToInclude: "",
+		},
+		{
+			name: "One entry",
+			entry: colEntry,
+			wantToInclude: "web/chapter1.html",
 		},
   }
   for _, tc := range tests {
 		var buf bytes.Buffer
-		entries := []corpus.CorpusEntry{}
+		err := WriteCollectionFile(tc.entry, outputConfig, corpus.CorpusConfig{}, &buf)
+		if err != nil {
+			t.Fatalf("%s, unexpected error: %v", tc.name, err)
+		}
+		got := buf.String()
+		if len(got) == 0 {
+			t.Fatalf("%s, no data written", tc.name)
+		}
+		if !strings.Contains(got, tc.wantToInclude) {
+			t.Errorf("%s, got %s\n but wantToInclude %s", tc.name, got, tc.wantToInclude)
+		}
+	}
+	t.Log("generator.TestWriteDoc: End +++++++++++")
+}
+
+func TestWriteCollectionList(t *testing.T) {
+	t.Log("generator.WriteCollectionList: Begin +++++++++++")
+	type test struct {
+		name string
+		entries []corpus.CollectionEntry
+  }
+  tests := []test{
+		{
+			name: "Empty",
+			entries: []corpus.CollectionEntry{},
+		},
+  }
+  for _, tc := range tests {
+		var buf bytes.Buffer
 		outputConfig := HTMLOutPutConfig{}
 		outputConfig.Templates = NewTemplateMap(config.AppConfig{})
-		err := WriteCollectionFile(tc.entry, "corpus_analysis.html",
-			outputConfig, corpus.CorpusConfig{}, entries, "introText", &buf)
+		err := WriteCollectionList(tc.entries, "analysisFile",
+			outputConfig, corpus.CorpusConfig{}, &buf)
 		if err != nil {
-			t.Errorf("%s unexpected error: %v", tc.name, err)
+			t.Fatalf("%s unexpected error: %v", tc.name, err)
 		}
 		if len(buf.String()) == 0 {
 			t.Errorf("%s no data written", tc.name)
 		}
 	}
-	t.Log("generator.TestWriteDoc: End +++++++++++")
+	t.Log("generator.WriteCollectionList: End +++++++++++")
 }
