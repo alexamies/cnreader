@@ -88,6 +88,12 @@ type HTMLContent struct {
 	Content, DateUpdated, Title, FileName string
 }
 
+// CollectionListContent holds content for the template of a list of collections.
+type CollectionListContent struct {
+	ColIEntries []corpus.CollectionEntry
+	DateUpdated, Title, AnalysisPage string
+}
+
 // decodeUsageExample formats usage example text into links with highlight
 //   Return
 //      marked up text with links and highlight
@@ -192,6 +198,9 @@ func WriteCollectionFile(entry corpus.CollectionEntry, analysisFile string,
 		corpusEntries []corpus.CorpusEntry, introText string, f io.Writer) error {
 	entry.CorpusEntries = corpusEntries
 	entry.AnalysisFile = analysisFile
+	if len(outputConfig.GoStaticDir) > 0 {
+		entry.GlossFile = outputConfig.GoStaticDir + "/" + entry.GlossFile
+	}
 	w := bufio.NewWriter(f)
 	// Replace name of intro file with introduction text
 	entry.Intro = introText
@@ -201,9 +210,30 @@ func WriteCollectionFile(entry corpus.CollectionEntry, analysisFile string,
 	if err != nil {
 		return fmt.Errorf("Error executing collection-template: %v ", err)
 	}
+	w.Flush()
 	return nil
 }
 
+// WriteCollectionList writes a HTML file listing all collections
+func WriteCollectionList(colIEntries []corpus.CollectionEntry, analysisFile string,
+		outputConfig HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
+		f io.Writer) error {
+	colListContent := CollectionListContent{
+		ColIEntries: colIEntries,
+		Title: "Collections of Texts",
+		DateUpdated: time.Now().Format("2006-01-02"),
+		AnalysisPage: analysisFile,
+	}
+	w := bufio.NewWriter(f)
+	// Replace name of intro file with introduction text
+	tmpl := outputConfig.Templates["texts-template.html"]
+	err := tmpl.Execute(w, colListContent)
+	if err != nil {
+		return fmt.Errorf("Error executing collection-template: %v ", err)
+	}
+	w.Flush()
+	return nil
+}
 
 // WriteCorpusDoc writes a corpus document with markup for the array of tokens
 // tokens: A list of tokens forming the document

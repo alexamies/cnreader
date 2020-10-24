@@ -151,8 +151,15 @@ func saveNewConfig(cName string) error {
 	}
 	defer cFile.Close()
 	const configContent = `# Generated configuration data
+
+# Location of dictionary word files
 DictionaryDir: data
+
+# Names of dictionary files
 LUFiles: words.txt
+
+# Location for serving static resources
+GoStaticDir: web
 `
 	cWriter := bufio.NewWriter(cFile)
 	_, err = cWriter.WriteString(configContent)
@@ -394,7 +401,7 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 			return fmt.Errorf("library.WriteLibraryFiles: could not load corpus: %v", err)
 		}
 		_, err = analysis.WriteCorpus(*collections, outputConfig, lib.Loader,
-				dictTokenizer, indexConfig, wdict, appConfig)
+				dictTokenizer, indexConfig, wdict, appConfig, corpusConfig)
 		if err != nil {
 			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
 		}

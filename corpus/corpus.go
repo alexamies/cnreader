@@ -24,24 +24,17 @@ import (
 	"strings"
 )
 
+const CollectionsFile = "collections.csv"
+
 type CollectionEntry struct {
 	CollectionFile, GlossFile, Title, Summary, Intro, DateUpdated, Corpus string
 	CorpusEntries []CorpusEntry
 	AnalysisFile, Format, Date, Genre string
 }
 
-const CollectionsFile = "collections.csv"
-
 // An entry in a collection
 type CorpusEntry struct {
 	RawFile, GlossFile, Title, ColTitle string
-}
-
-// iterates over CorpusEntry objects
-type CorpusEntryIter interface {
-
-	// Method to get the next CorpusEntry obect or nil if there is none
-	Next() CorpusEntry
 }
 
 // CorpusConfig encapsulates parameters for corpus configuration

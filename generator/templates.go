@@ -31,7 +31,7 @@ const collectionTemplate = `
     <p>{{.Summary}}</p>
     <ul>
       {{ range $element := .CorpusEntries }}
-      <li><ahref='/{{$element.GlossFile}}'>{{ $element.Title }}</a></li>
+      <li><a href="/{{$element.GlossFile}}"">{{ $element.Title }}</a></li>
       {{ end }}
     </ul>
     {{.Intro}}
@@ -86,6 +86,48 @@ const pageTemplate = `
 `
 
 const corpusAnalysisTemplate = `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+  </head>
+  <body>
+    <main>
+      <h2>{{.Title}}</h2>
+      <h3 id="lexical">Frequencies of Lexical Words</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Frequency</th>
+            <th>Chinese</th>
+            <th>Pinyin</th>
+            <th>English</th>
+            <th>Example Usage</th>
+          </tr>
+        </thead>
+        <tbody>
+        {{ range $index, $wf := .LexicalWordFreq }}
+          <tr>
+            <td>{{ add $index 1 }}</td>
+            <td>{{ $wf.Freq }}</td>
+            <td><a href="/words/{{$wf.HeadwordId}}.html">{{$wf.Chinese}}</a></td>
+            <td>{{ $wf.Pinyin }}</td>
+            <td>{{ $wf.English }}</td>
+            <td>{{ $wf.Usage }}</td>
+          </tr>
+        {{ end }}
+        </tbody>
+      </table>
+      </main>
+    <footer>
+      <div>Page updated on {{.DateUpdated}}</div>
+    </footer>
+  <body>
+</html>
+`
+
+const textsTemplate = `
 <!DOCTYPE html>
 <html lang="en">
   <head>

@@ -444,14 +444,7 @@ func sampleUsage(usageMap map[string]*[]wordUsage) map[string]*[]wordUsage {
 func writeAnalysisCorpus(results *CollectionAResults,
 		docFreq index.DocumentFrequency, outputConfig generator.HTMLOutPutConfig,
 		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word,
-		c config.AppConfig) error {
-
-	// If the web/analysis directory does not exist, then skip the analysis
-	analysisDir := c.ProjectHome + "/" + outputConfig.WebDir + "/analysis/"
-	_, err := os.Stat(analysisDir)
-	if err != nil {
-		return fmt.Errorf("writeAnalysisCorpus, could not open analysisDir: %v", err)
-	}
+		c config.AppConfig, analysisFile io.Writer) error {
 
 	// Parse template and organize template parameters
 	sortedWords := index.SortedFreq(results.Vocab)
@@ -502,16 +495,8 @@ func writeAnalysisCorpus(results *CollectionAResults,
 	if !ok {
 		return fmt.Errorf("writeAnalysisCorpus: no template found for %s", tmplFile)
 	}
-	basename := "corpus_analysis.html"
-	filename := analysisDir + basename
-	f, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("writeAnalysisCorpus: error creating summary analysis file %v", err)
-	}
-	defer f.Close()
-	w := bufio.NewWriter(f)
-	err = tmpl.Execute(w, aResults)
-	if err != nil {
+	w := bufio.NewWriter(analysisFile)
+	if err := tmpl.Execute(w, aResults); err != nil {
 		return fmt.Errorf("writeAnalysisCorpus: error executing summary analysis template%v", err)
 	}
 	w.Flush()
@@ -784,8 +769,8 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 func WriteCorpus(collections []corpus.CollectionEntry,
 		outputConfig generator.HTMLOutPutConfig,
 		libLoader library.LibraryLoader, dictTokenizer tokenizer.Tokenizer,
-		indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word, c config.AppConfig) (*index.IndexState, error) {
+		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word,
+		c config.AppConfig, corpusConfig corpus.CorpusConfig) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpus: enter")
 	wfDocMap := index.TermFreqDocMap{}
 	bigramDocMap := index.TermFreqDocMap{}
@@ -804,9 +789,17 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		wfDocMap.Merge(results.WFDocMap)
 		bigramDocMap.Merge(results.BigramDocMap)
 	}
-	err := writeAnalysisCorpus(&aResults, docFreq, outputConfig, indexConfig,
-			wdict, c)
+
+	analysisDir := c.ProjectHome + "/" + outputConfig.WebDir + "/analysis/"
+	basename := "corpus_analysis.html"
+	analysisFN := analysisDir + basename
+	analysisWriter, err := os.Create(analysisFN)
 	if err != nil {
+		return nil, fmt.Errorf("writeAnalysisCorpus: error creating summary analysis file %v", err)
+	}
+	defer analysisWriter.Close()
+	if err := writeAnalysisCorpus(&aResults, docFreq, outputConfig, indexConfig,
+			wdict, c, analysisWriter); err != nil {
 		return nil, fmt.Errorf("WriteCorpus could not write analysis: %v", err)
 	}
 
@@ -860,6 +853,24 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	if err != nil {
 		return nil, fmt.Errorf("error building index: %v", err)
 	}
+
+	textsFN := c.ProjectHome
+	if len(outputConfig.GoStaticDir) > 0 {
+		textsFN = "/" + outputConfig.GoStaticDir
+	}
+	textsFN += "/texts.html"
+	collListWriter, err := os.Create(textsFN)
+	if err != nil {
+		return nil, fmt.Errorf("analysis.WriteCorpus: Could not create texts file, %s: %v",
+				textsFN, err)
+	}
+	defer collListWriter.Close()
+	generator.WriteCollectionList(collections, analysisFN, outputConfig,
+			corpusConfig, collListWriter)
+	if err != nil {
+		return nil, fmt.Errorf("analysis.WriteCorpus: Could write texts file, %s: %v",
+				textsFN, err)
+	}
 	log.Println("analysis.WriteCorpus: exit")
 	return indexState, nil
 }
@@ -868,8 +879,8 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 // (collections.csv file)
 func WriteCorpusAll(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
-		indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word, c config.AppConfig) (*index.IndexState, error) {
+		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word,
+		c config.AppConfig) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpusAll: enter")
 	corpLoader := libLoader.GetCorpusLoader()
 	corpusConfig := corpLoader.GetConfig()
@@ -884,7 +895,7 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 		return nil, fmt.Errorf("WriteCorpusAll could not load corpus: %v", err)
 	}
 	indexState, err := WriteCorpus(*collections, outputConfig, libLoader, dictTokenizer,
-			indexConfig, wdict, c)
+			indexConfig, wdict, c, corpusConfig)
 	if err != nil {
 		return nil, fmt.Errorf("WriteCorpusAll could not open file: %v", err)
 	}
