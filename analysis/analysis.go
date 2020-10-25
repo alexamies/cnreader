@@ -513,7 +513,8 @@ func writeAnalysisCorpus(results *CollectionAResults,
 		return fmt.Errorf("Could not open write unknownCharsFile: %v", err)
 	}
 	defer unknownCharsFile.Close()
-	ngramFile, err := os.Create(indexConfig.IndexDir + "/" + index.NgramCorpusFile)
+	ngramFN := indexConfig.IndexDir + "/" + index.NgramCorpusFile
+	ngramFile, err := os.Create(ngramFN)
 	if err != nil {
 		return fmt.Errorf("Could not open write ngramFile: %v", err)
 	}
