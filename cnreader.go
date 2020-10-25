@@ -15,7 +15,7 @@
 // style.
 //
 // This utility is used to generate web pages for
-// https://chinesenotes.com, https://ntireader.org, and https://hbreader.org.
+// https://chinesenotes.com, https://ntireader.org, and https://hbreader.org
 //
 // Quickstart:
 //

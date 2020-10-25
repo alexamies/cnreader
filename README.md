@@ -125,6 +125,12 @@ there. To analyze your own corpus, create a new directory tree with your own
 collections.csv file and set the environment variable CNREADER_HOME to the top
 of that directory.
 
+## Go API
+
+The API documentation is given at 
+
+https://pkg.go.dev/github.com/alexamies/cnreader
+
 ## Testing
 
 Run unit tests with the command
