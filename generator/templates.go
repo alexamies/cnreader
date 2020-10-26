@@ -13,30 +13,85 @@
 package generator
 
 import (
+  "fmt"
   "log"
   "text/template"
 
 	"github.com/alexamies/chinesenotes-go/config"
 )
 
+// HTML fragment for page head
+const head = `
+  <head>
+    <meta charset="utf-8">
+    <title>{{.Title}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans" rel="stylesheet">
+    <link rel="stylesheet" href="/web/styles.css">
+  </head>
+`
+
+// header block in HTML body
+const header = `
+<header>
+  <h1>{{.Title}}</h1>
+</header>
+`
+
+// navigation menu
+const nav = `
+<nav>
+  <ul>
+    <li><a href="/">Home</a></li>
+    <li><a href="/findtm">Translation Memory</a></li>
+    <li><a href="/findadvanced/">Full Text Search</a></li>
+    <li><a href="/web/texts.html">Library</a></li>
+  </ul>
+</nav>
+`
+
+// Page footer
+const footer = `
+    <footer>
+      <p>Page updated on {{.DateUpdated}}</p>
+      <p>
+        Copyright Fo Guang Shan 佛光山 2020.
+        The Chinese-English dictionary is reproduced from the <a 
+        href="http://ntireader.org/" target="_blank"
+        > NTI Buddhist Text Reader</a> under the <a 
+        href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank"
+        >Creative Commons Attribution-Share Alike 3.0 License</a>
+        (CCASE 3.0). 
+        The site is powered by open source
+        software under an <a 
+        href="http://www.apache.org/licenses/LICENSE-2.0.html"
+        >Apache 2.0 license</a>.
+        Other content shown in password protected versions of this site is
+        copyright protected.
+      </p>
+    </footer>
+`
+
 // Templates from source for zero-config usage
 const collectionTemplate = `
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-  </head>
+  %s
   <body>
-    <h2>{{.Title}}</h2>
-    <p>{{.Summary}}</p>
-    <ul>
-      {{ range $element := .CorpusEntries }}
-      <li><a href="/{{$element.GlossFile}}">{{ $element.Title }}</a></li>
-      {{ end }}
-    </ul>
-    <p>{{.Intro}}</p>
-    <a href="{{.AnalysisFile}}">vocabulary analysis</a>
-    <p>Page updated on {{.DateUpdated}}</p>
+    %s
+    %s
+    <main>
+      <p>{{.Summary}}</p>
+      <ul>
+        {{ range $element := .CorpusEntries }}
+        <li><a href="/{{$element.GlossFile}}">{{ $element.Title }}</a></li>
+        {{ end }}
+      </ul>
+      <p>{{.Intro}}</p>
+      <a href="{{.AnalysisFile}}">vocabulary analysis</a>
+    </main>
+    %s
   </body>
 </html>
 `
@@ -44,23 +99,26 @@ const collectionTemplate = `
 const corpusTemplate = `
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-  </head>
+  %s
   <body>
+    %s
+    %s
     <main>
-      <h1>{{.Title}}</h1>
-      <header>
+      <div>
         <h2>{{.CollectionTitle}}</h2>
         <h3>{{.EntryTitle}}</h3>
-      </header>
-      <div>
+      </div>
+      <div id="CorpusTextDiv">
       {{.CorpusText}}
       </div>
+      <dialog id="vocabDialog">
+        <p id="vocabDialogCn"></p>
+        <p id="vocabDialogEn"></p>
+        <button id="okButton">OK</button>
+      </dialog>
     </main>
-    <footer>
-      <div>Page updated on {{.DateUpdated}}</div>
-    </footer>
+    %s
+    <script src="/web/cnotes.js" async></script>
   <body>
 </html>
 `
@@ -68,19 +126,16 @@ const corpusTemplate = `
 const pageTemplate = `
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-  </head>
+  %s
   <body>
+    %s
+    %s
     <main>
-      <h1>{{.Title}}</h1>
-      <div>
+      <div id="CorpusText">
       {{.Content}}
       </div>
     </main>
-    <footer>
-      <div>Page updated on {{.DateUpdated}}</div>
-    </footer>
+    %s
   <body>
 </html>
 `
@@ -88,12 +143,11 @@ const pageTemplate = `
 const corpusAnalysisTemplate = `
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-  </head>
+  %s
   <body>
+    %s
+    %s
     <main>
-      <h2>{{.Title}}</h2>
       <h3 id="lexical">Frequencies of Lexical Words</h3>
       <table>
         <thead>
@@ -120,9 +174,7 @@ const corpusAnalysisTemplate = `
         </tbody>
       </table>
       </main>
-    <footer>
-      <div>Page updated on {{.DateUpdated}}</div>
-    </footer>
+    %s
   <body>
 </html>
 `
@@ -130,12 +182,11 @@ const corpusAnalysisTemplate = `
 const textsTemplate = `
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-  </head>
+  %s
   <body>
+    %s
+    %s
     <main>
-      <h2>{{.Title}}</h2>
       <ul>
         {{ range $index, $entry := .ColIEntries }}
           <li><a href="{{ $entry.GlossFile }}">{{ $entry.Title }}</a></li>
@@ -143,9 +194,7 @@ const textsTemplate = `
       </ul>
       <p><a href="{{ .AnalysisPage }}">Corpus vocabulary analysis</a></p>
     </main>
-    <footer>
-      <div>Page updated on {{.DateUpdated}}</div>
-    </footer>
+    %s
   <body>
 </html>
 `
@@ -153,12 +202,11 @@ const textsTemplate = `
 const corpusSummaryAnalysisTemplate = `
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-  </head>
+  %s
   <body>
+    %s
+    %s
     <main>
-      <h2>{{.Title}}</h2>
       <h3>Frequencies of Lexical Words</h3>
       <table>
         <thead>
@@ -185,9 +233,7 @@ const corpusSummaryAnalysisTemplate = `
         </tbody>
       </table>
       </main>
-    <footer>
-      <div>Page updated on {{.DateUpdated}}</div>
-    </footer>
+    %s
   <body>
 </html>
 `
@@ -218,13 +264,15 @@ func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
       if err != nil {
         log.Printf("newTemplateMap: error parsing template, using default %s: %v",
             tName, err)
-        tmpl = template.Must(template.New(tName).Funcs(funcs).Parse(defTmpl))
+        t := fmt.Sprintf(defTmpl, head, header, nav, footer)
+        tmpl = template.Must(template.New(tName).Funcs(funcs).Parse(t))
       }
       templateMap[tName] = tmpl
     }
   } else {
     for tName, defTmpl := range tNames {
-      tmpl := template.Must(template.New(tName).Funcs(funcs).Parse(defTmpl))
+      t := fmt.Sprintf(defTmpl, head, header, nav, footer)
+      tmpl := template.Must(template.New(tName).Funcs(funcs).Parse(t))
       templateMap[tName] = tmpl
     }
   }
