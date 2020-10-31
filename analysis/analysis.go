@@ -863,15 +863,15 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		textsFN = textsFN + "/" + outputConfig.GoStaticDir
 	}
 	textsFN += "/texts.html"
+	log.Printf("WriteCorpus, writing list of collections to %s", textsFN)
 	collListWriter, err := os.Create(textsFN)
 	if err != nil {
 		return nil, fmt.Errorf("analysis.WriteCorpus: Could not create texts file, %s: %v",
 				textsFN, err)
 	}
 	defer collListWriter.Close()
-	generator.WriteCollectionList(collections, analysisFN, outputConfig,
-			corpusConfig, collListWriter)
-	if err != nil {
+	if err := generator.WriteCollectionList(collections, analysisFN, outputConfig,
+			corpusConfig, collListWriter); err != nil {
 		return nil, fmt.Errorf("analysis.WriteCorpus: Could write texts file, %s: %v",
 				textsFN, err)
 	}

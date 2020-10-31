@@ -111,11 +111,6 @@ const corpusTemplate = `
       <div id="CorpusTextDiv">
       {{.CorpusText}}
       </div>
-      <dialog id="vocabDialog">
-        <p id="vocabDialogCn"></p>
-        <p id="vocabDialogEn"></p>
-        <button id="okButton">OK</button>
-      </dialog>
     </main>
     %s
     <script src="/web/cnotes.js" async></script>

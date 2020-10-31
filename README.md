@@ -7,6 +7,11 @@ Many HTML pages at chinesenotes.com and family of sites are generated from Go
 templates from the lexical database and text corpus. This readme gives
 instructions. It assumes that you have already cloned the project from GitHub.
 
+The tool can create markup that can be used with JavaScript to bring up a dialog
+like shown below for each term in the corpus:
+
+![screenshot of vocabulary dialog](doc/vocab_dialog.png)
+
 The app also compiles unigram and bigram index for full text searching of the
 corpus.
 
