@@ -54,6 +54,7 @@ import (
 	"os"
 	"runtime/pprof"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
@@ -86,17 +87,16 @@ func initApp() (config.AppConfig) {
 
 // dlDictionary downloads and saves dictionary files locally.
 // Also, create a config.yaml file to track it.
-func dlDictionary() error {
-  const baseUrl = "https://github.com/alexamies/chinesenotes.com/blob/master/%s?raw=true"
+func dlDictionary(c config.AppConfig) error {
+  const baseUrl = "https://github.com/alexamies/chinesenotes.com/blob/master/data/%s?raw=true"
 
 	// Files to download
-	luFiles := []string{"data/words.txt"}
-	dictionaryDir := "data"
+	luFiles := []string{"words.txt"}
 
 	// Check if config file exists and, if not, save a fresh one
-	const cName = "config.yaml"
-	fInfo, err := os.Stat(cName)
-	if os.IsNotExist(err) || !fInfo.IsDir(){
+	cName := c.ProjectHome + "/config.yaml"
+	_, err := os.Stat(cName)
+	if os.IsNotExist(err) {
 		err := saveNewConfig(cName)
 		if err != nil {
 			return fmt.Errorf("Could not save new config file: %v", err)
@@ -105,35 +105,46 @@ func dlDictionary() error {
   	return fmt.Errorf("Could not check existence of config file: %v", err)
   } else {
   	// Config is set, use it to file files to refresh
-  	c := config.InitConfig()
   	luFiles = c.LUFileNames
-  	dictionaryDir = c.DictionaryDir()
   }
 
 	// Download and save dictionary files
-	posFName := dictionaryDir + "/grammar.txt"
-	topicsFName := dictionaryDir + "/topics.txt"
-	files := append(luFiles, posFName)
-	files = append(luFiles, topicsFName)
+	files := append(luFiles, "grammar.txt")
+	files = append(files, "topics.txt")
+	fmt.Printf("Downloading %d files\n", len(files))
 	for _, fName := range files {
-		url := fmt.Sprintf(baseUrl, fName)
-		fmt.Printf("Downloading and saving dictionary from %s\n", url)
+		i := strings.LastIndex(fName, "/")
+		var name string
+		if i < 0 {
+			name = fName
+		} else {
+			name = fName[i+1:]
+		}
+		url := fmt.Sprintf(baseUrl, name)
+		fmt.Printf("Downloading dictionary from %s\n", url)
 		resp, err := http.Get(url)
 		if err != nil {
 			return fmt.Errorf("GET error: %v", err)
 		}
 		defer resp.Body.Close()
+		if resp.StatusCode > 200 {
+			fmt.Printf("Could not get dictionary file %s (%d), skipping\n", name,
+					resp.StatusCode)
+			continue
+		}
 		b, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return fmt.Errorf("error reading download: %v", err)
 		}
-		f, err := os.Create(fName)
+		fn := c.DictionaryDir() + "/" + name
+		f, err := os.Create(fn)
 		if err != nil {
 			return fmt.Errorf("could not create dictionary file %v", err)
 		}
 		defer f.Close()
 		w := bufio.NewWriter(f)
 		_, err = w.Write(b)
+		fmt.Printf("Saved dictionary file %s\n", fName)
 		if err != nil {
 			return fmt.Errorf("could not write dictionary file %s : %v", fName, err)
 		}
@@ -167,6 +178,7 @@ GoStaticDir: web
 		return fmt.Errorf("could not write config file %s : %v", cName, err)
 	}
 	cWriter.Flush()
+	fmt.Printf("Saved new config file %s\n", cName)
 	return nil
 }
 
@@ -451,9 +463,10 @@ func main() {
 			"translation memory index.")
 	flag.Parse()
 
-	// Download dictionary for Quickstart
+	// Download latest dictionary files
+	c := initApp()
 	if *downloadDict == true {
-		err := dlDictionary()
+		err := dlDictionary(c)
 		if err != nil {
 			log.Fatalf("Unable to download dictionary: %v", err)
 		}
@@ -461,7 +474,6 @@ func main() {
 	}
 
 	// Minimal config for simple cases
-	c := initApp()
 	var wdict map[string]dicttypes.Word
 	var err error
 	if len(c.LUFileNames) > 0 {
