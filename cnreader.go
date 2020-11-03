@@ -171,6 +171,12 @@ LUFiles: words.txt
 
 # Location for serving static resources
 GoStaticDir: web
+
+# Contains Material Design Web Go HTML templates
+TemplateDir: web-resources
+
+# Title for dynamicall enerated Go HTML pages
+Title: Chinese Notes Translation Portal
 `
 	cWriter := bufio.NewWriter(cFile)
 	_, err = cWriter.WriteString(configContent)

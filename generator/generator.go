@@ -86,6 +86,7 @@ type CorpusEntryContent struct {
 // HTMLContent holds content for the template
 type HTMLContent struct {
 	Content, DateUpdated, Title, FileName string
+	Data interface{}
 }
 
 // CollectionListContent holds content for the template of a list of collections.
@@ -214,7 +215,15 @@ func WriteCollectionFile(colEntry corpus.CollectionEntry,
 	// Replace name of intro file with introduction text
 	colEntry.DateUpdated = time.Now().Format("2006-01-02")
 	tmpl := outputConfig.Templates["collection-template.html"]
-	err := tmpl.Execute(w, colEntry)
+	dateUpdated := time.Now().Format("2006-01-02")
+	content := HTMLContent{
+		Content: "",
+		DateUpdated: dateUpdated,
+		Title: outputConfig.Title,
+		FileName: "",
+		Data: colEntry,
+	}
+	err := tmpl.Execute(w, content)
 	if err != nil {
 		return fmt.Errorf("Error executing collection-template: %v ", err)
 	}
@@ -224,18 +233,24 @@ func WriteCollectionFile(colEntry corpus.CollectionEntry,
 
 // WriteCollectionList writes a HTML file listing all collections
 func WriteCollectionList(colIEntries []corpus.CollectionEntry, analysisFile string,
-		outputConfig HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
-		f io.Writer) error {
+		outputConfig HTMLOutPutConfig, f io.Writer) error {
 	colListContent := CollectionListContent{
 		ColIEntries: colIEntries,
-		Title: "Collections of Texts",
 		DateUpdated: time.Now().Format("2006-01-02"),
 		AnalysisPage: analysisFile,
 	}
 	w := bufio.NewWriter(f)
 	// Replace name of intro file with introduction text
 	tmpl := outputConfig.Templates["texts-template.html"]
-	err := tmpl.Execute(w, colListContent)
+	dateUpdated := time.Now().Format("2006-01-02")
+	content := HTMLContent{
+		Content: "",
+		DateUpdated: dateUpdated,
+		Title: outputConfig.Title,
+		FileName: "",
+		Data: colListContent,
+	}
+	err := tmpl.Execute(w, content)
 	if err != nil {
 		return fmt.Errorf("Error executing collection-template: %v ", err)
 	}
@@ -317,7 +332,8 @@ func WriteDoc(tokens []tokenizer.TextToken, f io.Writer, tmpl template.Template,
 		}
 	}
 	dateUpdated := time.Now().Format("2006-01-02")
-	content := HTMLContent{b.String(), dateUpdated, title, ""}
+	data := map[string]string{}
+	content := HTMLContent{b.String(), dateUpdated, title, "", data}
 	w := bufio.NewWriter(f)
 	err := tmpl.Execute(w, content)
 	if err != nil {

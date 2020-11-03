@@ -82,14 +82,15 @@ const collectionTemplate = `
     %s
     %s
     <main>
-      <p>{{.Summary}}</p>
+      <h2>{{.Data.Title}}</h2>
+      <p>{{.Data.Summary}}</p>
       <ul>
-        {{ range $element := .CorpusEntries }}
+        {{ range $element := .Data.CorpusEntries }}
         <li><a href="/{{$element.GlossFile}}">{{ $element.Title }}</a></li>
         {{ end }}
       </ul>
-      <p>{{.Intro}}</p>
-      <a href="{{.AnalysisFile}}">vocabulary analysis</a>
+      <p>{{.Data.Intro}}</p>
+      <a href="{{.Data.AnalysisFile}}">vocabulary analysis</a>
     </main>
     %s
   </body>
@@ -183,11 +184,11 @@ const textsTemplate = `
     %s
     <main>
       <ul>
-        {{ range $index, $entry := .ColIEntries }}
+        {{ range $index, $entry := .Data.ColIEntries }}
           <li><a href="{{ $entry.GlossFile }}">{{ $entry.Title }}</a></li>
         {{ end }}
       </ul>
-      <p><a href="{{ .AnalysisPage }}">Corpus vocabulary analysis</a></p>
+      <p><a href="{{ .Data.AnalysisPage }}">Corpus vocabulary analysis</a></p>
     </main>
     %s
   <body>
@@ -236,7 +237,7 @@ const corpusSummaryAnalysisTemplate = `
 // newTemplateMap builds a template map
 func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
   templateMap := make(map[string]*template.Template)
-  templDir := appConfig.GetVar("TemplateDir")
+  templDir := appConfig.ProjectHome + "/" + appConfig.GetVar("TemplateDir")
   tNames := map[string]string{
     "about-template.html": pageTemplate,
     "collection-template.html": collectionTemplate,

@@ -871,7 +871,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	}
 	defer collListWriter.Close()
 	if err := generator.WriteCollectionList(collections, analysisFN, outputConfig,
-			corpusConfig, collListWriter); err != nil {
+			collListWriter); err != nil {
 		return nil, fmt.Errorf("analysis.WriteCorpus: Could write texts file, %s: %v",
 				textsFN, err)
 	}
