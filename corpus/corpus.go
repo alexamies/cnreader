@@ -190,7 +190,9 @@ func loadCorpusCollections(r io.Reader, corpusConfig CorpusConfig) (*[]Collectio
 		return nil, fmt.Errorf("loadCorpusCollections, could not read collections: %v", err)
 	}
 	collections := make([]CollectionEntry, 0)
+	log.Printf("loadCorpusCollections, reading collections")
 	for i, row := range rawCSVdata {
+		log.Printf("loadCorpusCollections, i = %d, len(row) = %d", i, len(row))
 		if len(row) < 9 {
 			return nil, fmt.Errorf("loadCorpusCollections: not enough fields in fileline %d: %d",
 					i, len(row))

@@ -658,7 +658,7 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	}
 	aResults := NewCollectionAResults()
 	for _, entry := range *corpusEntries {
-		//log.Printf("analysis.writeCollection: entry.RawFile = " + entry.RawFile)
+		log.Printf("analysis.writeCollection: entry.RawFile = " + entry.RawFile)
 		src := corpusConfig.CorpusDir + "/" + entry.RawFile
 		r, err := os.Open(src)
 		if err != nil {
@@ -705,6 +705,7 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		defer w.Flush()
 
 		textTokens := dictTokenizer.Tokenize(text)
+		//log.Printf("writeCollection, got %d tokens", len(textTokens))
 		err = generator.WriteCorpusDoc(textTokens, results.Vocab, w, collectionEntry.GlossFile,
 				collectionEntry.Title, entry.Title, "corpus_analysis.html", sourceFormat, outputConfig,
 				corpusConfig, wdict)
@@ -775,7 +776,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		libLoader library.LibraryLoader, dictTokenizer tokenizer.Tokenizer,
 		indexConfig index.IndexConfig, wdict map[string]dicttypes.Word,
 		c config.AppConfig, corpusConfig corpus.CorpusConfig) (*index.IndexState, error) {
-	log.Printf("analysis.WriteCorpus: enter")
+	log.Printf("analysis.WriteCorpus: enter %d collections", len(collections))
 	wfDocMap := index.TermFreqDocMap{}
 	bigramDocMap := index.TermFreqDocMap{}
 	docFreq := index.NewDocumentFrequency() // used to accumulate doc frequencies
@@ -889,6 +890,7 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 	corpLoader := libLoader.GetCorpusLoader()
 	corpusConfig := corpLoader.GetConfig()
 	collectionsFile := corpusConfig.CorpusDataDir + "/" + corpus.CollectionsFile
+	log.Printf("analysis.WriteCorpusAll, enter: %s\n", collectionsFile)
 	f, err := os.Open(collectionsFile)
 	if err != nil {
 		return nil, fmt.Errorf("getWordFrequencies: Error opening collection file: %v", err)

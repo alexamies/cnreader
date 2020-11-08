@@ -374,6 +374,7 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
 		indexConfig index.IndexConfig,
 		wdict map[string]dicttypes.Word, appConfig config.AppConfig) error {
+	log.Printf("writeLibraryFiles, LibraryFile: %s", library.LibraryFile)
 	libFle, err := os.Open(library.LibraryFile)
 	if err != nil {
 		return fmt.Errorf("writeLibraryFiles: Error opening library file: %v", err)
@@ -383,32 +384,21 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 	if err != nil {
 		return fmt.Errorf("writeLibraryFiles, Error loading library: %v", err)
 	}
-	libraryOutFile := outputConfig.WebDir + "/library.html"
-	analysis.WriteLibraryFile(lib, *corpora, libraryOutFile, outputConfig)
 	portalDir := ""
 	goStaticDir := outputConfig.GoStaticDir
 	if len(goStaticDir) != 0 {
 		portalDir = corpusConfig.ProjectHome + "/" + goStaticDir
 		_, err := os.Stat(portalDir)
-		lib.TargetStatus = "translator_portal"
+		lib.TargetStatus = "public"
 		if err == nil {
-			portalLibraryFile := portalDir + "/portal_library.html"
-			analysis.WriteLibraryFile(lib, *corpora, portalLibraryFile, outputConfig)
+			libraryOutFile := portalDir + "/library.html"
+			analysis.WriteLibraryFile(lib, *corpora, libraryOutFile, outputConfig)
 		}
 	}
 	for _, c := range *corpora {
-		outputFile := ""
-		if c.Status == "public" {
-			outputFile = fmt.Sprintf("%s/%s.html", outputConfig.WebDir,
-					c.ShortName)
-		} else if c.Status == "translator_portal" {
-			outputFile = fmt.Sprintf("%s/%s.html", portalDir, c.ShortName)
-		} else {
-			log.Printf("library.WriteLibraryFiles: not sure what to do with status %v",
-				c.Status)
-			continue
-		}
-		r, err := os.Create(c.FileName)
+		outputFile := fmt.Sprintf("%s/%s.html", outputConfig.WebDir, c.ShortName)
+		srcFileName := fmt.Sprintf("%s/%s", corpusConfig.CorpusDataDir, c.FileName)
+		r, err := os.Open(srcFileName)
 		if err != nil {
 			log.Fatalf("WriteHwFiles, unable to open to file %s: %v",
 				c.FileName, err)
@@ -418,6 +408,8 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		if err != nil {
 			return fmt.Errorf("library.WriteLibraryFiles: could not load corpus: %v", err)
 		}
+		log.Printf("writeLibraryFiles, loaded %d collections from corpus: %s",
+				len(*collections), srcFileName)
 		_, err = analysis.WriteCorpus(*collections, outputConfig, lib.Loader,
 				dictTokenizer, indexConfig, wdict, appConfig, corpusConfig)
 		if err != nil {
@@ -607,8 +599,8 @@ func main() {
 			log.Fatalf("main, unable to write headwords: %v", err)
 		}
 	} else if *librarymeta {
-		log.Printf("main: Writing digital library metadata\n")
 		fname := c.ProjectHome + "/" + library.LibraryFile
+		log.Printf("main: Writing digital library metadata: %s\n", fname)
 		libraryLoader := library.NewLibraryLoader(fname, corpusConfig,)
 		dateUpdated := time.Now().Format("2006-01-02")
 		lib := library.Library{
