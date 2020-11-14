@@ -256,7 +256,7 @@ func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
       fileName := templDir + "/" + tName
       var tmpl *template.Template
       var err error
-      tmpl, err = template.New(tName).ParseFiles(fileName)
+      tmpl, err = template.New(tName).Funcs(funcs).ParseFiles(fileName)
       if err != nil {
         log.Printf("newTemplateMap: error parsing template, using default %s: %v",
             tName, err)

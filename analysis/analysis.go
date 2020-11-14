@@ -658,7 +658,7 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	}
 	aResults := NewCollectionAResults()
 	for _, entry := range *corpusEntries {
-		log.Printf("analysis.writeCollection: entry.RawFile = " + entry.RawFile)
+		// log.Printf("analysis.writeCollection: entry.RawFile = " + entry.RawFile)
 		src := corpusConfig.CorpusDir + "/" + entry.RawFile
 		r, err := os.Open(src)
 		if err != nil {
@@ -683,9 +683,9 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 			return nil, fmt.Errorf("writeCollection: count not create analysis file %s: %v",
 					filename, err)
 		}
-		defer af.Close()
 		err = writeAnalysis(results, entry.RawFile, entry.GlossFile,
 			collectionEntry.Title, entry.Title, outputConfig, wdict, af)
+		af.Close()
 		if err != nil {
 			return nil, fmt.Errorf("writeCollection could write analysis: %v", err)
 		}
@@ -700,15 +700,15 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 			return nil, fmt.Errorf("writeCollection could not open dest file %s: %v",
 					dest, err)
 		}
-		defer f.Close()
 		w := bufio.NewWriter(df)
-		defer w.Flush()
 
 		textTokens := dictTokenizer.Tokenize(text)
 		//log.Printf("writeCollection, got %d tokens", len(textTokens))
 		err = generator.WriteCorpusDoc(textTokens, results.Vocab, w, collectionEntry.GlossFile,
 				collectionEntry.Title, entry.Title, "corpus_analysis.html", sourceFormat, outputConfig,
 				corpusConfig, wdict)
+		w.Flush()
+		df.Close()
 		if err != nil {
 			return nil, fmt.Errorf("writeCollection, error writing corpus doc: %v", err)
 		}
