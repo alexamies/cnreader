@@ -563,11 +563,12 @@ func main() {
 			log.Fatalf("error writing collection %v\n", err)
 		}
 	} else if *html {
-		log.Printf("main: Converting all HTML files\n")
 		conversions := getHTMLConversions(c)
+		log.Printf("main: Converting %d HTML files", len(conversions))
 		for _, conversion := range conversions {
 			src :=  outputConfig.WebDir + "/" + conversion.SrcFile
 			dest :=  outputConfig.WebDir + "/" + conversion.DestFile
+			// log.Printf("main, converting file %s to %s", src, dest)
 			r, err := os.Open(src)
 			if err != nil {
 				log.Fatalf("main, could not open file %s: %v", src, err)
@@ -582,7 +583,7 @@ func main() {
 			defer f.Close()
 			template, ok := outputConfig.Templates[conversion.Template]
 			if !ok {
-				log.Fatalf("template %s found", conversion.Template)
+				log.Fatalf("template %s not found", conversion.Template)
 			}
 			vocabFormat := outputConfig.VocabFormat
 			err = generator.WriteDoc(tokens, f, *template, conversion.GlossChinese,

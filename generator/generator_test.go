@@ -152,7 +152,7 @@ func TestWriteDoc(t *testing.T) {
 	tokenizer := tokenizer.DictTokenizer{wdict}
 	input1 := `
   	A test document
-    繁體中文	
+    繁體中文
 	`
 	input2 := `
  	  <p>A test document with simplified Chinese</p>
@@ -176,13 +176,13 @@ func TestWriteDoc(t *testing.T) {
 			name: "Four characters",
 			input: input1,
 			expectError: false,
-			expectLen: 31,
+			expectLen: 6,
 		},
 		{
 			name: "Simplified characters",
 			input: input2,
 			expectError: false,
-			expectLen: 109,
+			expectLen: 8,
 		},
   }
   for _, tc := range tests {
@@ -284,7 +284,7 @@ func TestWriteCollectionList(t *testing.T) {
 		outputConfig := HTMLOutPutConfig{}
 		outputConfig.Templates = NewTemplateMap(config.AppConfig{})
 		err := WriteCollectionList(tc.entries, "analysisFile",
-			outputConfig, corpus.CorpusConfig{}, &buf)
+			outputConfig, &buf)
 		if err != nil {
 			t.Fatalf("%s unexpected error: %v", tc.name, err)
 		}

@@ -14,7 +14,6 @@ package generator
 
 import (
   "fmt"
-  "log"
   "text/template"
 
 	"github.com/alexamies/chinesenotes-go/config"
@@ -234,17 +233,29 @@ const corpusSummaryAnalysisTemplate = `
 </html>
 `
 
+const useFileTemplate = `
+Use file template
+`
+
 // newTemplateMap builds a template map
 func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
   templateMap := make(map[string]*template.Template)
   templDir := appConfig.ProjectHome + "/" + appConfig.GetVar("TemplateDir")
   tNames := map[string]string{
     "about-template.html": pageTemplate,
+    "advanced-search-template.html": useFileTemplate,
     "collection-template.html": collectionTemplate,
-    "corpus-template.html": corpusTemplate,
-    "texts-template.html": textsTemplate,
     "corpus-analysis-template.html": corpusAnalysisTemplate,
     "corpus-summary-analysis-template.html": corpusSummaryAnalysisTemplate,
+    "corpus-template.html": corpusTemplate,
+    "headword-template.html": useFileTemplate,
+    "index-template.html": useFileTemplate,
+    "library-template.html": useFileTemplate,
+    "lookup-template.html": useFileTemplate,
+    "mediadetail.html-template.html": useFileTemplate,
+    "reference-template.html": useFileTemplate,
+    "texts-template.html": textsTemplate,
+    "tools-template.html": useFileTemplate,
   }
   funcs := template.FuncMap{
     "add": func(x, y int) int { return x + y },
@@ -258,8 +269,8 @@ func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
       var err error
       tmpl, err = template.New(tName).Funcs(funcs).ParseFiles(fileName)
       if err != nil {
-        log.Printf("newTemplateMap: error parsing template, using default %s: %v",
-            tName, err)
+        //log.Printf("newTemplateMap: error parsing template, using default %s: %v",
+        //    tName, err)
         t := fmt.Sprintf(defTmpl, head, header, nav, footer)
         tmpl = template.Must(template.New(tName).Funcs(funcs).Parse(t))
       }
