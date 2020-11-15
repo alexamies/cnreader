@@ -233,8 +233,66 @@ const corpusSummaryAnalysisTemplate = `
 </html>
 `
 
+const headwordTemplate = `
+<!DOCTYPE html>
+<html lang="en">
+  %s
+  <body>
+    %s
+    %s
+    <main>
+      <h2>{{ .Headword.Simplified }}</h2>
+        {{ if .Headword.Senses }}
+        <ol>
+          {{ range $index, $ws := .Headword.Senses }}
+            <li>
+              <span class='dict-entry-pinyin'>{{ $ws.Pinyin }}</span> 
+              {{if ne $ws.MP3 "\\N"}}
+                {{if eq $index 0}}
+                <span><a href='/mp3/{{ $ws.MP3 }}'
+                         title='Play sound'
+                         target="_blank"><img src='/images/audio.gif'/></a></span>
+                {{ end }}
+              {{ end }}
+              <span class='dict-entry-grammar'>{{if ne $ws.Grammar "\\N"}}{{ $ws.Grammar }}{{end}}</span> 
+              <span class='dict-entry-definition'>{{if ne $ws.English "\\N"}}{{ $ws.English }}{{end}}</span> <br/>
+              Domain: {{ $ws.Topic_en }} {{ $ws.Topic_cn }}
+              {{if ne $ws.Parent_en "\\N"}}
+                , Subdomain: {{ $ws.Parent_en}} {{ $ws.Parent_cn}}
+              {{ end }}
+              {{if ne $ws.Concept_en "\\N"}}
+                , Concept: {{ $ws.Concept_en}} {{ $ws.Concept_cn}}
+              {{ end }}
+              <br/>
+              {{if ne $ws.Notes "\\N"}}
+                <span class='dict-entry-notes'>Notes</span>: {{ $ws.Notes}}
+              {{ end }}
+              {{if ne $ws.Image "\\N"}}
+                <span><img src='/images/{{ $ws.Image }}'/></span>
+              {{ end }}
+            </li>
+          {{ end }}
+        </ol>
+        {{ end }}
+    </main>
+    %s
+  <body>
+</html>
+`
+
 const useFileTemplate = `
-Use file template
+<!DOCTYPE html>
+<html lang="en">
+  %s
+  <body>
+    %s
+    %s
+    <main>
+      <h2>H2 Title</h2>
+    </main>
+    %s
+  <body>
+</html>
 `
 
 // newTemplateMap builds a template map
@@ -248,7 +306,7 @@ func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
     "corpus-analysis-template.html": corpusAnalysisTemplate,
     "corpus-summary-analysis-template.html": corpusSummaryAnalysisTemplate,
     "corpus-template.html": corpusTemplate,
-    "headword-template.html": useFileTemplate,
+    "headword-template.html": headwordTemplate,
     "index-template.html": useFileTemplate,
     "library-template.html": useFileTemplate,
     "lookup-template.html": useFileTemplate,

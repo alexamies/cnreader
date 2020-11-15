@@ -291,18 +291,19 @@ func getHTMLConversions(c config.AppConfig) []htmlConversion {
 
 // getCorpusConfig loads the corpus configuration
 func getCorpusConfig(c config.AppConfig) corpus.CorpusConfig {
+	log.Printf("main.getCorpusConfig c.CorpusDataDir(): %s", c.CorpusDataDir())
 	var excluded map[string]bool
 	if len(c.CorpusDataDir()) > 0 {
 		excludedFile := c.CorpusDataDir() + "/exclude.txt"
 		file, err := os.Open(excludedFile)
 		if err != nil {
-			log.Printf("corpus.loadExcluded: Error opening excluded words file: %v, " +
+			log.Printf("main.getCorpusConfig: Error opening excluded words file: %v, " +
 				"skipping excluded words", err)
 		} else {
 			defer file.Close()
 			excludedPtr, err := corpus.LoadExcluded(file)
 			if err != nil {
-				log.Printf("corpus.loadExcluded: Error loading excluded words file: %v, " +
+				log.Printf("main.getCorpusConfig: Error loading excluded words file: %v, " +
 					"skipping excluded words", err)
 			} else {
 				excluded = *excludedPtr
@@ -400,7 +401,7 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		srcFileName := fmt.Sprintf("%s/%s", corpusConfig.CorpusDataDir, c.FileName)
 		r, err := os.Open(srcFileName)
 		if err != nil {
-			log.Fatalf("WriteHwFiles, unable to open to file %s: %v",
+			log.Fatalf("writeLibraryFiles, unable to open to file %s: %v",
 				c.FileName, err)
 		}
 		defer r.Close()

@@ -79,8 +79,17 @@ type analysisResults struct {
 	MaxWFOutput             int
 }
 
+// VocabAnalysis bundles up vocabulary analysis
+type VocabAnalysis struct {
+	UsageMap map[string]*[]wordUsage
+	WFTotal map[*index.CorpusWord]index.CorpusWordFreq
+	WCTotal map[string]int
+	Collocations ngram.CollocationMap
+}
+
 // DictEntry holds content used for writing a dictionary entry to HTML
 type DictEntry struct {
+	Title string
 	Headword     dicttypes.Word
 	RelevantDocs []index.RetrievalResult
 	ContainsByDomain []dicttypes.Word
@@ -88,14 +97,6 @@ type DictEntry struct {
 	Collocations []ngram.BigramFreq
 	UsageArr     []wordUsage
 	DateUpdated  string
-}
-
-// VocabAnalysis bundles up vocabulary analysis
-type VocabAnalysis struct {
-	UsageMap map[string]*[]wordUsage
-	WFTotal map[*index.CorpusWord]index.CorpusWordFreq
-	WCTotal map[string]int
-	Collocations ngram.CollocationMap
 }
 
 // wordUsage holds details of Word usage in the corpus
@@ -256,7 +257,7 @@ func getWordFrequencies(libLoader library.LibraryLoader,
 				collectionsFile, err)
 	}
 	for _, col := range *collectionEntries {
-		colFile := col.CollectionFile
+		colFile := corpusConfig.CorpusDataDir + "/" + col.CollectionFile
 		r, err := os.Open(colFile)
 		if err != nil {
 			return nil, fmt.Errorf("getWordFrequencies: Error opening collection file %s: %v",
@@ -269,14 +270,14 @@ func getWordFrequencies(libLoader library.LibraryLoader,
 					colFile, err)
 		}
 		for _, entry := range *corpusEntries {
-			src := corpusConfig.CorpusDir + entry.RawFile
+			src := corpusConfig.CorpusDir + "/" + entry.RawFile
 			reader, err := os.Open(src)
 			if err != nil {
 				return nil, fmt.Errorf("getWordFrequencies: Error opening src file %s: %v",
 					src, err)
 			}
-			defer reader.Close()
 			text := corpLoader.ReadText(reader)
+			reader.Close()
 			ccount += utf8.RuneCountInString(text)
 			_, results := ParseText(text, col.Title, &entry, dictTokenizer,
 						corpusConfig, wdict)
@@ -965,7 +966,9 @@ func WriteHwFiles(loader library.LibraryLoader,
 	}
 	usageMap := vocabAnalysis.UsageMap
 	collocations := vocabAnalysis.Collocations
-	f, err := os.Create(corpus.CollectionsFile)
+	corpusDatadir := loader.GetCorpusLoader().GetConfig().CorpusDataDir
+	colFile := corpusDatadir + "/" + corpus.CollectionsFile
+	f, err := os.Open(colFile)
 	if err != nil {
 		return fmt.Errorf("WriteHwFiles, unable to open to file %s: %v",
 				corpus.CollectionsFile, err)
@@ -975,16 +978,19 @@ func WriteHwFiles(loader library.LibraryLoader,
 	if err != nil {
 		return fmt.Errorf("WriteHwFiles, Error getting outfile map: %v", err)
 	}
+	if len(*outfileMap) == 0 {
+		return fmt.Errorf("WriteHwFiles, No entries in outfile map %s", colFile)
+	}
+	log.Printf("analysis.WriteHwFiles: outfileMap has %d entries",
+			len(*outfileMap))
 	dateUpdated := time.Now().Format("2006-01-02")
 
 	// Prepare template
-	log.Printf("analysis.WriteHwFiles: Prepare template\n")
-	templFile := outputConfig.TemplateDir + "/headword-template.html"
-	fm := template.FuncMap{
-		"Deref":   func(sp *string) string { return *sp },
-		"DerefNe": func(sp *string, s string) bool { return *sp != s },
+	log.Printf("analysis.WriteHwFiles: Prepare template")
+	tmpl, ok := outputConfig.Templates["headword-template.html"]
+	if !ok {
+		return fmt.Errorf("WriteHwFiles, headword-template.html not found")
 	}
-	tmpl := template.Must(template.New("headword-template.html").Funcs(fm).ParseFiles(templFile))
 
 	i := 0
 	for _, hw := range hwArray {
@@ -1048,6 +1054,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 		}
 
 		dictEntry := DictEntry {
+			Title: 				hw.Simplified,
 			Headword:     hw,
 			RelevantDocs: index.FindDocsForKeyword(hw, *outfileMap, *indexState),
 			ContainsByDomain: cByDomain,
@@ -1061,15 +1068,14 @@ func WriteHwFiles(loader library.LibraryLoader,
 		f, err := os.Create(filename)
 		if err != nil {
 			return fmt.Errorf("WriteHwFiles: Error creating file for hw.Id %d, "+
-				"Simplified %s", hw.HeadwordId, hw.Simplified)
+				"Simplified %s, err: %v", hw.HeadwordId, hw.Simplified, err)
 		}
-		w := bufio.NewWriter(f)
-		err = tmpl.Execute(w, dictEntry)
+		err = writeHwFile(f, dictEntry, *tmpl)
 		if err != nil {
-			return fmt.Errorf("analysis.WriteHwFiles: error executing template for hw.Id: %d,"+
-				" filename: %s, Simplified: %s", hw.HeadwordId, filename, hw.Simplified)
+			return fmt.Errorf("generator.WriteHwFile: error executing template for " +
+					"hw.Id: %d, filename: %s, Simplified: %s, error: %v", hw.HeadwordId,
+					filename, hw.Simplified, err)
 		}
-		w.Flush()
 		f.Close()
 		i++
 	}
@@ -1105,4 +1111,15 @@ func WriteLibraryFile(lib library.Library, corpora []library.CorpusData,
 	}
 	w.Flush()
 
+}
+
+// Writes dictionary headword entry to writer
+func writeHwFile(f io.Writer, dictEntry DictEntry, tmpl template.Template) error {
+	w := bufio.NewWriter(f)
+	err := tmpl.Execute(w, dictEntry)
+	if err != nil {
+		return err
+	}
+	w.Flush()
+	return nil
 }

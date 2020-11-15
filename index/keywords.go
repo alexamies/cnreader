@@ -13,9 +13,10 @@
 package index
 
 import (
-	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"log"
 	"sort"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"
 )
 
 // A keyword in a document
@@ -25,7 +26,6 @@ type Keyword struct {
 }
 
 type Keywords []Keyword
-
 
 func (kws Keywords) Len() int {
 	return len(kws)

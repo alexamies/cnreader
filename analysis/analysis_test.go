@@ -437,3 +437,32 @@ func TestWriteAnalysis(t *testing.T) {
 	}
 	t.Log("analysis.TestWriteAnalysis: End +++++++++++")
 }
+
+func TestWriteHwFile(t *testing.T) {
+	var buf bytes.Buffer
+	hw := dicttypes.Word{
+		HeadwordId:  	1,
+		Simplified:  	"繁体中文",
+		Traditional: 	"繁體中文",
+		Pinyin:      	"fántǐ zhōngwén",
+		Senses:  			[]dicttypes.WordSense{},
+	}
+	dictEntry := DictEntry{
+		Headword: hw,
+		RelevantDocs: nil,
+		ContainsByDomain: nil,
+		Contains: nil,
+		Collocations: nil,
+		UsageArr: nil,
+		DateUpdated: "",
+	}
+	templates := generator.NewTemplateMap(config.AppConfig{})
+	tmpl, ok := templates["headword-template.html"]
+	if !ok {
+		t.Error("template not found")
+	}
+	err := writeHwFile(&buf, dictEntry, *tmpl)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
