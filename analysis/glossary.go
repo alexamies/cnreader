@@ -21,20 +21,21 @@ import (
 // The content for a corpus entry
 type Glossary struct {
 	Domain string
-	Words []dicttypes.WordSense
+	Words dicttypes.Words
 }
 
 // Makes a glossary by filtering by the domain label and sorting by Chinese
 // pinyin.
 func MakeGlossary(domain string, headwords []dicttypes.Word) Glossary {
-	hws := dicttypes.WordSenses{}
+	hws := dicttypes.Words{}
 	if len(domain) == 0 {
 		return Glossary{domain, hws}
 	}
 	for _, hw := range headwords {
-		for _, ws := range hw.Senses {
+		if len(hw.Senses) > 0 {
+			ws := hw.Senses[0]
 			if ws.Domain == domain && ws.Grammar != "proper noun" {
-				hws = append(hws, ws)
+				hws = append(hws, hw)
 			}
 		}
 	}

@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"sort"
 	"strconv"
 
@@ -182,6 +183,7 @@ func WriteWFCorpus(wfStore WordFreqStore, sortedWords,
 	wfWriter.Flush()
 
 	// Write unknown characters to a text file
+	log.Printf("WriteWFCorpus, writing %d unknown chars", len(sortedUnknownWords))
 	w := bufio.NewWriter(wfStore.UnknownCharsWriter)
 	for _, wordItem := range sortedUnknownWords {
 		for _, r := range wordItem.Word {

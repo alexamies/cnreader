@@ -37,7 +37,7 @@
 //  -hwfiles				Compute and write HTML entries for each headword, writing
 // 									the files to the web/words directory.
 //  -librarymeta		collection entries for the digital library.
-// -tmindex					Compute and write translation memory index.
+//  -tmindex				Compute and write translation memory index.
 //
 // Follow instructions in the README.md file for setup.
 package main
