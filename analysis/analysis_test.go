@@ -439,16 +439,18 @@ func TestWriteAnalysis(t *testing.T) {
 }
 
 func TestWriteHwFile(t *testing.T) {
-	var buf bytes.Buffer
-	hw := dicttypes.Word{
+	const s = "繁体中文"
+	const trad = "繁體中文"
+	const p = "fántǐ zhōngwén"
+	hw0 := dicttypes.Word{
 		HeadwordId:  	1,
-		Simplified:  	"繁体中文",
-		Traditional: 	"繁體中文",
-		Pinyin:      	"fántǐ zhōngwén",
+		Simplified:  	s,
+		Traditional: 	trad,
+		Pinyin:      	p,
 		Senses:  			[]dicttypes.WordSense{},
 	}
-	dictEntry := DictEntry{
-		Headword: hw,
+	dictEntry0 := DictEntry{
+		Headword: hw0,
 		RelevantDocs: nil,
 		ContainsByDomain: nil,
 		Contains: nil,
@@ -456,13 +458,76 @@ func TestWriteHwFile(t *testing.T) {
 		UsageArr: nil,
 		DateUpdated: "",
 	}
-	templates := generator.NewTemplateMap(config.AppConfig{})
-	tmpl, ok := templates["headword-template.html"]
-	if !ok {
-		t.Error("template not found")
+	ws := dicttypes.WordSense{
+		Simplified: s,
+		Traditional: trad,
+		Pinyin: p,
+		English: "Traditional Chinese text",
+		Grammar: "phrase",
+		ConceptCN: "",
+		Concept: "",
+		DomainCN: "现代汉语",
+		Domain: "Modern Chinese",
+		SubdomainCN: "",
+		Subdomain: "",
+		Notes: "",
 	}
-	err := writeHwFile(&buf, dictEntry, *tmpl)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	hw1 := dicttypes.Word{
+		HeadwordId:  	1,
+		Simplified:  	s,
+		Traditional: 	trad,
+		Pinyin:      	p,
+		Senses:  			[]dicttypes.WordSense{ws},
+	}
+	dictEntry1 := DictEntry{
+		Headword: hw1,
+		RelevantDocs: nil,
+		ContainsByDomain: nil,
+		Contains: nil,
+		Collocations: nil,
+		UsageArr: nil,
+		DateUpdated: "",
+	}
+	type test struct {
+		name string
+		dictEntry DictEntry
+		wantToInclude string
+		wantToNotInclude string
+  }
+  tests := []test{
+		{
+			name: "No word senses",
+			dictEntry: dictEntry0,
+			wantToInclude: s,
+			wantToNotInclude: "hello",
+		},
+		{
+			name: "One word sense",
+			dictEntry: dictEntry1,
+			wantToInclude: s,
+			wantToNotInclude: "Subdomain",
+		},
+	}
+  for _, tc := range tests {
+		var buf bytes.Buffer
+		templates := generator.NewTemplateMap(config.AppConfig{})
+		tmpl, ok := templates["headword-template.html"]
+		if !ok {
+			t.Fatalf("%s, template not found", tc.name)
+		}
+		err := writeHwFile(&buf, tc.dictEntry, *tmpl)
+		if err != nil {
+			t.Fatalf("%s, Unexpected error: %v", tc.name, err)
+		}
+		got := buf.String()
+		if len(got) == 0 {
+			t.Fatalf("%s, no data written", tc.name)
+		}
+		if !strings.Contains(got, tc.wantToInclude) {
+			t.Errorf("%s, got %s\n but wantToInclude %s", tc.name, got, tc.wantToInclude)
+		}
+		if strings.Contains(got, tc.wantToNotInclude) {
+			t.Errorf("%s, got %s\n but wantToNotInclude %s", tc.name, got, tc.wantToNotInclude)
+		}
 	}
 }

@@ -241,7 +241,11 @@ const headwordTemplate = `
     %s
     %s
     <main>
-      <h2>{{ .Headword.Simplified }}</h2>
+      <h2>{{ .Headword.Simplified }}
+        {{if ne .Headword.Traditional "\\N"}}
+          ({{.Headword.Traditional}})
+        {{end}}</span>
+      </h2>
         {{ if .Headword.Senses }}
         <ol>
           {{ range $index, $ws := .Headword.Senses }}
@@ -256,15 +260,15 @@ const headwordTemplate = `
               {{ end }}
               <span class='dict-entry-grammar'>{{if ne $ws.Grammar "\\N"}}{{ $ws.Grammar }}{{end}}</span> 
               <span class='dict-entry-definition'>{{if ne $ws.English "\\N"}}{{ $ws.English }}{{end}}</span> <br/>
-              Domain: {{ $ws.Topic_en }} {{ $ws.Topic_cn }}
-              {{if ne $ws.Parent_en "\\N"}}
-                , Subdomain: {{ $ws.Parent_en}} {{ $ws.Parent_cn}}
+              Domain: {{ $ws.Domain }} {{ $ws.DomainCN }}
+              {{ if $ws.Subdomain }}
+                , Subdomain: {{ $ws.Subdomain}} {{ $ws.SubdomainCN}}
               {{ end }}
-              {{if ne $ws.Concept_en "\\N"}}
-                , Concept: {{ $ws.Concept_en}} {{ $ws.Concept_cn}}
+              {{if $ws.Concept }}
+                , Concept: {{ $ws.Concept}} {{ $ws.ConceptCN}}
               {{ end }}
               <br/>
-              {{if ne $ws.Notes "\\N"}}
+              {{if $ws.Notes }}
                 <span class='dict-entry-notes'>Notes</span>: {{ $ws.Notes}}
               {{ end }}
               {{if ne $ws.Image "\\N"}}
@@ -311,6 +315,7 @@ func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
     "library-template.html": useFileTemplate,
     "lookup-template.html": useFileTemplate,
     "mediadetail.html-template.html": useFileTemplate,
+    "page-template.html": useFileTemplate,
     "reference-template.html": useFileTemplate,
     "texts-template.html": textsTemplate,
     "tools-template.html": useFileTemplate,

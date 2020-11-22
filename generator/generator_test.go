@@ -94,15 +94,6 @@ func TestDecodeUsageExample(t *testing.T) {
 	}
 }
 
-// TestNewTemplateMap building the template map
-func TestNewTemplateMap(t *testing.T) {
-	templates := NewTemplateMap(config.AppConfig{})
-	_, ok := templates["corpus-template.html"]
-	if !ok {
-		t.Error("template not found")
-	}
-}
-
 // TestWriteCorpusDoc tests the writeCorpusDoc function
 func TestWriteCorpusDoc(t *testing.T) {
 	t.Log("TestWriteCorpusDoc: Begin +++++++++++")
