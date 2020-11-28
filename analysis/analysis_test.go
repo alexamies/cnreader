@@ -492,20 +492,20 @@ func TestWriteHwFile(t *testing.T) {
 		name string
 		dictEntry DictEntry
 		wantToInclude string
-		wantToNotInclude string
+		wantToNotInclude []string
   }
   tests := []test{
 		{
 			name: "No word senses",
 			dictEntry: dictEntry0,
 			wantToInclude: s,
-			wantToNotInclude: "hello",
+			wantToNotInclude: []string{"hello"},
 		},
 		{
 			name: "One word sense",
 			dictEntry: dictEntry1,
 			wantToInclude: s,
-			wantToNotInclude: "Subdomain",
+			wantToNotInclude: []string{"Subdomain", "Concept"},
 		},
 	}
   for _, tc := range tests {
@@ -526,8 +526,10 @@ func TestWriteHwFile(t *testing.T) {
 		if !strings.Contains(got, tc.wantToInclude) {
 			t.Errorf("%s, got %s\n but wantToInclude %s", tc.name, got, tc.wantToInclude)
 		}
-		if strings.Contains(got, tc.wantToNotInclude) {
-			t.Errorf("%s, got %s\n but wantToNotInclude %s", tc.name, got, tc.wantToNotInclude)
+		for _, notInclude := range tc.wantToNotInclude {
+		  if strings.Contains(got, notInclude) {
+			  t.Errorf("%s, got %s\n but wantToNotInclude %s", tc.name, got, notInclude)
+		  }
 		}
 	}
 }
