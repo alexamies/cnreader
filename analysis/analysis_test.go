@@ -158,55 +158,89 @@ func mockValidator() (dictionary.Validator, error) {
 	return dictionary.NewValidator(posReader, domainReader)
 }
 
-func TestGetChunks1(t *testing.T) {
-	chunks := getChunks("中文")
-	if chunks.Len() != 1 {
-		t.Error("TestGetChunks1: Expected length of chunks 1, got ",
-			chunks.Len())
+func TestGetChunks(t *testing.T) {
+	testCases := []struct {
+		name string
+		in  string
+		expectedLen int
+		expectedOut string
+	}{
+		{
+			name: "One chunk",
+			in: "中文", 
+			expectedLen: 1,
+			expectedOut: "中文",
+		},
+		{
+			name: "Two chunks",
+			in: "a中文", 
+			expectedLen: 2,
+			expectedOut: "a",
+		},
+		{
+			name: "Three chunks",
+			in: "a中文b", 
+			expectedLen: 3,
+			expectedOut: "a",
+		},
+		{
+			name: "Simplified Chinese",
+			in: "简体中文", 
+			expectedLen: 1,
+			expectedOut: "简体中文",
+		},
 	}
-	chunk := chunks.Front().Value.(string)
-	if chunk != "中文" {
-		t.Error("TestGetChunks1: Expected first element of chunk 中文, got ",
-			chunk)
-	}
-}
-
-func TestGetChunks2(t *testing.T) {
-	chunks := getChunks("a中文")
-	if chunks.Len() != 2 {
-		t.Error("Expected length of chunks 2, got ", chunks.Len())
-	}
-	chunk := chunks.Front().Value.(string)
-	if chunk != "a" {
-		t.Error("Expected first element of chunk a, got ", chunk)
-	}
-}
-
-func TestGetChunks3(t *testing.T) {
-	chunks := getChunks("a中文b")
-	if chunks.Len() != 3 {
-		t.Error("Expected length of chunks 3, got ", chunks.Len())
-	}
-	chunk := chunks.Front().Value.(string)
-	if chunk != "a" {
-		t.Error("Expected first element of chunk a, got ", chunk)
-	}
-}
-
-// Simplified Chinese
-func TestGetChunks4(t *testing.T) {
-	chunks := getChunks("简体中文")
-	if chunks.Len() != 1 {
-		t.Error("Simplified Chinese 简体中文: expected length of chunks 1, got ",
-			chunks.Len())
-	}
-	chunk := chunks.Front().Value.(string)
-	if chunk != "简体中文" {
-		for e := chunks.Front(); e != nil; e = e.Next() {
-			t.Logf("TestGetChunks4: chunk: %s", e.Value.(string))
+	for _, tc := range testCases {
+		chunks := getChunks(tc.in)
+		if chunks.Len() != tc.expectedLen {
+			t.Errorf("TestGetChunks %s: Expected length of chunks got %d, want %d",
+				tc.name, chunks.Len(), tc.expectedLen)
 		}
-		t.Error("Expected first element of chunk 简体中文 to be 简体中文, got ",
-			chunk)
+		chunk := chunks.Front().Value.(string)
+		if chunk != tc.expectedOut {
+			t.Errorf("TestGetChunks %s: Expected first element of chunk %s, want %s",
+				tc.name, chunk, tc.expectedOut)
+		}
+	}
+}
+
+
+func TestGetHeadwords(t *testing.T) {
+	s1 := "繁体中文"
+	t1 := "繁體中文"
+	hw1 := dicttypes.Word{
+		HeadwordId:  	1,
+		Simplified:  	s1,
+		Traditional: 	t1,
+		Pinyin:      	"fántǐ zhōngwén",
+		Senses:  			[]dicttypes.WordSense{},
+	}
+	oneWordDict := map[string]dicttypes.Word {
+		s1: hw1,
+		t1: hw1,
+	}
+	testCases := []struct {
+		name string
+		wdict  map[string]dicttypes.Word
+		expectedLen int
+	}{
+		{
+			name: "Empty dict",
+			wdict: map[string]dicttypes.Word{}, 
+			expectedLen: 0,
+		},
+		{
+			name: "One word dict",
+			wdict: oneWordDict, 
+			expectedLen: 1,
+		},
+	}
+	for _, tc := range testCases {
+		words := getHeadwords(tc.wdict)
+		if len(words) != tc.expectedLen {
+			t.Errorf("TestGetHeadwords %s: Expected length of wdict got %d, want %d",
+				tc.name, len(words), tc.expectedLen)
+		}
 	}
 }
 

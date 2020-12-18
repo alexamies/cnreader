@@ -128,7 +128,8 @@ func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
 // Return a sorted array of headwords
 func getHeadwords(wdict map[string]dicttypes.Word) []dicttypes.Word {
 	hwArray := []dicttypes.Word{}
-	for _, w := range wdict {
+	hwMap := getHwMap(wdict)
+	for _, w := range hwMap {
 		hwArray = append(hwArray, w)
 	}
 	log.Printf("dictionary.GetHeadwords: hwcount = %d\n", len(hwArray))
