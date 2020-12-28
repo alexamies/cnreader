@@ -24,6 +24,7 @@ import (
 const (
 	fnameUni = "tmindex_unigram.tsv"
 	fnameDomain = "tmindex_uni_domain.tsv"
+	maxChars = 10
 )
 
 type indexEntry struct {
@@ -82,10 +83,13 @@ func buildUniDomainIndex(w io.Writer, wdict map[string]dicttypes.Word) error {
 	return nil
 }
 
-// Builds a unigram index
+// Builds a unigram index, skip for strings > maxChars
 func buildUnigramIndex(w io.Writer, wdict map[string]dicttypes.Word) error {
 	tmindexUni := make(map[string]bool)
 	for term := range wdict {
+		if len([]rune(term)) > maxChars {
+			continue
+		}
 		for _, c := range term {
 	  	line := fmt.Sprintf("%c\t%s\n", c, term)
 			if _, ok := tmindexUni[line]; ok {
