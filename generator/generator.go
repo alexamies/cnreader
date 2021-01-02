@@ -126,6 +126,8 @@ func hyperlink(w dicttypes.Word, text, vocabFormat string) string {
 	classTxt := "vocabulary"
 	if w.IsProperNoun() {
 		classTxt = classTxt + " propernoun"
+	} else if w.IsQuote() {
+		classTxt = classTxt + " quote"
 	}
 	pinyin := w.Pinyin
 	english := ""
