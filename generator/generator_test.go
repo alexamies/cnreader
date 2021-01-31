@@ -34,6 +34,81 @@ func mockCorpusConfig() corpus.CorpusConfig {
 	}
 }
 
+func TestSpan(t *testing.T) {
+	s1 := "海"
+	t1 := "\\N"
+	ws1 := dicttypes.WordSense{
+		Pinyin: "hǎi",
+		English: "sea",
+	}
+	hw1 := dicttypes.Word{
+		HeadwordId:  	1,
+		Simplified:  	s1,
+		Traditional: 	t1,
+		Pinyin:      	"hǎi",
+		Senses:  			[]dicttypes.WordSense{ws1},
+	}
+	s2 := "国"
+	t2 := "國"
+	ws2 := dicttypes.WordSense{
+		Pinyin: "guó",
+		English: "country",
+	}
+	hw2 := dicttypes.Word{
+		HeadwordId:  	2,
+		Simplified:  	s2,
+		Traditional: 	t2,
+		Pinyin:      	"guó",
+		Senses:  			[]dicttypes.WordSense{ws2},
+	}
+	s3 := "菩萨"
+	t3 := "菩薩"
+	ws3 := dicttypes.WordSense{
+		Pinyin: "púsà",
+		English: "bodhisattva",
+		Notes: "Sanskrit equivalent: bodhisattva",
+	}
+	hw3 := dicttypes.Word{
+		HeadwordId:  	3,
+		Simplified:  	s3,
+		Traditional: 	t3,
+		Pinyin:      	"púsà",
+		Senses:  			[]dicttypes.WordSense{ws3},
+	}
+	type testCase struct {
+		name string
+		input string
+		hw dicttypes.Word
+		expected string
+  }
+  tests := []testCase{
+		{
+			name: "happy path",
+			input: "海",
+			hw: hw1,
+			expected: `<span title="hǎi | sea" class="vocabulary" itemprop="HeadwordId" value="1">海</span>`,
+		},
+		{
+			name: "Tradition text",
+			input: "國",
+			hw: hw2,
+			expected: `<span title="guó | country" class="vocabulary" itemprop="HeadwordId" value="2">國</span>`,
+		},
+		{
+			name: "Has Sanskrit",
+			input: "菩薩",
+			hw: hw3,
+			expected: `<span title="púsà | bodhisattva" class="vocabulary sanskrit" itemprop="HeadwordId" value="3">菩薩</span>`,
+		},
+	}
+  for _, tc := range tests {
+		highlighted := span(tc.hw, tc.input)
+		if highlighted != tc.expected {
+			t.Errorf("%s: expected %s, got %s", tc.name, tc.expected, highlighted)
+		}
+	}
+}
+
 func TestDecodeUsageExample(t *testing.T) {
 	s1 := "海"
 	t1 := "\\N"

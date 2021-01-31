@@ -177,6 +177,8 @@ func span(w dicttypes.Word, text string) string {
 		classTxt = classTxt + " propernoun"
 	} else if w.IsQuote() {
 		classTxt = classTxt + " quote"
+	} else if w.HasNotesLabel("Sanskrit equivalent:") {
+		classTxt = classTxt + " sanskrit"
 	}
 	pinyin := w.Pinyin
 	english := ""
