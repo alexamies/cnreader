@@ -24,7 +24,7 @@ import (
 const (
 	fnameUni = "tmindex_unigram.tsv"
 	fnameDomain = "tmindex_uni_domain.tsv"
-	maxChars = 10
+	maxChars = 11
 )
 
 type indexEntry struct {
