@@ -37,8 +37,8 @@ func BuildDocTitleIndex(libLoader library.LibraryLoader, w io.Writer) error {
 	log.Printf("BuildDocTitleIndex loaded %d collections", len(*collections))
 	csvWriter := csv.NewWriter(w)
 	csvWriter.Comma = '\t'
-	headers := []string{"# plain_text_file", "gloss_file", "title_cn", "title_en",
-			"col_gloss_file", "col_title", "col_plus_doc_title"}
+	headers := []string{"# plain_text_file", "gloss_file", "title_cn", "title_cn",
+			"title_en", "col_gloss_file", "col_title", "col_plus_doc_title"}
 	if err := csvWriter.Write(headers); err != nil {
 			return fmt.Errorf("BuildDocTitleIndex error writing headers: %v", err)
 	}
@@ -52,7 +52,7 @@ func BuildDocTitleIndex(libLoader library.LibraryLoader, w io.Writer) error {
 		for _, d := range *docs {
 			title_cn, title_en := splitTitle(d.Title)
 			title := c.Title + ": " + d.Title
-			record := []string{d.RawFile, d.GlossFile, title_cn, title_en,
+			record := []string{d.RawFile, d.GlossFile, d.Title, title_cn, title_en,
 					c.GlossFile, c.Title, title}
 			if err := csvWriter.Write(record); err != nil {
 					return fmt.Errorf("BuildDocTitleIndex error writing record: %v", err)
