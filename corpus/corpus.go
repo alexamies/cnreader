@@ -103,10 +103,11 @@ func NewFileCorpusConfig(corpusDataDir, corpusDir string,
 		return loadCorpusCollections(f)
 	}
 	readCollection := func(fName, colTitle string) (*[]CorpusEntry, error) {
-		r, err := os.Open(fName)
+		collectionsFile := corpusDataDir + "/" + fName
+		r, err := os.Open(collectionsFile)
 		if err != nil {
 			return nil, fmt.Errorf("readCollection: Error opening file %s: %v",
-					fName, err)
+					collectionsFile, err)
 		}
 		defer r.Close()
 		return loadCorpusEntries(r, colTitle)

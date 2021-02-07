@@ -621,10 +621,10 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 			collectionEntry.CollectionFile)
 	corpLoader := libLoader.GetCorpusLoader()
 	corpusConfig := corpLoader.GetConfig()
-	cFile := corpusConfig.CorpusDataDir + "/" + collectionEntry.CollectionFile
+	cFile := collectionEntry.CollectionFile
 	corpusEntries, err := corpLoader.LoadCollection(cFile, collectionEntry.Title)
 	if err != nil {
-		return nil, fmt.Errorf("analysis.writeCollection error loading cFile %s: %v",
+		return nil, fmt.Errorf("analysis.writeCollection error loading file %s: %v",
 				cFile, err)
 	}
 	aResults := NewCollectionAResults()
@@ -633,7 +633,7 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		src := corpusConfig.CorpusDir + "/" + entry.RawFile
 		r, err := os.Open(src)
 		if err != nil {
-			return nil, fmt.Errorf("analysis.writeCollection error src cFile %s: %v",
+			return nil, fmt.Errorf("analysis.writeCollection error src file %s: %v",
 					src, err)
 		}
 		defer r.Close()
