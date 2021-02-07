@@ -24,7 +24,7 @@ import (
 	"strings"
 )
 
-const CollectionsFile = "collections.csv"
+const collectionsFile = "collections.csv"
 
 type CollectionEntry struct {
 	CollectionFile, GlossFile, Title, Summary, Intro, DateUpdated, Corpus string
@@ -43,8 +43,11 @@ type CorpusConfig struct {
 	CorpusDir string
 	Excluded map[string]bool
 	ProjectHome string
+	readCollections  func() (*[]CollectionEntry, error)
+	readCollection  func(fName, colTitle string) (*[]CorpusEntry, error)
 }
 
+// Interface for loading corpus with hierarchical collections of documents
 type CorpusLoader interface {
 
 	// Method to get the corpus configuration
@@ -63,7 +66,12 @@ type CorpusLoader interface {
     // Param:
     //   fName: A file name containing the entries in the collection
     //   colTitle: The title of the collection
-	LoadCollection(r io.Reader, colTitle string) (*[]CorpusEntry, error)
+	LoadCollection(fName, colTitle string) (*[]CorpusEntry, error)
+
+	// Method to load the collections in a corpus from the default file
+	// Parameter:
+	//  r: to read the listing of the collections
+	LoadCollections() (*[]CollectionEntry, error)
 
 	// Method to load the collections in a corpus
 	// Parameter:
@@ -82,6 +90,37 @@ type fileCorpusLoader struct{
 	Config CorpusConfig
 }
 
+// Creates a new CorpusConfig strct
+func NewFileCorpusConfig(corpusDataDir, corpusDir string,
+		excluded map[string]bool, projectHome string) CorpusConfig {
+	collectionsFile := corpusDataDir + "/" + collectionsFile
+	readCollections := func() (*[]CollectionEntry, error) {
+		f, err := os.Open(collectionsFile)
+		if err != nil {
+			return nil, fmt.Errorf("readCollections: Error opening file: %v", err)
+		}
+		defer f.Close()
+		return loadCorpusCollections(f)
+	}
+	readCollection := func(fName, colTitle string) (*[]CorpusEntry, error) {
+		r, err := os.Open(fName)
+		if err != nil {
+			return nil, fmt.Errorf("readCollection: Error opening file %s: %v",
+					fName, err)
+		}
+		defer r.Close()
+		return loadCorpusEntries(r, colTitle)
+	}
+	return CorpusConfig{
+		CorpusDataDir: corpusDataDir,
+		CorpusDir: corpusDir,
+		Excluded: excluded,
+		ProjectHome: projectHome,
+		readCollections: readCollections,
+		readCollection: readCollection,
+	}
+}
+
 // Impements the CollectionLoader interface for FileCollectionLoader
 func (loader fileCorpusLoader) GetConfig() CorpusConfig {
 	return loader.Config
@@ -93,13 +132,18 @@ func (loader fileCorpusLoader) GetCollectionEntry(fName string) (*CollectionEntr
 }
 
 // Implements the LoadCollection method in the CorpusLoader interface
-func (loader fileCorpusLoader) LoadCollection(r io.Reader, colTitle string) (*[]CorpusEntry, error) {
-	return loadCorpusEntries(r, colTitle, loader.Config)
+func (loader fileCorpusLoader) LoadCollection(fName, colTitle string) (*[]CorpusEntry, error) {
+	return loader.Config.readCollection(fName, colTitle)
+}
+
+// LoadCorpus implements the CorpusLoader interface
+func (loader fileCorpusLoader) LoadCollections() (*[]CollectionEntry, error) {
+	return loader.Config.readCollections()
 }
 
 // LoadCorpus implements the CorpusLoader interface
 func (loader fileCorpusLoader) LoadCorpus(r io.Reader) (*[]CollectionEntry, error) {
-	return loadCorpusCollections(r, loader.Config)
+	return loadCorpusCollections(r)
 }
 
 // Implements the LoadCorpus method in the CorpusLoader interface
@@ -108,7 +152,7 @@ func (loader fileCorpusLoader) ReadText(r io.Reader) string {
 }
 
 // CorpusLoader gets the default kind of CorpusLoader
-func NewCorpusLoader(corpusConfig CorpusConfig) CorpusLoader  {
+func NewFileCorpusLoader(corpusConfig CorpusConfig) CorpusLoader  {
 	return fileCorpusLoader{corpusConfig}
 }
 
@@ -124,7 +168,7 @@ func getCollectionEntry(collectionFile string, corpusConfig CorpusConfig) (*Coll
 		log.Fatalf("getCollectionEntry: Error opening collection file: %v", err)
 	}
 	defer file.Close()
-	collections, err := loadCorpusCollections(file, corpusConfig)
+	collections, err := loadCorpusCollections(file)
 	if err != nil {
 		return nil, fmt.Errorf("getCollectionEntry count load collections: %v", err)
 	}
@@ -141,8 +185,8 @@ func getCollectionEntry(collectionFile string, corpusConfig CorpusConfig) (*Coll
 //   sourceMap: A map by source (plain) text file name
 // Returns
 //   map with keys being the output file names
-func GetOutfileMap(loader CorpusLoader, r io.Reader) (*map[string]CorpusEntry, error) {
-	sourceMap, err := loadAll(loader, r)
+func GetOutfileMap(loader CorpusLoader) (*map[string]CorpusEntry, error) {
+	sourceMap, err := loadAll(loader)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to load corpus: %v", err)
 	}
@@ -154,20 +198,15 @@ func GetOutfileMap(loader CorpusLoader, r io.Reader) (*map[string]CorpusEntry, e
 }
 
 // Load all corpus entries and keep them in a hash map
-func loadAll(loader CorpusLoader, r io.Reader) (*map[string]CorpusEntry, error) {
+func loadAll(loader CorpusLoader) (*map[string]CorpusEntry, error) {
 	corpusEntryMap := map[string]CorpusEntry{}
-	collections, err := loader.LoadCorpus(r)
+	collections, err := loader.LoadCollections()
 	if err != nil {
 		return nil, fmt.Errorf("loadAll could not load corpus: %v", err)
 	}
 	for _, collectionEntry := range *collections {
 		colEntryFName := loader.GetConfig().CorpusDataDir + "/" + collectionEntry.CollectionFile
-		f, err := os.Open(colEntryFName)
-		if err != nil {
-			return nil, fmt.Errorf("loadAll: Error opening collection file: %v", err)
-		}
-		defer f.Close()
-		corpusEntries, err := loader.LoadCollection(f, collectionEntry.Title)
+		corpusEntries, err := loader.LoadCollection(colEntryFName, collectionEntry.Title)
 		if err != nil {
 			return nil, fmt.Errorf("loadAll could not load collection %s: %v",
 				collectionEntry.Title, err)
@@ -180,7 +219,7 @@ func loadAll(loader CorpusLoader, r io.Reader) (*map[string]CorpusEntry, error) 
 }
 
 // Gets the list of collections in the corpus
-func loadCorpusCollections(r io.Reader, corpusConfig CorpusConfig) (*[]CollectionEntry, error) {
+func loadCorpusCollections(r io.Reader) (*[]CollectionEntry, error) {
 	reader := csv.NewReader(r)
 	reader.FieldsPerRecord = -1
 	reader.Comma = rune('\t')
@@ -237,8 +276,7 @@ func loadCorpusCollections(r io.Reader, corpusConfig CorpusConfig) (*[]Collectio
 }
 
 // Get a list of files for a corpus
-func loadCorpusEntries(r io.Reader, colTitle string,
-		corpusConfig CorpusConfig) (*[]CorpusEntry, error) {
+func loadCorpusEntries(r io.Reader, colTitle string) (*[]CorpusEntry, error) {
 	reader := csv.NewReader(r)
 	reader.FieldsPerRecord = -1
 	reader.Comma = rune('\t')

@@ -189,25 +189,13 @@ func GetDocFrequencies(libLoader library.LibraryLoader,
 	df := index.NewDocumentFrequency()
 	corpLoader := libLoader.GetCorpusLoader()
 	corpusConfig := corpLoader.GetConfig()
-	collectionsFile := corpusConfig.CorpusDataDir + "/" + corpus.CollectionsFile
-	f, err := os.Open(collectionsFile)
-	if err != nil {
-		return nil, fmt.Errorf("GetDocFrequencies: Error opening collection file: %v", err)
-	}
-	defer f.Close()
-	collectionEntries, err := corpLoader.LoadCorpus(f)
+	collectionEntries, err := corpLoader.LoadCollections()
 	if err != nil {
 		return nil, fmt.Errorf("GetDocFrequencies: Error loading corpus: %v", err)
 	}
 	for _, col := range *collectionEntries {
 		colFile := col.CollectionFile
-		r, err := os.Open(colFile)
-		if err != nil {
-			return nil, fmt.Errorf("GetDocFrequencies: Error opening col file %s: %v",
-					colFile, err)
-		}
-		defer r.Close()
-		corpusEntries, err := corpLoader.LoadCollection(r, col.Title)
+		corpusEntries, err := corpLoader.LoadCollection(colFile, col.Title)
 		if err != nil {
 			return nil, fmt.Errorf("GetDocFrequencies: Error loading collection %s: %v",
 					colFile, err)
@@ -245,27 +233,14 @@ func getWordFrequencies(libLoader library.LibraryLoader,
 
 	corpLoader := libLoader.GetCorpusLoader()
 	corpusConfig := corpLoader.GetConfig()
-	collectionsFile := corpusConfig.CorpusDataDir + "/" + corpus.CollectionsFile
-	f, err := os.Open(collectionsFile)
+	collectionEntries, err := corpLoader.LoadCollections()
 	if err != nil {
-		return nil, fmt.Errorf("getWordFrequencies: Error opening collections file %s: %v",
-				collectionsFile, err)
-	}
-	defer f.Close()
-	collectionEntries, err := corpLoader.LoadCorpus(f)
-	if err != nil {
-		return nil, fmt.Errorf("getWordFrequencies: Error reading collections file %s: %v",
-				collectionsFile, err)
+		return nil, fmt.Errorf("getWordFrequencies: Error reading collections: %v",
+				err)
 	}
 	for _, col := range *collectionEntries {
 		colFile := corpusConfig.CorpusDataDir + "/" + col.CollectionFile
-		r, err := os.Open(colFile)
-		if err != nil {
-			return nil, fmt.Errorf("getWordFrequencies: Error opening collection file %s: %v",
-					colFile, err)
-		}
-		defer r.Close()
-		corpusEntries, err := corpLoader.LoadCollection(r, col.Title)
+		corpusEntries, err := corpLoader.LoadCollection(colFile, col.Title)
 		if err != nil {
 			return nil, fmt.Errorf("getWordFrequencies: Error loading col file %s: %v",
 					colFile, err)
@@ -647,13 +622,7 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	corpLoader := libLoader.GetCorpusLoader()
 	corpusConfig := corpLoader.GetConfig()
 	cFile := corpusConfig.CorpusDataDir + "/" + collectionEntry.CollectionFile
-	f, err := os.Open(cFile)
-	if err != nil {
-		return nil, fmt.Errorf("analysis.writeCollection error opering cFile %s: %v",
-				cFile, err)
-	}
-	defer f.Close()
-	corpusEntries, err := corpLoader.LoadCollection(f, collectionEntry.Title)
+	corpusEntries, err := corpLoader.LoadCollection(cFile, collectionEntry.Title)
 	if err != nil {
 		return nil, fmt.Errorf("analysis.writeCollection error loading cFile %s: %v",
 				cFile, err)
@@ -891,14 +860,7 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 	log.Printf("analysis.WriteCorpusAll: enter")
 	corpLoader := libLoader.GetCorpusLoader()
 	corpusConfig := corpLoader.GetConfig()
-	collectionsFile := corpusConfig.CorpusDataDir + "/" + corpus.CollectionsFile
-	log.Printf("analysis.WriteCorpusAll, enter: %s\n", collectionsFile)
-	f, err := os.Open(collectionsFile)
-	if err != nil {
-		return nil, fmt.Errorf("getWordFrequencies: Error opening collection file: %v", err)
-	}
-	defer f.Close()
-	collections, err := corpLoader.LoadCorpus(f)
+	collections, err := corpLoader.LoadCollections()
 	if err != nil {
 		return nil, fmt.Errorf("WriteCorpusAll could not load corpus: %v", err)
 	}
@@ -967,20 +929,12 @@ func WriteHwFiles(loader library.LibraryLoader,
 	}
 	usageMap := vocabAnalysis.UsageMap
 	collocations := vocabAnalysis.Collocations
-	corpusDatadir := loader.GetCorpusLoader().GetConfig().CorpusDataDir
-	colFile := corpusDatadir + "/" + corpus.CollectionsFile
-	f, err := os.Open(colFile)
-	if err != nil {
-		return fmt.Errorf("WriteHwFiles, unable to open to file %s: %v",
-				corpus.CollectionsFile, err)
-	}
-	defer f.Close()
-	outfileMap, err := corpus.GetOutfileMap(loader.GetCorpusLoader(), f)
+	outfileMap, err := corpus.GetOutfileMap(loader.GetCorpusLoader())
 	if err != nil {
 		return fmt.Errorf("WriteHwFiles, Error getting outfile map: %v", err)
 	}
 	if len(*outfileMap) == 0 {
-		return fmt.Errorf("WriteHwFiles, No entries in outfile map %s", colFile)
+		return fmt.Errorf("WriteHwFiles, No entries in outfile map")
 	}
 	log.Printf("analysis.WriteHwFiles: outfileMap has %d entries",
 			len(*outfileMap))

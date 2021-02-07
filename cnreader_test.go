@@ -71,7 +71,7 @@ func TestIntegration(t *testing.T) {
 		t.Fatalf("main, could not load dict: %v", err)
 	}
 	corpusConfig := testCorpusConfig()
-	corpusLoader := corpus.NewCorpusLoader(corpusConfig)
+	corpusLoader := corpus.NewFileCorpusLoader(corpusConfig)
 	r, err := os.Open("testdata/test-trad.html")
 	if err != nil {
 		t.Fatalf("main, could not open file: %v", err)

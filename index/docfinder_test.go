@@ -68,9 +68,8 @@ func TestFindDocsForKeyword(t *testing.T) {
 		Pinyin:      "hǎi",
 		Senses:  []dicttypes.WordSense{},
 	}
-	corpusLoader := corpus.NewCorpusLoader(corpus.CorpusConfig{})
-	var buf bytes.Buffer
-	outfileMap, err := corpus.GetOutfileMap(corpusLoader, &buf)
+	corpusLoader := mockCorpusLoader{}
+	outfileMap, err := corpus.GetOutfileMap(corpusLoader)
 	if err != nil {
 		t.Fatalf("index.TestFindDocsForKeyword: error: %v", err)
 	}

@@ -44,7 +44,7 @@ type LibraryData struct {
 	Corpora []CorpusData
 }
 
-// LibraryLoader loads teh corpora into the library
+// LibraryLoader loads the corpora into the library
 type LibraryLoader interface {
 
 	// GetCorpusLoader gets the corpus loader
@@ -76,7 +76,7 @@ func NewLibraryLoader(fname string, config corpus.CorpusConfig) LibraryLoader {
 	return fileLibraryLoader{
 		FileName: fname,
 		Config: config,
-		CLoader: corpus.NewCorpusLoader(config),
+		CLoader: corpus.NewFileCorpusLoader(config),
 	}
 }
 

@@ -92,7 +92,7 @@ cd cnreader
 Generate a HTML page for the defintion of each word its usage in the corpus:
 
 ```shell
-./cnreader -hwfiles
+go run github.com/alexamies/cnreader -hwfiles
 ```
 
 ### Analyze the corpus

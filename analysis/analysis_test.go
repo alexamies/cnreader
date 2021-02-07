@@ -245,7 +245,7 @@ func TestGetHeadwords(t *testing.T) {
 }
 
 func TestReadText(t *testing.T) {
-	corpusLoader := corpus.NewCorpusLoader(corpus.CorpusConfig{})
+	corpusLoader := corpus.NewFileCorpusLoader(corpus.CorpusConfig{})
 	var buf bytes.Buffer
 	io.WriteString(&buf, "繁體中文")
 	text := corpusLoader.ReadText(&buf)

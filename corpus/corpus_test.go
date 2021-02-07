@@ -52,10 +52,10 @@ func (loader MockCorpusLoader) GetConfig() CorpusConfig {
 }
 
 func (loader MockCorpusLoader) LoadAll(r io.Reader) (*map[string]CorpusEntry, error) {
-	return loadAll(loader, r)
+	return loadAll(loader)
 }
 
-func (loader MockCorpusLoader) LoadCollection(r io.Reader, colTitle string) (*[]CorpusEntry, error) {
+func (loader MockCorpusLoader) LoadCollection(fName, colTitle string) (*[]CorpusEntry, error) {
 	entry := CorpusEntry{
 		RawFile: "raw_file.txt",
 		GlossFile: "gloss_file.html",
@@ -63,6 +63,11 @@ func (loader MockCorpusLoader) LoadCollection(r io.Reader, colTitle string) (*[]
 		ColTitle: "Collection Title",
 	}
 	return &[]CorpusEntry{entry}, nil
+}
+
+func (loader MockCorpusLoader) LoadCollections() (*[]CollectionEntry, error) {
+	entries := []CollectionEntry{}
+	return &entries, nil
 }
 
 func (loader MockCorpusLoader) LoadCorpus(r io.Reader) (*[]CollectionEntry, error) {
@@ -86,7 +91,7 @@ func mockCorpusConfig() CorpusConfig {
 // LoadCorpus test to load a collection file
 func TestLoadCorpus(t *testing.T) {
 	t.Log("corpus.LoadCorpus: Begin unit test")
-	loader := NewCorpusLoader(CorpusConfig{})
+	loader := NewFileCorpusLoader(CorpusConfig{})
 	simpleCol := `#Comment
 example_collection.tsv	example_collection.html	A Book 一本書		example_collection000.txt		Literary Chinese	Prose	Classical
 `
@@ -121,10 +126,10 @@ example_collection.tsv	example_collection.html	A Book 一本書		example_collect
 }
 
 // Test reading of files for HTML conversion
-func TestCollections(t *testing.T) {
+func TestLoadCorpusEntries(t *testing.T) {
 	t.Log("corpus.TestCollections: Begin unit test")
 	var buf bytes.Buffer
-	collections, err := loadCorpusCollections(&buf, mockCorpusConfig())
+	collections, err := loadCorpusCollections(&buf)
 	if err != nil {
 		t.Fatalf("%s: unexpected error: %v", "TestCollections", err)
 	}
@@ -137,7 +142,6 @@ func TestCollections(t *testing.T) {
 // Test reading of corpus files
 func TestLoadCollection(t *testing.T) {
 	t.Log("corpus.TestLoadCollection: Begin unit test")
-	emptyLoader := NewCorpusLoader(CorpusConfig{})
 	smallCollection := `# Source file, HTML file, title
 example_collection/example_collection001.txt	example_collection/example_collection001.html	第一回 Chapter 1
 `
@@ -160,7 +164,7 @@ example_collection/example_collection001.txt	example_collection/example_collecti
 	for _, tc := range tests {
 		var buf bytes.Buffer
 		io.WriteString(&buf, tc.input)
-		corpusEntries, err := emptyLoader.LoadCollection(&buf, "")
+		corpusEntries, err := loadCorpusEntries(&buf, "")
 		if err != nil {
 			t.Fatalf("%s: unexpected error: %v", tc.name, err)
 		}

@@ -38,6 +38,7 @@
 // 									the files to the web/words directory.
 //  -librarymeta		collection entries for the digital library.
 //  -tmindex				Compute and write translation memory index.
+//  -titleindex			Builds a flat index of document titles
 //
 // Follow instructions in the README.md file for setup.
 package main
@@ -71,7 +72,10 @@ import (
 	"github.com/alexamies/cnreader/tmindex"
 )
 
-const conversionsFile = "data/corpus/html-conversion.csv"
+const (
+	conversionsFile = "data/corpus/html-conversion.csv"
+	titleIndexFN = "documents.tsv"
+)
 
 // A type that holds the source and destination files for HTML conversion
 type htmlConversion struct {
@@ -310,12 +314,8 @@ func getCorpusConfig(c config.AppConfig) corpus.CorpusConfig {
 			}
 		}
 	}
-	return corpus.CorpusConfig{
-		CorpusDataDir: c.CorpusDataDir(),
-		CorpusDir: c.CorpusDir(),
-		Excluded: excluded,
-		ProjectHome: c.ProjectHome,
-	}
+	return corpus.NewFileCorpusConfig(c.CorpusDataDir(), c.CorpusDir(), excluded,
+			c.ProjectHome)
 }
 
 // getDictionaryConfig returns the dicitonary configuration
@@ -460,6 +460,8 @@ func main() {
 			"Analyze vocabulary for source input on the command line.")
 	var writeTMIndex = flag.Bool("tmindex", false, "Compute and write " +
 			"translation memory index.")
+	var titleIndex = flag.Bool("titleindex", false, "Builds a flat index of " +
+			"document titles.")
 	flag.Parse()
 
 	// Download latest dictionary files
@@ -617,13 +619,26 @@ func main() {
 		if err != nil {
 			log.Fatalf("main: could not write library files: %v\n", err)
 		}
-	} else if *writeTMIndex {
 
+	} else if *writeTMIndex {
 		log.Println("main: writing translation memory index")
 		err := tmindex.BuildIndexes(indexConfig.IndexDir, wdict)
 		if err != nil {
-			log.Fatalf("main: could not create to index file, err: %v\n", err)
+			log.Fatalf("main: could not create tm index file, err: %v\n", err)
 		}
+
+	} else if *titleIndex {
+		log.Println("main: building title index")
+		fname := indexConfig.IndexDir + "/" + titleIndexFN
+		f, err := os.Create(fname)
+		if err != nil {
+			log.Fatalf("main: could not create title index file, err: %v\n", err)
+		}
+		err = index.BuildDocTitleIndex(libraryLoader, f)
+		if err != nil {
+			log.Fatalf("main: could not build title index file, err: %v\n", err)
+		}
+
 	} else {
 		log.Println("main: writing out entire corpus")
 		_, err := analysis.WriteCorpusAll(libraryLoader, dictTokenizer,
