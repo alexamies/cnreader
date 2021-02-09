@@ -57,8 +57,8 @@ func (loader mockCorpusLoader) LoadCorpus(r io.Reader) (*[]corpus.CollectionEntr
 	return &loader.collections, nil
 }
 
-func (loader mockCorpusLoader) ReadText(r io.Reader) string {
-	return "你好 Hello!"
+func (loader mockCorpusLoader) ReadText(src string) (string, error) {
+	return "你好 Hello!", nil
 }
 
 // A mock LibraryLoader 

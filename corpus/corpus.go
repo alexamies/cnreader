@@ -22,6 +22,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/gomarkdown/markdown"
 )
 
 const collectionsFile = "collections.csv"
@@ -45,6 +47,7 @@ type CorpusConfig struct {
 	ProjectHome string
 	readCollections  func() (*[]CollectionEntry, error)
 	readCollection  func(fName, colTitle string) (*[]CorpusEntry, error)
+	readText func(string) (string, error)
 }
 
 // Interface for loading corpus with hierarchical collections of documents
@@ -81,7 +84,7 @@ type CorpusLoader interface {
 	// Method to read the contents of a corpus entry
 	// Parameter:
 	//  r: to reader the text
-	ReadText(r io.Reader) string
+	ReadText(srcFile string) (string, error)
 
 }
 
@@ -94,6 +97,7 @@ type fileCorpusLoader struct{
 func NewFileCorpusConfig(corpusDataDir, corpusDir string,
 		excluded map[string]bool, projectHome string) CorpusConfig {
 	collectionsFile := corpusDataDir + "/" + collectionsFile
+
 	readCollections := func() (*[]CollectionEntry, error) {
 		f, err := os.Open(collectionsFile)
 		if err != nil {
@@ -102,6 +106,7 @@ func NewFileCorpusConfig(corpusDataDir, corpusDir string,
 		defer f.Close()
 		return loadCorpusCollections(f)
 	}
+
 	readCollection := func(fName, colTitle string) (*[]CorpusEntry, error) {
 		collectionsFile := corpusDataDir + "/" + fName
 		r, err := os.Open(collectionsFile)
@@ -112,6 +117,22 @@ func NewFileCorpusConfig(corpusDataDir, corpusDir string,
 		defer r.Close()
 		return loadCorpusEntries(r, colTitle)
 	}
+
+	readTextImpl := func(srcFile string) (string, error) {
+		src := corpusDir + srcFile
+		reader, err := os.Open(src)
+		if err != nil {
+			return "", fmt.Errorf("readTextImpl: Error opening doc file %s: %v",
+				src, err)
+		}
+		defer reader.Close()
+		if strings.HasSuffix(srcFile, ".md") {
+			md := ReadText(reader)
+			return convertMarkdown(md), nil
+		}
+		return ReadText(reader), nil
+	}
+
 	return CorpusConfig{
 		CorpusDataDir: corpusDataDir,
 		CorpusDir: corpusDir,
@@ -119,6 +140,7 @@ func NewFileCorpusConfig(corpusDataDir, corpusDir string,
 		ProjectHome: projectHome,
 		readCollections: readCollections,
 		readCollection: readCollection,
+		readText: readTextImpl,
 	}
 }
 
@@ -148,8 +170,8 @@ func (loader fileCorpusLoader) LoadCorpus(r io.Reader) (*[]CollectionEntry, erro
 }
 
 // Implements the LoadCorpus method in the CorpusLoader interface
-func (loader fileCorpusLoader) ReadText(r io.Reader) string {
-	return readText(r)
+func (loader fileCorpusLoader) ReadText(srcFile string) (string, error) {
+	return loader.Config.readText(srcFile)
 }
 
 // CorpusLoader gets the default kind of CorpusLoader
@@ -236,7 +258,7 @@ func loadCorpusCollections(r io.Reader) (*[]CollectionEntry, error) {
 		if len(row) < 9 {
 			return nil, fmt.Errorf("loadCorpusCollections: not enough fields in fileline %d: %d",
 					i, len(row))
-	  	}
+	  }
 		collectionFile := row[0]
 		title := ""
 		if row[2] != "\\N" {
@@ -330,7 +352,7 @@ func ReadIntroFile(r io.Reader,) string {
 }
 
 // Reads a Chinese text file
-func readText(r io.Reader) string {
+func ReadText(r io.Reader) string {
 	reader := bufio.NewReader(r)
 	var buffer bytes.Buffer
 	eof := false
@@ -348,4 +370,9 @@ func readText(r io.Reader) string {
 		}
 	}
 	return buffer.String()
+}
+
+func convertMarkdown(md string) string {
+	b := markdown.ToHTML([]byte(md), nil, nil)
+	return string(b)
 }

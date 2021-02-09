@@ -245,10 +245,9 @@ func TestGetHeadwords(t *testing.T) {
 }
 
 func TestReadText(t *testing.T) {
-	corpusLoader := corpus.NewFileCorpusLoader(corpus.CorpusConfig{})
 	var buf bytes.Buffer
 	io.WriteString(&buf, "繁體中文")
-	text := corpusLoader.ReadText(&buf)
+	text := corpus.ReadText(&buf)
 	expected := "繁體中文"
 	if text != expected {
 		t.Error("Expected ", expected, ", got ", text)

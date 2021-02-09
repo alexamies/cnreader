@@ -201,14 +201,11 @@ func GetDocFrequencies(libLoader library.LibraryLoader,
 					colFile, err)
 		}
 		for _, entry := range *corpusEntries {
-			src := corpusConfig.CorpusDir + entry.RawFile
-			reader, err := os.Open(src)
+			text, err := corpLoader.ReadText(entry.RawFile)
 			if err != nil {
-				return nil, fmt.Errorf("GetDocFrequencies: Error opening col file %s: %v",
-					src, err)
+				return nil, fmt.Errorf("GetDocFrequencies: Error reading file %s: %v",
+					entry.RawFile, err)
 			}
-			defer reader.Close()
-			text := corpLoader.ReadText(reader)
 			_, results := ParseText(text, col.Title, &entry, dictTokenizer,
 						corpusConfig, wdict)
 			df.AddDocFreq(results.DocFreq)
@@ -242,18 +239,15 @@ func getWordFrequencies(libLoader library.LibraryLoader,
 		colFile := corpusConfig.CorpusDataDir + "/" + col.CollectionFile
 		corpusEntries, err := corpLoader.LoadCollection(colFile, col.Title)
 		if err != nil {
-			return nil, fmt.Errorf("getWordFrequencies: Error loading col file %s: %v",
+			return nil, fmt.Errorf("getWordFrequencies: Error loading col %s: %v",
 					colFile, err)
 		}
 		for _, entry := range *corpusEntries {
-			src := corpusConfig.CorpusDir + "/" + entry.RawFile
-			reader, err := os.Open(src)
+			text, err := corpLoader.ReadText(entry.RawFile)
 			if err != nil {
-				return nil, fmt.Errorf("getWordFrequencies: Error opening src file %s: %v",
-					src, err)
+				return nil, fmt.Errorf("getWordFrequencies: Error opening file %s: %v",
+					entry.RawFile, err)
 			}
-			text := corpLoader.ReadText(reader)
-			reader.Close()
 			ccount += utf8.RuneCountInString(text)
 			_, results := ParseText(text, col.Title, &entry, dictTokenizer,
 						corpusConfig, wdict)
@@ -630,14 +624,11 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	aResults := NewCollectionAResults()
 	for _, entry := range *corpusEntries {
 		// log.Printf("analysis.writeCollection: entry.RawFile = " + entry.RawFile)
-		src := corpusConfig.CorpusDir + "/" + entry.RawFile
-		r, err := os.Open(src)
+		text, err := corpLoader.ReadText(entry.RawFile)
 		if err != nil {
-			return nil, fmt.Errorf("analysis.writeCollection error src file %s: %v",
-					src, err)
+			return nil, fmt.Errorf("analysis.writeCollection error reading src %s: %v",
+					entry.RawFile, err)
 		}
-		defer r.Close()
-		text := corpLoader.ReadText(r)
 		_, results := ParseText(text, collectionEntry.Title, &entry,
 				dictTokenizer, corpusConfig, wdict)
 

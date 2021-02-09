@@ -71,13 +71,12 @@ func TestIntegration(t *testing.T) {
 		t.Fatalf("main, could not load dict: %v", err)
 	}
 	corpusConfig := testCorpusConfig()
-	corpusLoader := corpus.NewFileCorpusLoader(corpusConfig)
 	r, err := os.Open("testdata/test-trad.html")
 	if err != nil {
 		t.Fatalf("main, could not open file: %v", err)
 	}
 	defer r.Close()
-	text := corpusLoader.ReadText(r)
+	text := corpus.ReadText(r)
 	tok := tokenizer.DictTokenizer{wdict}
 	tokens, results := analysis.ParseText(text, "", corpus.NewCorpusEntry(),
 			tok, corpusConfig, wdict)

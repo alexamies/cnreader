@@ -577,7 +577,7 @@ func main() {
 				log.Fatalf("main, could not open file %s: %v", src, err)
 			}
 			defer r.Close()
-			text := libraryLoader.GetCorpusLoader().ReadText(r)
+			text := corpus.ReadText(r)
 			tokens := dictTokenizer.Tokenize(text)
 			f, err := os.Create(dest)
 			if err != nil {

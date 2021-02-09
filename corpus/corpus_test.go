@@ -75,8 +75,8 @@ func (loader MockCorpusLoader) LoadCorpus(r io.Reader) (*[]CollectionEntry, erro
 	return &[]CollectionEntry{c}, nil
 }
 
-func (loader MockCorpusLoader) ReadText(r io.Reader) string {
-	return "你好 Hello!"
+func (loader MockCorpusLoader) ReadText(src string) (string, error) {
+	return "你好 Hello!", nil
 }
 
 func mockCorpusConfig() CorpusConfig {
