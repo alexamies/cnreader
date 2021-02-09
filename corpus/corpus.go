@@ -119,7 +119,7 @@ func NewFileCorpusConfig(corpusDataDir, corpusDir string,
 	}
 
 	readTextImpl := func(srcFile string) (string, error) {
-		src := corpusDir + srcFile
+		src := corpusDir + "/" + srcFile
 		reader, err := os.Open(src)
 		if err != nil {
 			return "", fmt.Errorf("readTextImpl: Error opening doc file %s: %v",
