@@ -236,7 +236,7 @@ func getWordFrequencies(libLoader library.LibraryLoader,
 				err)
 	}
 	for _, col := range *collectionEntries {
-		colFile := corpusConfig.CorpusDataDir + "/" + col.CollectionFile
+		colFile := col.CollectionFile
 		corpusEntries, err := corpLoader.LoadCollection(colFile, col.Title)
 		if err != nil {
 			return nil, fmt.Errorf("getWordFrequencies: Error loading col %s: %v",

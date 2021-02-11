@@ -228,7 +228,7 @@ func loadAll(loader CorpusLoader) (*map[string]CorpusEntry, error) {
 		return nil, fmt.Errorf("loadAll could not load corpus: %v", err)
 	}
 	for _, collectionEntry := range *collections {
-		colEntryFName := loader.GetConfig().CorpusDataDir + "/" + collectionEntry.CollectionFile
+		colEntryFName := collectionEntry.CollectionFile
 		corpusEntries, err := loader.LoadCollection(colEntryFName, collectionEntry.Title)
 		if err != nil {
 			return nil, fmt.Errorf("loadAll could not load collection %s: %v",

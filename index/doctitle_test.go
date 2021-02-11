@@ -75,7 +75,6 @@ func (loader mockLibraryLoader) LoadLibrary(r io.Reader) (*[]library.CorpusData,
 	return &data, nil
 }
 
-
 // Table tests for BuildDocTitleIndex
 func TestBuildDocTitleIndex(t *testing.T) {
 	emptyCorpLoader := mockCorpusLoader{}

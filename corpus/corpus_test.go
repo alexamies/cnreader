@@ -88,6 +88,24 @@ func mockCorpusConfig() CorpusConfig {
 	}
 }
 
+// TestLoadAll tests loadAll
+func TestLoadAll(t *testing.T) {
+	mockCorpLoader := MockCorpusLoader{}
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "empty",
+		},
+	}
+	for _, tc := range tests {
+		_, err := loadAll(mockCorpLoader)
+		if err != nil {
+			t.Errorf("TestLoadAll, unexpected error, %s: %v", tc.name, err)
+		}
+	}
+}
+
 // LoadCorpus test to load a collection file
 func TestLoadCorpus(t *testing.T) {
 	t.Log("corpus.LoadCorpus: Begin unit test")

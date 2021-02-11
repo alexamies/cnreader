@@ -25,6 +25,7 @@ import (
 	"github.com/alexamies/cnreader/corpus"
 	"github.com/alexamies/cnreader/generator"
 	"github.com/alexamies/cnreader/index"
+	"github.com/alexamies/cnreader/library"
 )
 
 func mockCorpusConfig() corpus.CorpusConfig {
@@ -157,6 +158,81 @@ func mockValidator() (dictionary.Validator, error) {
 	domainReader := strings.NewReader(domainList)
 	return dictionary.NewValidator(posReader, domainReader)
 }
+// Implements the CorpusLoader interface with no data
+type mockCorpusLoader struct {
+	collections []corpus.CollectionEntry
+}
+
+func (loader mockCorpusLoader) GetCollectionEntry(fName string) (*corpus.CollectionEntry, error) {
+	return &corpus.CollectionEntry{}, nil
+}
+
+func (loader mockCorpusLoader) GetConfig() corpus.CorpusConfig {
+	return corpus.CorpusConfig{}
+}
+
+func (loader mockCorpusLoader) LoadAll(r io.Reader) (*map[string]corpus.CorpusEntry, error) {
+	data := map[string]corpus.CorpusEntry{}
+	return &data, nil
+}
+
+func (loader mockCorpusLoader) LoadCollection(fName, colTitle string) (*[]corpus.CorpusEntry, error) {
+	for _, col := range loader.collections {
+		if col.CollectionFile == fName {
+			return &col.CorpusEntries, nil
+		}
+	}
+	return &[]corpus.CorpusEntry{}, nil
+}
+
+func (loader mockCorpusLoader) LoadCollections() (*[]corpus.CollectionEntry, error) {
+	return &loader.collections, nil
+}
+
+func (loader mockCorpusLoader) LoadCorpus(r io.Reader) (*[]corpus.CollectionEntry, error) {
+	return &loader.collections, nil
+}
+
+func (loader mockCorpusLoader) ReadText(src string) (string, error) {
+	return "你好 Hello!", nil
+}
+
+// A mock LibraryLoader 
+type mockLibraryLoader struct {
+	corpLoader corpus.CorpusLoader
+}
+
+func (loader mockLibraryLoader) GetCorpusLoader() corpus.CorpusLoader {
+	return loader.corpLoader
+}
+
+func (loader mockLibraryLoader) LoadLibrary(r io.Reader) (*[]library.CorpusData, error) {
+	data := []library.CorpusData{}
+	return &data, nil
+}
+
+func TestContainsWord(t *testing.T) {
+	testCases := []struct {
+		name string
+		word  string
+		headwords []dicttypes.Word
+		expectedLen int
+	}{
+		{
+			name: "Empty",
+			word: "中文", 
+			headwords: []dicttypes.Word{},
+			expectedLen: 0,
+		},
+	}
+	for _, tc := range testCases {
+		result := containsWord(tc.word, tc.headwords)
+		if len(result) != tc.expectedLen {
+			t.Errorf("TestContainsWord %s: got %d, want %d", tc.name, len(result),
+					tc.expectedLen)
+		}
+	}
+}
 
 func TestGetChunks(t *testing.T) {
 	testCases := []struct {
@@ -204,6 +280,54 @@ func TestGetChunks(t *testing.T) {
 	}
 }
 
+func TestGetDocFrequencies(t *testing.T) {
+	wdict := mockSmallDict()
+	tok := tokenizer.DictTokenizer{wdict}
+	emptyCorpLoader := mockCorpusLoader{}
+	emptyLibLoader := mockLibraryLoader{emptyCorpLoader}
+	entry := corpus.CorpusEntry{
+		RawFile: "raw_file.txt",
+		GlossFile: "gloss_file.html",
+		Title: "標題 Entry Title",
+		ColTitle: "Collection Title",
+	}
+	collection := corpus.CollectionEntry{
+		CollectionFile: "collection.txt",
+		GlossFile: "collection.html",
+		Title: "My collection",
+		Summary: "xyz",
+		Intro: "abc",
+		CorpusEntries: []corpus.CorpusEntry{entry},
+	}
+	collections := []corpus.CollectionEntry{collection}
+	smallCorpLoader := mockCorpusLoader{collections}
+	smallLibLoader := mockLibraryLoader{smallCorpLoader}
+	testCases := []struct {
+		name string
+		libLoader library.LibraryLoader
+		tok tokenizer.Tokenizer
+		wdict map[string]dicttypes.Word
+	}{
+		{
+			name: "Empty",
+			libLoader: emptyLibLoader,
+			tok: tok,
+			wdict: wdict,
+		},
+		{
+			name: "small",
+			libLoader: smallLibLoader,
+			tok: tok,
+			wdict: wdict,
+		},
+	}
+	for _, tc := range testCases {
+		_, err := GetDocFrequencies(tc.libLoader, tc.tok, tc.wdict)
+		if err != nil {
+			t.Errorf("TestGetDocFrequencies %s: unexpected error %v",tc.name, err)
+		}
+	}
+}
 
 func TestGetHeadwords(t *testing.T) {
 	s1 := "繁体中文"
@@ -240,6 +364,49 @@ func TestGetHeadwords(t *testing.T) {
 		if len(words) != tc.expectedLen {
 			t.Errorf("TestGetHeadwords %s: Expected length of wdict got %d, want %d",
 				tc.name, len(words), tc.expectedLen)
+		}
+	}
+}
+
+func TestGetWordFrequencies(t *testing.T) {
+	wdict := mockSmallDict()
+	tok := tokenizer.DictTokenizer{wdict}
+	emptyCorpLoader := mockCorpusLoader{}
+	emptyLibLoader := mockLibraryLoader{emptyCorpLoader}
+	entry := corpus.CorpusEntry{
+		RawFile: "raw_file.txt",
+		GlossFile: "gloss_file.html",
+		Title: "標題 Entry Title",
+		ColTitle: "Collection Title",
+	}
+	collection := corpus.CollectionEntry{
+		CollectionFile: "collection.txt",
+		GlossFile: "collection.html",
+		Title: "My collection",
+		Summary: "xyz",
+		Intro: "abc",
+		CorpusEntries: []corpus.CorpusEntry{entry},
+	}
+	collections := []corpus.CollectionEntry{collection}
+	smallCorpLoader := mockCorpusLoader{collections}
+	smallLibLoader := mockLibraryLoader{smallCorpLoader}
+	testCases := []struct {
+		name string
+		libLoader library.LibraryLoader
+	}{
+		{
+			name: "Empty",
+			libLoader: emptyLibLoader,
+		},
+		{
+			name: "Small",
+			libLoader: smallLibLoader,
+		},
+	}
+	for _, tc := range testCases {
+		_, err := getWordFrequencies(tc.libLoader, tok, wdict)
+		if err != nil {
+			t.Errorf("TestGetWordFrequencies, unexpected error, %s: %v", tc.name, err)
 		}
 	}
 }
