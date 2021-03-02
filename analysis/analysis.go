@@ -938,6 +938,12 @@ func WriteHwFiles(loader library.LibraryLoader,
 		return fmt.Errorf("WriteHwFiles, headword-template.html not found")
 	}
 
+	var processor notesProcessor 
+	if len(outputConfig.NotesReMatch) > 0 {
+		processor = newNotesProcessor(outputConfig.NotesReMatch,
+				outputConfig.NotesReplace)
+	}
+
 	i := 0
 	for _, hw := range hwArray {
 
@@ -950,6 +956,10 @@ func WriteHwFiles(loader library.LibraryLoader,
 		for _, ws := range hw.Senses {
 			if hw.Traditional != ws.Traditional {
 				tradVariants = append(tradVariants, ws)
+			}
+			// Replace text in notes, if configured
+			if len(outputConfig.NotesReMatch) > 0 {
+				ws.Notes = processor.process(ws.Notes)
 			}
 		}
 

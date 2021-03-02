@@ -346,6 +346,8 @@ func getHTMLOutPutConfig(c config.AppConfig) generator.HTMLOutPutConfig {
 	if len(title) == 0 {
 		title = "Chinese Notes Translation Portal"
 	}
+	match := c.GetVar("NotesReMatch")
+	replace := c.GetVar("NotesReplace")
 	templates := generator.NewTemplateMap(c)
 	outputConfig := generator.HTMLOutPutConfig{
 		Title: title,
@@ -356,6 +358,8 @@ func getHTMLOutPutConfig(c config.AppConfig) generator.HTMLOutPutConfig {
 		TemplateDir: templateHome,
 		VocabFormat: vocabFormat,
 		WebDir: webDir,
+		NotesReMatch: match,
+		NotesReplace: replace,
 	}
 	return outputConfig
 }

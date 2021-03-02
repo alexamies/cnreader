@@ -56,6 +56,12 @@ type HTMLOutPutConfig struct {
 
 	// To write HTML files to
 	WebDir string
+
+	// Regex to match text in notes
+	NotesReMatch string
+
+	// Regex to replace text in notes
+	NotesReplace string
 }
 
 // CorpusEntryContent holds the content for a corpus entry

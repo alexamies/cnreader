@@ -43,7 +43,7 @@ func BuildDocTitleIndex(libLoader library.LibraryLoader, w io.Writer) error {
 			return fmt.Errorf("BuildDocTitleIndex error writing headers: %v", err)
 	}
 	for _, c := range *collections {
-		log.Printf("BuildDocTitleIndex, collection: %s\n", c.Title)
+		// log.Printf("BuildDocTitleIndex, collection: %s\n", c.Title)
 		docs, err := corpLoader.LoadCollection(c.CollectionFile, c.Title)
 		if err != nil {
 			return fmt.Errorf("BuildDocTitleIndex error loading %s: %v",
