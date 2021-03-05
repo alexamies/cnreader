@@ -645,7 +645,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("main: Error creating file for hw.Id %d, err: %v", hwId, err)
 			}
-			f.Close()
+			defer f.Close()
 			return f
 		}
 		err = analysis.WriteHwFiles(libraryLoader, dictTokenizer, outputConfig,
