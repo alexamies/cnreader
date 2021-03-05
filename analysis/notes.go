@@ -49,10 +49,11 @@ func newNotesProcessor(patternList, replaceList string) notesProcessor{
 
 // processes the notes
 func (p notesProcessor) process(notes string) string {
-	 for i, re := range p.patterns {
+	s := notes
+	for i, re := range p.patterns {
 		if re.MatchString(notes) {
-			return re.ReplaceAllString(notes, p.replaces[i])
+			s = re.ReplaceAllString(s, p.replaces[i])
 		}
 	}
-	return notes
+	return s
 }

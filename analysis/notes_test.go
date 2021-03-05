@@ -18,6 +18,8 @@ import (
 
 // TestNotesProcessor tests processing of notes
 func TestNotesProcessor(t *testing.T) {
+	const match = `"(T ([0-9]))(\)|,|;)","(T ([0-9]{2}))(\)|,|;)","(T ([0-9]{3}))(\)|,|;)","(T ([0-9]{4}))(\)|,|;)"`
+	const replace = `"<a href="/taisho/t000${2}.html">${1}</a>${3}","<a href="/taisho/t00${2}.html">${1}</a>${3}","<a href="/taisho/t0${2}.html">${1}</a>${3}","<a href="/taisho/t${2}.html">${1}</a>${3}"`
 	testCases := []struct {
 		name string
 		match  string
@@ -61,11 +63,11 @@ func TestNotesProcessor(t *testing.T) {
 			expect: `Testing 123`, 
 		},
 		{
-			name: "Granddaddy",
-			match: `"(T ([0-9]))(\)|,|;)","(T ([0-9]{2}))(\)|,|;)"`, 
-			replace: `"<a href="/taisho/t000${2}.html">${1}</a>${3}","<a href="/taisho/t00${2}.html">${1}</a>${3}"`, 
-			notes: " T 23;", 
-			expect: ` <a href="/taisho/t0023.html">T 23</a>;`, 
+			name: "Replace Taisho abbreviations",
+			match: match, 
+			replace: replace, 
+			notes: `(T 1; T 23; T 456; T 1234)`, 
+			expect: `(<a href="/taisho/t0001.html">T 1</a>; <a href="/taisho/t0023.html">T 23</a>; <a href="/taisho/t0456.html">T 456</a>; <a href="/taisho/t1234.html">T 1234</a>)`, 
 		},
 	}
 	for _, tc := range testCases {
