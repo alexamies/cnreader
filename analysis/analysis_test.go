@@ -404,7 +404,7 @@ func TestGetWordFrequencies(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		_, err := getWordFrequencies(tc.libLoader, tok, wdict)
+		_, err := GetWordFrequencies(tc.libLoader, tok, wdict)
 		if err != nil {
 			t.Errorf("TestGetWordFrequencies, unexpected error, %s: %v", tc.name, err)
 		}
@@ -717,19 +717,121 @@ func TestWriteHwFile(t *testing.T) {
 		}
 		err := writeHwFile(&buf, tc.dictEntry, *tmpl)
 		if err != nil {
-			t.Fatalf("%s, Unexpected error: %v", tc.name, err)
+			t.Fatalf("TestWriteHwFile: %s, Unexpected error: %v", tc.name, err)
 		}
 		got := buf.String()
 		if len(got) == 0 {
-			t.Fatalf("%s, no data written", tc.name)
+			t.Fatalf("TestWriteHwFile: %s, no data written", tc.name)
 		}
 		if !strings.Contains(got, tc.wantToInclude) {
-			t.Errorf("%s, got %s\n but wantToInclude %s", tc.name, got, tc.wantToInclude)
+			t.Errorf("TestWriteHwFile: %s, got %s\n but wantToInclude %s", tc.name,
+					got, tc.wantToInclude)
 		}
 		for _, notInclude := range tc.wantToNotInclude {
 		  if strings.Contains(got, notInclude) {
-			  t.Errorf("%s, got %s\n but wantToNotInclude %s", tc.name, got, notInclude)
+			  t.Errorf("TestWriteHwFile %s, got %s\n but wantToNotInclude %s",
+			  		tc.name, got, notInclude)
 		  }
+		}
+	}
+}
+
+func TestWriteHwFiles(t *testing.T) {
+	loader := mockLibraryLoader{}
+	indexState := index.IndexState{}
+	vocabAnalysis := VocabAnalysis{}
+	oneWordDict := make(map[string]dicttypes.Word)
+	const match = `"(T ([0-9]))(\)|,|;)","(T ([0-9]{2}))(\)|,|;)","(T ([0-9]{3}))(\)|,|;)","(T ([0-9]{4}))(\)|,|;)"`
+	const replace = `"<a href="/taisho/t000${2}.html">${1}</a>${3}","<a href="/taisho/t00${2}.html">${1}</a>${3}","<a href="/taisho/t0${2}.html">${1}</a>${3}","<a href="/taisho/t${2}.html">${1}</a>${3}"`
+	config := generator.HTMLOutPutConfig{
+		ContainsByDomain: "",
+		Domain: "",
+		GoStaticDir: "static",
+		TemplateDir: "templates",
+		VocabFormat: "",
+		WebDir: "web-staging",
+		Templates: generator.NewTemplateMap(config.AppConfig{}),
+		NotesReMatch: match,
+		NotesReplace: replace,
+	}
+	const s = "金刚经"
+	const tr = "金剛經"
+	const p = "Jīngāng Jīng"
+	ws := dicttypes.WordSense{
+		Simplified: s,
+		Traditional: tr,
+		Pinyin: p,
+		English: "Diamond Sutra",
+		Notes: "(T 235)",
+	}
+	hw := dicttypes.Word{
+		HeadwordId:  	1,
+		Simplified:  	s,
+		Traditional: 	tr,
+		Pinyin:      	p,
+		Senses:  			[]dicttypes.WordSense{ws},
+	}
+	oneWordDict[s] = hw
+	oneWordDict[tr] = hw
+	type test struct {
+		name string
+		wdict map[string]dicttypes.Word
+		config generator.HTMLOutPutConfig
+		expectNum int
+		contains string
+  }
+  tests := []test{
+		{
+			name: "Empty",
+			wdict: map[string]dicttypes.Word{},
+			config: mockOutputConfig(),
+			expectNum: 0,
+			contains: "",
+		},
+		{
+			name: "Small",
+			wdict: mockSmallDict(),
+			config: mockOutputConfig(),
+			expectNum: 8,
+			contains: "",
+		},
+		{
+			name: "Has notes",
+			wdict: oneWordDict,
+			config: mockOutputConfig(),
+			expectNum: 1,
+			contains: "T 235",
+		},
+		{
+			name: "Transforms notes",
+			wdict: oneWordDict,
+			config: config,
+			expectNum: 1,
+			contains: `<a href="/taisho/t0235.html">T 235</a>`,
+		},
+	}
+  for _, tc := range tests {
+		tok := tokenizer.DictTokenizer{tc.wdict}
+		var buf bytes.Buffer
+		numWritten := 0
+		openHWWriter := func(hwId int) io.Writer {
+			t.Logf("TestWriteHwFiles: Writing hw: %d", hwId)
+			numWritten++
+			return &buf
+		}
+		err := WriteHwFiles(loader, tok, tc.config, indexState, tc.wdict,
+				vocabAnalysis, openHWWriter)
+		if err != nil {
+			t.Fatalf("TestWriteHwFiles: %s, Unexpected error: %v", tc.name, err)
+		}
+		got := buf.String()
+		if numWritten != tc.expectNum {
+			t.Fatalf("TestWriteHwFiles %s, Got numWritten = %d, want: %d, buf:\n%s",
+					tc.name, numWritten, tc.expectNum, got)
+		}
+		if !strings.Contains(got, tc.contains) {
+			t.Fatalf("TestWriteHwFiles %s, did not contain expected string %s buf:\n%s",
+					tc.name, tc.contains, buf.String())
 		}
 	}
 }

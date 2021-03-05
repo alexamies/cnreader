@@ -63,6 +63,13 @@ func TestNotesProcessor(t *testing.T) {
 			expect: `Testing 123`, 
 		},
 		{
+			name: "One Taisho text",
+			match: match, 
+			replace: replace, 
+			notes: `(T 123)`, 
+			expect: `(<a href="/taisho/t0123.html">T 123</a>)`, 
+		},
+		{
 			name: "Replace Taisho abbreviations",
 			match: match, 
 			replace: replace, 

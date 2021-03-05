@@ -13,6 +13,7 @@
 package analysis
 
 import (
+	"log"
 	"regexp"
 	"strings"
 )
@@ -28,10 +29,13 @@ type notesProcessor struct {
 //   patternList a list of patterns to match regular expressions, quoted and delimited by commas
 //   replaceList a list of replacement regular expressions, same cardinality
 func newNotesProcessor(patternList, replaceList string) notesProcessor{
+	log.Printf("analysis.newNotesProcessor: patternList: %s replaceList: %s",
+			patternList, replaceList)
 	p := strings.Split(patternList, `","`)
 	patterns := []*regexp.Regexp{}
 	for _, t := range p {
 		pattern := strings.Trim(t, ` "`)
+		log.Printf("notes.newNotesProcessor: compiling %s ", pattern)
 		re := regexp.MustCompile(pattern)
 		patterns =  append(patterns, re)
 	}
@@ -39,8 +43,10 @@ func newNotesProcessor(patternList, replaceList string) notesProcessor{
 	replaces := []string{}
 	for _, t := range r {
 		replace := strings.Trim(t, ` "`)
+		log.Printf("notes.newNotesProcessor: adding replacement %s ", replace)
 		replaces =  append(replaces, replace)
 	}
+	log.Printf("analysis.newNotesProcessor: got %d patterns ", len(patterns))
 	return notesProcessor {
 		patterns: patterns,
 		replaces: replaces,

@@ -215,7 +215,7 @@ func GetDocFrequencies(libLoader library.LibraryLoader,
 }
 
 // getWordFrequencies compute word frequencies, collocations, and usage for corpus
-func getWordFrequencies(libLoader library.LibraryLoader,
+func GetWordFrequencies(libLoader library.LibraryLoader,
 		dictTokenizer tokenizer.Tokenizer,
 		wdict map[string]dicttypes.Word) (*VocabAnalysis, error) {
 
@@ -885,47 +885,19 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 
 // Writes dictionary headword entries
 func WriteHwFiles(loader library.LibraryLoader,
-		dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
-		indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word) error {
+		dictTokenizer tokenizer.Tokenizer,
+		outputConfig generator.HTMLOutPutConfig,
+		indexState index.IndexState,
+		wdict map[string]dicttypes.Word,
+		vocabAnalysis VocabAnalysis,
+		openHWWriter func(int) io.Writer) error {
 	log.Printf("analysis.WriteHwFiles: Begin +++++++++++\n")
-	fname := indexConfig.IndexDir + "/" + index.WfCorpusFile
-	wfFile, err := os.Open(fname)
-	if err != nil {
-		return fmt.Errorf("analysis.WriteHwFiles, error opening word freq file: %f", err)
-	}
-	defer wfFile.Close()
-	wfDocFName := indexConfig.IndexDir + "/" + index.WfDocFile
-	wfDocReader, err := os.Open(wfDocFName)
-	if err != nil {
-		return fmt.Errorf("analysis.WriteHwFiles, error opening word freq doc file: %v", err)
-	}
-	defer wfDocReader.Close()
-	indexFN := indexConfig.IndexDir + "/" + index.KeywordIndexFile
-	indexWriter, err := os.Create(indexFN)
-	if err != nil {
-		return fmt.Errorf("index.writeKeywordIndex: Could not create file: %v", err)
-	}
-	defer indexWriter.Close()
-	indexStore := index.IndexStore{wfFile, wfDocReader, indexWriter}
-	indexState, err := index.BuildIndex(indexConfig, indexStore)
-	if err != nil {
-		return fmt.Errorf("WriteHwFiles, error building index: %v", err)
-	}
-	log.Printf("analysis.WriteHwFiles: Get headwords\n")
 	hwArray := getHeadwords(wdict)
-	vocabAnalysis, err := getWordFrequencies(loader, dictTokenizer, wdict)
-	if err != nil {
-		return fmt.Errorf("WriteHwFiles, error getting freq: %v", err)
-	}
 	usageMap := vocabAnalysis.UsageMap
 	collocations := vocabAnalysis.Collocations
 	outfileMap, err := corpus.GetOutfileMap(loader.GetCorpusLoader())
 	if err != nil {
 		return fmt.Errorf("WriteHwFiles, Error getting outfile map: %v", err)
-	}
-	if len(*outfileMap) == 0 {
-		return fmt.Errorf("WriteHwFiles, No entries in outfile map")
 	}
 	log.Printf("analysis.WriteHwFiles: outfileMap has %d entries",
 			len(*outfileMap))
@@ -940,6 +912,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 
 	var processor notesProcessor 
 	if len(outputConfig.NotesReMatch) > 0 {
+		log.Printf("analysis.WriteHwFiles: initializing notesProcessor")
 		processor = newNotesProcessor(outputConfig.NotesReMatch,
 				outputConfig.NotesReplace)
 	}
@@ -948,18 +921,26 @@ func WriteHwFiles(loader library.LibraryLoader,
 	for _, hw := range hwArray {
 
 		if i%1000 == 0 {
-			log.Printf("analysis.WriteHwFiles: wrote %d words\n", i)
+			log.Printf("analysis.WriteHwFiles: wrote %d words", i)
 		}
 
-		// Look for different writings of traditional form
+		// Replace text in notes, if configured
+		if len(outputConfig.NotesReMatch) > 0 {
+			senses := []dicttypes.WordSense{}
+			for _, ws := range hw.Senses {
+				log.Printf("analysis.WriteHwFiles: notes %s", ws.Notes)
+				ws.Notes = processor.process(ws.Notes)
+				log.Printf("analysis.WriteHwFiles: notes after%s", ws.Notes)
+				senses = append(senses, ws)
+			}
+			hw.Senses = senses
+		}
+
+		// Check for different writings of traditional form
 		tradVariants := []dicttypes.WordSense{}
 		for _, ws := range hw.Senses {
 			if hw.Traditional != ws.Traditional {
 				tradVariants = append(tradVariants, ws)
-			}
-			// Replace text in notes, if configured
-			if len(outputConfig.NotesReMatch) > 0 {
-				ws.Notes = processor.process(ws.Notes)
 			}
 		}
 
@@ -996,7 +977,8 @@ func WriteHwFiles(loader library.LibraryLoader,
 		// Decorate useage text
 		hlUsageArr := []wordUsage{}
 		for _, wu := range *usageArrPtr {
-			hlText := generator.DecodeUsageExample(wu.Example, hw, dictTokenizer, outputConfig, wdict)
+			hlText := generator.DecodeUsageExample(wu.Example, hw, dictTokenizer,
+					outputConfig, wdict)
 			hlWU := wordUsage{
 				Freq:       wu.Freq,
 				RelFreq:    wu.RelFreq,
@@ -1012,27 +994,20 @@ func WriteHwFiles(loader library.LibraryLoader,
 		dictEntry := DictEntry {
 			Title: 				hw.Simplified,
 			Headword:     hw,
-			RelevantDocs: index.FindDocsForKeyword(hw, *outfileMap, *indexState),
+			RelevantDocs: index.FindDocsForKeyword(hw, *outfileMap, indexState),
 			ContainsByDomain: cByDomain,
 			Contains:     contains,
 			Collocations: wordCollocations,
 			UsageArr:     hlUsageArr,
 			DateUpdated:  dateUpdated,
 		}
-		filename := fmt.Sprintf("%s%s%d%s", outputConfig.WebDir, "/words/",
-				hw.HeadwordId, ".html")
-		f, err := os.Create(filename)
-		if err != nil {
-			return fmt.Errorf("WriteHwFiles: Error creating file for hw.Id %d, "+
-				"Simplified %s, err: %v", hw.HeadwordId, hw.Simplified, err)
-		}
+		f := openHWWriter(hw.HeadwordId)
 		err = writeHwFile(f, dictEntry, *tmpl)
 		if err != nil {
 			return fmt.Errorf("generator.WriteHwFile: error executing template for " +
-					"hw.Id: %d, filename: %s, Simplified: %s, error: %v", hw.HeadwordId,
-					filename, hw.Simplified, err)
+					"hw.Id: %d, Simplified: %s, error: %v", hw.HeadwordId,
+					hw.Simplified, err)
 		}
-		f.Close()
 		i++
 	}
 	return nil

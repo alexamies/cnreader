@@ -223,6 +223,11 @@ func GetOutfileMap(loader CorpusLoader) (*map[string]CorpusEntry, error) {
 // Load all corpus entries and keep them in a hash map
 func loadAll(loader CorpusLoader) (*map[string]CorpusEntry, error) {
 	corpusEntryMap := map[string]CorpusEntry{}
+	if loader == nil {
+		log.Print("loadAll loader is nil")
+		m := make(map[string]CorpusEntry)
+		return &m, nil
+	}
 	collections, err := loader.LoadCollections()
 	if err != nil {
 		return nil, fmt.Errorf("loadAll could not load corpus: %v", err)

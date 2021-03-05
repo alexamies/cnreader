@@ -39,6 +39,10 @@ func FindDocsForKeyword(keyword dicttypes.Word,
 		corpusEntryMap map[string]corpus.CorpusEntry,
 		indexState IndexState) []RetrievalResult {
 	docs := make([]RetrievalResult, 0)
+	if indexState.wfdoc == nil {
+		log.Print("FindDocsForKeyword: indexState.wfdoc == nil")
+		return []RetrievalResult{}
+	}
 	wfdoc := *indexState.wfdoc
 	// TODO - separate corpora into simplified and traditional. At the moment
 	// only traditional will work

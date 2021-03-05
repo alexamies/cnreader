@@ -371,6 +371,34 @@ func getIndexConfig(c config.AppConfig) index.IndexConfig {
 	}
 }
 
+// readIndex reads the index files from disk
+func readIndex(indexConfig index.IndexConfig) (*index.IndexState, error) {
+	fname := indexConfig.IndexDir + "/" + index.WfCorpusFile
+	wfFile, err := os.Open(fname)
+	if err != nil {
+		return nil, fmt.Errorf("readIndex, error opening word freq file: %f", err)
+	}
+	defer wfFile.Close()
+	wfDocFName := indexConfig.IndexDir + "/" + index.WfDocFile
+	wfDocReader, err := os.Open(wfDocFName)
+	if err != nil {
+		return nil, fmt.Errorf("readIndex, error opening word freq doc file: %v", err)
+	}
+	defer wfDocReader.Close()
+	indexFN := indexConfig.IndexDir + "/" + index.KeywordIndexFile
+	indexWriter, err := os.Create(indexFN)
+	if err != nil {
+		return nil, fmt.Errorf("readIndex: Could not create file: %v", err)
+	}
+	defer indexWriter.Close()
+	indexStore := index.IndexStore{wfFile, wfDocReader, indexWriter}
+	indexState, err := index.BuildIndex(indexConfig, indexStore)	
+	if err != nil {
+		return nil, fmt.Errorf("readIndex: Could not build index: %v", err)
+	}
+	return indexState, nil
+}
+
 // writeLibraryFiles writes HTML files for each file in the corpus.
 //
 // Table of contents files are also written with links including the highest
@@ -601,8 +629,27 @@ func main() {
 		}
 	} else if *hwFiles {
 		log.Printf("main: Writing word entries for headwords\n")
-		err := analysis.WriteHwFiles(libraryLoader, dictTokenizer, outputConfig,
-				indexConfig, wdict)
+		indexState, err := readIndex(indexConfig)
+		if err != nil {
+			log.Fatalf("main, unable to read index: %v", err)
+		}
+		vocabAnalysis, err := analysis.GetWordFrequencies(libraryLoader,
+				dictTokenizer, wdict)
+		if err != nil {
+			log.Fatalf("main, error getting freq: %v", err)
+		}
+		openHWWriter := func(hwId int) io.Writer {
+			filename := fmt.Sprintf("%s%s%d%s", outputConfig.WebDir, "/words/",
+				hwId, ".html")
+			f, err := os.Create(filename)
+			if err != nil {
+				log.Fatalf("main: Error creating file for hw.Id %d, err: %v", hwId, err)
+			}
+			f.Close()
+			return f
+		}
+		err = analysis.WriteHwFiles(libraryLoader, dictTokenizer, outputConfig,
+				*indexState, wdict, *vocabAnalysis, openHWWriter)
 		if err != nil {
 			log.Fatalf("main, unable to write headwords: %v", err)
 		}
