@@ -15,6 +15,7 @@ package analysis
 import (
 	"bytes"
 	"io"
+	"log"
 	"strings"
 	"testing"
 
@@ -736,6 +737,23 @@ func TestWriteHwFile(t *testing.T) {
 	}
 }
 
+// testHwWriter writes to a bytes buffer instead of a file
+type testHwWriter struct {
+	buf *bytes.Buffer
+	numWritten *int
+}
+
+// OpenWriter opens the file to write HTML
+func (w testHwWriter) NewWriter(hwId int) io.Writer {
+	*w.numWritten++
+	return w.buf
+}
+
+// CloseWriter does nothing
+func (w testHwWriter) CloseWriter(hwId int) {
+	log.Printf("testHwWriter: CloseWriter called with hw.Id %d", hwId)
+}
+
 func TestWriteHwFiles(t *testing.T) {
 	loader := mockLibraryLoader{}
 	indexState := index.IndexState{}
@@ -814,20 +832,19 @@ func TestWriteHwFiles(t *testing.T) {
 		tok := tokenizer.DictTokenizer{tc.wdict}
 		var buf bytes.Buffer
 		numWritten := 0
-		openHWWriter := func(hwId int) io.Writer {
-			t.Logf("TestWriteHwFiles: Writing hw: %d", hwId)
-			numWritten++
-			return &buf
+		tw := testHwWriter{
+			buf: &buf,
+			numWritten: &numWritten,
 		}
 		err := WriteHwFiles(loader, tok, tc.config, indexState, tc.wdict,
-				vocabAnalysis, openHWWriter)
+				vocabAnalysis, tw)
 		if err != nil {
 			t.Fatalf("TestWriteHwFiles: %s, Unexpected error: %v", tc.name, err)
 		}
 		got := buf.String()
-		if numWritten != tc.expectNum {
+		if *tw.numWritten != tc.expectNum {
 			t.Fatalf("TestWriteHwFiles %s, Got numWritten = %d, want: %d, buf:\n%s",
-					tc.name, numWritten, tc.expectNum, got)
+					tc.name, tw.numWritten, tc.expectNum, got)
 		}
 		if !strings.Contains(got, tc.contains) {
 			t.Fatalf("TestWriteHwFiles %s, did not contain expected string %s buf:\n%s",

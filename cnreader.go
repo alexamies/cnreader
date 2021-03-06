@@ -84,6 +84,45 @@ type htmlConversion struct {
 	Title string
 }
 
+// hwWriter manages files for writing headwords to HTML
+type hwWriter struct {
+	outputConfig generator.HTMLOutPutConfig
+	files map[int]*os.File
+}
+
+func newHwWriter(outputConfig generator.HTMLOutPutConfig) hwWriter {
+	files := make(map[int]*os.File)
+	return hwWriter{
+		outputConfig: outputConfig,
+		files: files,
+	}
+}
+
+// OpenWriter opens the file to write HTML
+func (w hwWriter) NewWriter(hwId int) io.Writer {
+	filename := fmt.Sprintf("%s%s%d%s", w.outputConfig.WebDir, "/words/",
+			hwId, ".html")
+	f, err := os.Create(filename)
+	if err != nil {
+		log.Fatalf("main: Error creating file for hw.Id %d, err: %v", hwId, err)
+	}
+	w.files[hwId] = f
+	return f
+}
+
+// CloseWriter closes the file
+func (w hwWriter) CloseWriter(hwId int) {
+	if f, ok := w.files[hwId]; ok {
+		err := f.Close()
+		if err != nil {
+			log.Printf("main: CloseWriter error closing file for hw.Id %d, err: %v",
+					hwId, err)
+		}
+	} else {
+		log.Printf("main: CloseWriter could not find file for hw.Id %d", hwId)
+	}
+}
+
 // Initialize the app config data
 func initApp() (config.AppConfig) {
 	return config.InitConfig()
@@ -638,18 +677,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("main, error getting freq: %v", err)
 		}
-		openHWWriter := func(hwId int) io.Writer {
-			filename := fmt.Sprintf("%s%s%d%s", outputConfig.WebDir, "/words/",
-				hwId, ".html")
-			f, err := os.Create(filename)
-			if err != nil {
-				log.Fatalf("main: Error creating file for hw.Id %d, err: %v", hwId, err)
-			}
-			defer f.Close()
-			return f
-		}
+		hww := newHwWriter(outputConfig)
 		err = analysis.WriteHwFiles(libraryLoader, dictTokenizer, outputConfig,
-				*indexState, wdict, *vocabAnalysis, openHWWriter)
+				*indexState, wdict, *vocabAnalysis, hww)
 		if err != nil {
 			log.Fatalf("main, unable to write headwords: %v", err)
 		}

@@ -64,6 +64,13 @@ const maxKeywords = 10
 // HTML file
 const maxContains = 50
 
+
+// hwWriter manages files for writing headwords to HTML
+type HeadwordWriter interface {
+	NewWriter(hwId int) io.Writer
+	CloseWriter(hwId int)
+}
+
 // analysisResults holds vocabulary analysis for a corpus text
 type analysisResults struct {
 	Title                   string
@@ -890,7 +897,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 		indexState index.IndexState,
 		wdict map[string]dicttypes.Word,
 		vocabAnalysis VocabAnalysis,
-		openHWWriter func(int) io.Writer) error {
+		hww HeadwordWriter) error {
 	log.Printf("analysis.WriteHwFiles: Begin +++++++++++\n")
 	hwArray := getHeadwords(wdict)
 	usageMap := vocabAnalysis.UsageMap
@@ -928,9 +935,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 		if len(outputConfig.NotesReMatch) > 0 {
 			senses := []dicttypes.WordSense{}
 			for _, ws := range hw.Senses {
-				log.Printf("analysis.WriteHwFiles: notes %s", ws.Notes)
 				ws.Notes = processor.process(ws.Notes)
-				log.Printf("analysis.WriteHwFiles: notes after%s", ws.Notes)
 				senses = append(senses, ws)
 			}
 			hw.Senses = senses
@@ -1001,13 +1006,14 @@ func WriteHwFiles(loader library.LibraryLoader,
 			UsageArr:     hlUsageArr,
 			DateUpdated:  dateUpdated,
 		}
-		f := openHWWriter(hw.HeadwordId)
+		f := hww.NewWriter(hw.HeadwordId)
 		err = writeHwFile(f, dictEntry, *tmpl)
 		if err != nil {
 			return fmt.Errorf("generator.WriteHwFile: error executing template for " +
 					"hw.Id: %d, Simplified: %s, error: %v", hw.HeadwordId,
 					hw.Simplified, err)
 		}
+		hww.CloseWriter(hw.HeadwordId)
 		i++
 	}
 	return nil
