@@ -185,6 +185,8 @@ func span(w dicttypes.Word, text string) string {
 		classTxt = classTxt + " quote"
 	} else if w.HasNotesLabel("Sanskrit equivalent:") {
 		classTxt = classTxt + " sanskrit"
+	} else if w.HasNotesLabel("FGDB entry") {
+		classTxt = classTxt + " fgdb"
 	}
 	pinyin := w.Pinyin
 	english := ""
