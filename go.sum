@@ -51,9 +51,16 @@ github.com/alexamies/chinesenotes-go v0.0.51 h1:KwitNQpHYR59OdpuDt9Y1VQT404X3Rxh
 github.com/alexamies/chinesenotes-go v0.0.51/go.mod h1:IswAhmuKzh5RG7hCkp3s1AHJl+Lnn8rJ+SZ7Y61V8ck=
 github.com/alexamies/chinesenotes-go v0.0.52 h1:hpZ13IKQFn5XNQjh2e70WQPTE8oZNx+0Js2tOHaqDEA=
 github.com/alexamies/chinesenotes-go v0.0.52/go.mod h1:IswAhmuKzh5RG7hCkp3s1AHJl+Lnn8rJ+SZ7Y61V8ck=
+github.com/alexamies/chinesenotes-go v0.0.65 h1:wH0WHsDKTS1MlK82jDUDoANSGqoOt2+E9Z7CG3jfLsE=
+github.com/alexamies/chinesenotes-go v0.0.65/go.mod h1:gHPl4wapa4rkyRlT9DSc1zSQa7cdvcv/EclW7GJf80E=
+github.com/alexamies/chinesenotes-go v0.0.66 h1:fv99eNOi4AsYP/jkwrYYjHQBktHSqQn3XjkjQkfRfj4=
+github.com/alexamies/chinesenotes-go v0.0.66/go.mod h1:gHPl4wapa4rkyRlT9DSc1zSQa7cdvcv/EclW7GJf80E=
+github.com/alexamies/chinesenotes-go v0.0.67 h1:v5PRsoDf902NFUCnK2SlHQTjtopUZjd3sPOO18MtUgg=
+github.com/alexamies/chinesenotes-go v0.0.67/go.mod h1:gHPl4wapa4rkyRlT9DSc1zSQa7cdvcv/EclW7GJf80E=
 github.com/alexamies/cnreader v0.0.0-20201011025456-29192240cd79/go.mod h1:1qBivAbUOyAsUhJK6MkaNmJts3kfT/HQn/UtN7ItPI8=
 github.com/alexamies/cnreader v0.0.0-20201018040111-ae58def97a40/go.mod h1:LxX7y9Pq7ynVZnPIy1o7j0fxd5lH9TupqukygV9Mik0=
 github.com/alexamies/cnreader v0.0.4/go.mod h1:IGGoBsmtCS5dsboD7b0J9EtT1SJzpBCE6TFuvFsRBqE=
+github.com/alexamies/cnreader v0.0.26/go.mod h1:UDVfMyEr1HPFFGCqGgz1cLH3E3Q9fNR+nsuZPbWJ4Oo=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-sql-driver/mysql v1.4.1 h1:g24URVg0OFbNUTx9qqY1IRZ9D9z3iPyi5zKhQZpNwpA=

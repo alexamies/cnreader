@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/alexamies/chinesenotes-go/config"	
-	"github.com/alexamies/chinesenotes-go/fileloader"	
+	"github.com/alexamies/chinesenotes-go/dictionary"	
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/analysis"
 	"github.com/alexamies/cnreader/corpus"
@@ -66,7 +66,7 @@ func TestIntegration(t *testing.T) {
 	appConfig := config.AppConfig{
 		LUFileNames: []string{"data/testwords.tsv"},
 	}
-	wdict, err := fileloader.LoadDictFile(appConfig)
+	wdict, err := dictionary.LoadDictFile(appConfig)
 	if err != nil {
 		t.Fatalf("main, could not load dict: %v", err)
 	}

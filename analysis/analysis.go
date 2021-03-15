@@ -35,6 +35,7 @@ import (
 
 	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dicttypes"
+	"github.com/alexamies/chinesenotes-go/dictionary"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/corpus"
 	"github.com/alexamies/cnreader/generator"
@@ -917,10 +918,10 @@ func WriteHwFiles(loader library.LibraryLoader,
 		return fmt.Errorf("WriteHwFiles, headword-template.html not found")
 	}
 
-	var processor notesProcessor 
+	var processor dictionary.NotesProcessor 
 	if len(outputConfig.NotesReMatch) > 0 {
 		log.Printf("analysis.WriteHwFiles: initializing notesProcessor")
-		processor = newNotesProcessor(outputConfig.NotesReMatch,
+		processor = dictionary.NewNotesProcessor(outputConfig.NotesReMatch,
 				outputConfig.NotesReplace)
 	}
 
@@ -933,12 +934,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 
 		// Replace text in notes, if configured
 		if len(outputConfig.NotesReMatch) > 0 {
-			senses := []dicttypes.WordSense{}
-			for _, ws := range hw.Senses {
-				ws.Notes = processor.process(ws.Notes)
-				senses = append(senses, ws)
-			}
-			hw.Senses = senses
+			hw = processor.Process(hw)
 		}
 
 		// Check for different writings of traditional form

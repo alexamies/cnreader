@@ -62,7 +62,6 @@ import (
 	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dictionary"
 	"github.com/alexamies/chinesenotes-go/dicttypes"	
-	"github.com/alexamies/chinesenotes-go/fileloader"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/analysis"
 	"github.com/alexamies/cnreader/corpus"
@@ -257,7 +256,7 @@ func getDocFreq(c config.AppConfig) (*index.DocumentFrequency, error) {
 	corpusConfig := getCorpusConfig(c)
 	libraryLoader := library.NewLibraryLoader(fname, corpusConfig)
 	indexConfig := getIndexConfig(c)
-	wdict, err := fileloader.LoadDictFile(c)
+	wdict, err := dictionary.LoadDictFile(c)
 	if err != nil {
 		return nil, fmt.Errorf("getDocFreq, error opening dictionary: %v", err)
 	}
@@ -549,10 +548,10 @@ func main() {
 	var wdict map[string]dicttypes.Word
 	var err error
 	if len(c.LUFileNames) > 0 {
-		wdict, err = fileloader.LoadDictFile(c)
+		wdict, err = dictionary.LoadDictFile(c)
 	} else {
 		const url = "https://github.com/alexamies/chinesenotes.com/blob/master/data/words.txt?raw=true"
-		wdict, err = fileloader.LoadDictURL(c, url)
+		wdict, err = dictionary.LoadDictURL(c, url)
 	}
 	if err != nil {
 		log.Fatalf("Error opening dictionary: %v", err)
