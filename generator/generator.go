@@ -188,9 +188,12 @@ func span(w dicttypes.Word, text string) string {
 	} else if w.HasNotesLabel("FGDB entry") {
 		classTxt = classTxt + " fgdb"
 	}
-	pinyin := w.Pinyin
+	pinyin := ""
+	if w.Pinyin != "\\N" {
+		pinyin = w.Pinyin
+	}
 	english := ""
-	if len(w.Senses) > 0 {
+	if len(w.Senses) > 0 && w.Senses[0].English != "\\N" {
 		english = w.Senses[0].English
 	}
 	if len(w.Senses) > 1 {
