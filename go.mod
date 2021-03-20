@@ -3,6 +3,6 @@ module github.com/alexamies/cnreader
 go 1.15
 
 require (
-	github.com/alexamies/chinesenotes-go v0.0.70
+	github.com/alexamies/chinesenotes-go v0.0.73
 	github.com/gomarkdown/markdown v0.0.0-20210208175418-bda154fe17d8
 )
