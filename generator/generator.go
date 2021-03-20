@@ -180,12 +180,15 @@ func MarkVocabSummary(w dicttypes.Word, text, vocabFormat string) string {
 func span(w dicttypes.Word, text string) string {
 	classTxt := "vocabulary"
 	if w.IsProperNoun() {
-		classTxt = classTxt + " propernoun"
-	} else if w.IsQuote() {
-		classTxt = classTxt + " quote"
-	} else if w.HasNotesLabel("Sanskrit equivalent:") {
-		classTxt = classTxt + " sanskrit"
-	} else if w.HasNotesLabel("FGDB entry") {
+		classTxt += " propernoun"
+	} 
+	if w.IsQuote() {
+		classTxt += " quote"
+	} 
+	if w.HasNotesLabel("Sanskrit equivalent:") {
+		classTxt += " sanskrit"
+	} 
+	if w.HasNotesLabel("FGDB entry") {
 		classTxt = classTxt + " fgdb"
 	}
 	pinyin := ""

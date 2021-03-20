@@ -75,14 +75,23 @@ func TestSpan(t *testing.T) {
 		Pinyin:      	"púsà",
 		Senses:  			[]dicttypes.WordSense{ws3},
 	}
-	type testCase struct {
+	ws4 := dicttypes.WordSense{
+		Notes: "FGDB entry 42",
+	}
+	hw4 := dicttypes.Word{
+		HeadwordId:  	3,
+		Simplified:  	s3,
+		Traditional: 	t3,
+		Pinyin:      	"púsà",
+		Senses:  			[]dicttypes.WordSense{ws3, ws4},
+	}
+  tests := []struct {
 		name string
 		input string
 		hw dicttypes.Word
 		expected string
-  }
-  tests := []testCase{
-		{
+  }{
+  	{
 			name: "happy path",
 			input: "海",
 			hw: hw1,
@@ -99,6 +108,12 @@ func TestSpan(t *testing.T) {
 			input: "菩薩",
 			hw: hw3,
 			expected: `<span title="púsà | bodhisattva" class="vocabulary sanskrit" itemprop="HeadwordId" value="3">菩薩</span>`,
+		},
+		{
+			name: "Has Sanskrit and is a FGDB entry",
+			input: "菩薩",
+			hw: hw4,
+			expected: `<span title="púsà | 1. bodhisattva, 2. " class="vocabulary sanskrit fgdb" itemprop="HeadwordId" value="3">菩薩</span>`,
 		},
 	}
   for _, tc := range tests {
