@@ -61,6 +61,8 @@ github.com/alexamies/chinesenotes-go v0.0.70 h1:PjzTYVYf3ugN9E2LVIz1BzXOdJr1bHEj
 github.com/alexamies/chinesenotes-go v0.0.70/go.mod h1:gHPl4wapa4rkyRlT9DSc1zSQa7cdvcv/EclW7GJf80E=
 github.com/alexamies/chinesenotes-go v0.0.73 h1:E6BY4ZrHFUebFuYdVqedRqOcZ0fJftPofL9fYiZh22Y=
 github.com/alexamies/chinesenotes-go v0.0.73/go.mod h1:gHPl4wapa4rkyRlT9DSc1zSQa7cdvcv/EclW7GJf80E=
+github.com/alexamies/chinesenotes-go v0.0.74 h1:puLHUevJlW68RO8iB3WQmSzJm0u35/MvY3MTD4KJ+Dg=
+github.com/alexamies/chinesenotes-go v0.0.74/go.mod h1:gHPl4wapa4rkyRlT9DSc1zSQa7cdvcv/EclW7GJf80E=
 github.com/alexamies/cnreader v0.0.0-20201011025456-29192240cd79/go.mod h1:1qBivAbUOyAsUhJK6MkaNmJts3kfT/HQn/UtN7ItPI8=
 github.com/alexamies/cnreader v0.0.0-20201018040111-ae58def97a40/go.mod h1:LxX7y9Pq7ynVZnPIy1o7j0fxd5lH9TupqukygV9Mik0=
 github.com/alexamies/cnreader v0.0.4/go.mod h1:IGGoBsmtCS5dsboD7b0J9EtT1SJzpBCE6TFuvFsRBqE=
