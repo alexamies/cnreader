@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command line utility to analyze Chinese text, including corpus analysis, 
+// Command line utility to analyze Chinese text, including corpus analysis,
 // compilation of a full text search index, and mark up HTML files in reader
 // style.
 //
@@ -61,7 +61,7 @@ import (
 
 	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dictionary"
-	"github.com/alexamies/chinesenotes-go/dicttypes"	
+	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/analysis"
 	"github.com/alexamies/cnreader/corpus"
@@ -73,34 +73,34 @@ import (
 
 const (
 	conversionsFile = "data/corpus/html-conversion.csv"
-	titleIndexFN = "documents.tsv"
+	titleIndexFN    = "documents.tsv"
 )
 
 // A type that holds the source and destination files for HTML conversion
 type htmlConversion struct {
 	SrcFile, DestFile, Template string
-	GlossChinese bool
-	Title string
+	GlossChinese                bool
+	Title                       string
 }
 
 // hwWriter manages files for writing headwords to HTML
 type hwWriter struct {
 	outputConfig generator.HTMLOutPutConfig
-	files map[int]*os.File
+	files        map[int]*os.File
 }
 
 func newHwWriter(outputConfig generator.HTMLOutPutConfig) hwWriter {
 	files := make(map[int]*os.File)
 	return hwWriter{
 		outputConfig: outputConfig,
-		files: files,
+		files:        files,
 	}
 }
 
 // OpenWriter opens the file to write HTML
 func (w hwWriter) NewWriter(hwId int) io.Writer {
 	filename := fmt.Sprintf("%s%s%d%s", w.outputConfig.WebDir, "/words/",
-			hwId, ".html")
+		hwId, ".html")
 	f, err := os.Create(filename)
 	if err != nil {
 		log.Fatalf("main: Error creating file for hw.Id %d, err: %v", hwId, err)
@@ -115,7 +115,7 @@ func (w hwWriter) CloseWriter(hwId int) {
 		err := f.Close()
 		if err != nil {
 			log.Printf("main: CloseWriter error closing file for hw.Id %d, err: %v",
-					hwId, err)
+				hwId, err)
 		}
 	} else {
 		log.Printf("main: CloseWriter could not find file for hw.Id %d", hwId)
@@ -123,14 +123,14 @@ func (w hwWriter) CloseWriter(hwId int) {
 }
 
 // Initialize the app config data
-func initApp() (config.AppConfig) {
+func initApp() config.AppConfig {
 	return config.InitConfig()
 }
 
 // dlDictionary downloads and saves dictionary files locally.
 // Also, create a config.yaml file to track it.
 func dlDictionary(c config.AppConfig) error {
-  const baseUrl = "https://github.com/alexamies/chinesenotes.com/blob/master/data/%s?raw=true"
+	const baseUrl = "https://github.com/alexamies/chinesenotes.com/blob/master/data/%s?raw=true"
 
 	// Files to download
 	luFiles := []string{"words.txt"}
@@ -141,14 +141,14 @@ func dlDictionary(c config.AppConfig) error {
 	if os.IsNotExist(err) {
 		err := saveNewConfig(cName)
 		if err != nil {
-			return fmt.Errorf("Could not save new config file: %v", err)
+			return fmt.Errorf("could not save new config file: %v", err)
 		}
-  } else if err != nil {
-  	return fmt.Errorf("Could not check existence of config file: %v", err)
-  } else {
-  	// Config is set, use it to file files to refresh
-  	luFiles = c.LUFileNames
-  }
+	} else if err != nil {
+		return fmt.Errorf("could not check existence of config file: %v", err)
+	} else {
+		// Config is set, use it to file files to refresh
+		luFiles = c.LUFileNames
+	}
 
 	// Download and save dictionary files
 	files := append(luFiles, "grammar.txt")
@@ -171,7 +171,7 @@ func dlDictionary(c config.AppConfig) error {
 		defer resp.Body.Close()
 		if resp.StatusCode > 200 {
 			fmt.Printf("Could not get dictionary file %s (%d), skipping\n", name,
-					resp.StatusCode)
+				resp.StatusCode)
 			continue
 		}
 		b, err := ioutil.ReadAll(resp.Body)
@@ -241,49 +241,11 @@ func formatTokens(w io.Writer, tokens []tokenizer.TextToken) {
 		}
 		fmt.Fprintf(w, "English:\n")
 		for i, ws := range t.DictEntry.Senses {
-			j := i+1
+			j := i + 1
 			fmt.Fprintf(w, "%d. %s\n", j, ws.English)
 		}
 		fmt.Fprintln(w)
-	} 
-}
-
-// getDocFreq gets the word document frequency
-//
-// If it cannot be read from file, it will be computed from the corpus
-func getDocFreq(c config.AppConfig) (*index.DocumentFrequency, error) {
-	fname := c.ProjectHome + "/" + library.LibraryFile
-	corpusConfig := getCorpusConfig(c)
-	libraryLoader := library.NewLibraryLoader(fname, corpusConfig)
-	indexConfig := getIndexConfig(c)
-	wdict, err := dictionary.LoadDictFile(c)
-	if err != nil {
-		return nil, fmt.Errorf("getDocFreq, error opening dictionary: %v", err)
 	}
-	dictTokenizer := tokenizer.DictTokenizer{wdict}
-	dir := indexConfig.IndexDir
-	dfFile, err := os.Open(dir + "/" + index.DocFreqFile)
-	if err != nil {
-		log.Printf("getDocFreq, error opening word freq file (recoverable): %v", err)
-		df, err := analysis.GetDocFrequencies(libraryLoader, dictTokenizer,
-				wdict)
-		if err != nil {
-			return nil, fmt.Errorf("getDocFreq: error computing document freq: %v", err)
-		}
-		return df, nil
-	}
-	defer dfFile.Close()
-	df, err := index.ReadDocumentFrequency(dfFile)
-	if err != nil {
-		log.Printf("getDocFreq, error reading document frequency (recoverable): %v",
-			err)
-		df, err = analysis.GetDocFrequencies(libraryLoader, dictTokenizer,
-				wdict)
-		if err != nil {
-			return nil, fmt.Errorf("getDocFreq, error computing doc freq: %v", err)
-		}
-	}
-	return df, nil
 }
 
 // getHTMLConversions gets the list of source and destination files for HTML conversion
@@ -308,20 +270,20 @@ func getHTMLConversions(c config.AppConfig) []htmlConversion {
 		if len(row) == 3 {
 			conversions = append(conversions, htmlConversion{row[0], row[1],
 				row[2], true, ""})
-		} else if len(row) == 4  {
+		} else if len(row) == 4 {
 			glossChinese, err := strconv.ParseBool(row[3])
 			if err != nil {
 				conversions = append(conversions, htmlConversion{row[0], row[1],
-				row[2], true, ""})
+					row[2], true, ""})
 			} else {
 				conversions = append(conversions, htmlConversion{row[0], row[1],
 					row[2], glossChinese, ""})
 			}
-		} else if len(row) == 5  {
+		} else if len(row) == 5 {
 			glossChinese, err := strconv.ParseBool(row[3])
 			if err != nil {
 				conversions = append(conversions, htmlConversion{row[0], row[1],
-				row[2], true, row[4]})
+					row[2], true, row[4]})
 			} else {
 				conversions = append(conversions, htmlConversion{row[0], row[1],
 					row[2], glossChinese, row[4]})
@@ -339,13 +301,13 @@ func getCorpusConfig(c config.AppConfig) corpus.CorpusConfig {
 		excludedFile := c.CorpusDataDir() + "/exclude.txt"
 		file, err := os.Open(excludedFile)
 		if err != nil {
-			log.Printf("main.getCorpusConfig: Error opening excluded words file: %v, " +
+			log.Printf("main.getCorpusConfig: Error opening excluded words file: %v, "+
 				"skipping excluded words", err)
 		} else {
 			defer file.Close()
 			excludedPtr, err := corpus.LoadExcluded(file)
 			if err != nil {
-				log.Printf("main.getCorpusConfig: Error loading excluded words file: %v, " +
+				log.Printf("main.getCorpusConfig: Error loading excluded words file: %v, "+
 					"skipping excluded words", err)
 			} else {
 				excluded = *excludedPtr
@@ -353,15 +315,7 @@ func getCorpusConfig(c config.AppConfig) corpus.CorpusConfig {
 		}
 	}
 	return corpus.NewFileCorpusConfig(c.CorpusDataDir(), c.CorpusDir(), excluded,
-			c.ProjectHome)
-}
-
-// getDictionaryConfig returns the dicitonary configuration
-func getDictionaryConfig(c config.AppConfig) dicttypes.DictionaryConfig {
-	return dicttypes.DictionaryConfig{
-		AvoidSubDomains: c.AvoidSubDomains(),
-		DictionaryDir: c.DictionaryDir(),
-	}
+		c.ProjectHome)
 }
 
 // getHTMLOutPutConfig gets the Web directory, as used for serving HTML files
@@ -388,16 +342,16 @@ func getHTMLOutPutConfig(c config.AppConfig) generator.HTMLOutPutConfig {
 	replace := c.GetVar("NotesReplace")
 	templates := generator.NewTemplateMap(c)
 	outputConfig := generator.HTMLOutPutConfig{
-		Title: title,
-		Templates: templates,
+		Title:            title,
+		Templates:        templates,
 		ContainsByDomain: c.GetVar("ContainsByDomain"),
-		Domain: domain_label,
-		GoStaticDir: c.GetVar("GoStaticDir"),
-		TemplateDir: templateHome,
-		VocabFormat: vocabFormat,
-		WebDir: webDir,
-		NotesReMatch: match,
-		NotesReplace: replace,
+		Domain:           domain_label,
+		GoStaticDir:      c.GetVar("GoStaticDir"),
+		TemplateDir:      templateHome,
+		VocabFormat:      vocabFormat,
+		WebDir:           webDir,
+		NotesReMatch:     match,
+		NotesReplace:     replace,
 	}
 	return outputConfig
 }
@@ -429,8 +383,12 @@ func readIndex(indexConfig index.IndexConfig) (*index.IndexState, error) {
 		return nil, fmt.Errorf("readIndex: Could not create file: %v", err)
 	}
 	defer indexWriter.Close()
-	indexStore := index.IndexStore{wfFile, wfDocReader, indexWriter}
-	indexState, err := index.BuildIndex(indexConfig, indexStore)	
+	indexStore := index.IndexStore{
+		WfReader:    wfFile,
+		WfDocReader: wfDocReader,
+		IndexWriter: indexWriter,
+	}
+	indexState, err := index.BuildIndex(indexConfig, indexStore)
 	if err != nil {
 		return nil, fmt.Errorf("readIndex: Could not build index: %v", err)
 	}
@@ -442,9 +400,9 @@ func readIndex(indexConfig index.IndexConfig) (*index.IndexState, error) {
 // Table of contents files are also written with links including the highest
 // level file pointing to the different ToC files.
 func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
-		outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
-		indexConfig index.IndexConfig,
-		wdict map[string]dicttypes.Word, appConfig config.AppConfig) error {
+	outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
+	indexConfig index.IndexConfig,
+	wdict map[string]dicttypes.Word, appConfig config.AppConfig) error {
 	log.Printf("writeLibraryFiles, LibraryFile: %s", library.LibraryFile)
 	libFle, err := os.Open(library.LibraryFile)
 	if err != nil {
@@ -480,13 +438,18 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 			return fmt.Errorf("library.WriteLibraryFiles: could not load corpus: %v", err)
 		}
 		log.Printf("writeLibraryFiles, loaded %d collections from corpus: %s",
-				len(*collections), srcFileName)
+			len(*collections), srcFileName)
 		_, err = analysis.WriteCorpus(*collections, outputConfig, lib.Loader,
-				dictTokenizer, indexConfig, wdict, appConfig, corpusConfig)
+			dictTokenizer, indexConfig, wdict, appConfig, corpusConfig)
 		if err != nil {
 			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
 		}
-		corpus := library.Corpus{c.Title, "", lib.DateUpdated, *collections}
+		corpus := library.Corpus{
+			Title:       c.Title,
+			Summary:     "",
+			DateUpdated: lib.DateUpdated,
+			Collections: *collections,
+		}
 		f, err := os.Create(outputFile)
 		if err != nil {
 			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
@@ -494,8 +457,8 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		defer f.Close()
 		w := bufio.NewWriter(f)
 		templFile := outputConfig.TemplateDir + "/corpus-list-template.html"
-		tmpl:= template.Must(template.New(
-					"corpus-list-template.html").ParseFiles(templFile))
+		tmpl := template.Must(template.New(
+			"corpus-list-template.html").ParseFiles(templFile))
 		err = tmpl.Execute(w, corpus)
 		if err != nil {
 			return fmt.Errorf("library.WriteLibraryFiles: could exacute template: %v", err)
@@ -510,33 +473,33 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 // The default action is to write out all corpus entries to HTML files
 func main() {
 	// Command line flags
-	var collectionFile = flag.String("collection", "", 
-			"Enhance HTML markup and do vocabulary analysis for all the files " +
+	var collectionFile = flag.String("collection", "",
+		"Enhance HTML markup and do vocabulary analysis for all the files "+
 			"listed in given collection.")
-	var downloadDict = flag.Bool("download_dict", false, 
-			"Download the dicitonary files from GitHub and save locally.")
-	var html = flag.Bool("html", false, "Enhance HTML markup for all files " +
-			"listed in data/corpus/html-conversion.csv")
-	var hwFiles = flag.Bool("hwfiles", false, "Compute and write " +
-			"HTML entries for each headword, writing the files to the "+
-			"web/words directory.")
-	var librarymeta = flag.Bool("librarymeta", false, "Top level " +
-			"collection entries for the digital library.")
-	var memprofile = flag.String("memprofile", "", "write memory profile to " +
-			"this file.")
+	var downloadDict = flag.Bool("download_dict", false,
+		"Download the dicitonary files from GitHub and save locally.")
+	var html = flag.Bool("html", false, "Enhance HTML markup for all files "+
+		"listed in data/corpus/html-conversion.csv")
+	var hwFiles = flag.Bool("hwfiles", false, "Compute and write "+
+		"HTML entries for each headword, writing the files to the "+
+		"web/words directory.")
+	var librarymeta = flag.Bool("librarymeta", false, "Top level "+
+		"collection entries for the digital library.")
+	var memprofile = flag.String("memprofile", "", "write memory profile to "+
+		"this file.")
 	var sourceFile = flag.String("source_file", "",
-			"Analyze vocabulary for source file and write to output.html.")
+		"Analyze vocabulary for source file and write to output.html.")
 	var sourceText = flag.String("source_text", "",
-			"Analyze vocabulary for source input on the command line.")
-	var writeTMIndex = flag.Bool("tmindex", false, "Compute and write " +
-			"translation memory index.")
-	var titleIndex = flag.Bool("titleindex", false, "Builds a flat index of " +
-			"document titles.")
+		"Analyze vocabulary for source input on the command line.")
+	var writeTMIndex = flag.Bool("tmindex", false, "Compute and write "+
+		"translation memory index.")
+	var titleIndex = flag.Bool("titleindex", false, "Builds a flat index of "+
+		"document titles.")
 	flag.Parse()
 
 	// Download latest dictionary files
 	c := initApp()
-	if *downloadDict == true {
+	if *downloadDict {
 		err := dlDictionary(c)
 		if err != nil {
 			log.Fatalf("Unable to download dictionary: %v", err)
@@ -556,7 +519,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error opening dictionary: %v", err)
 	}
-	dictTokenizer := tokenizer.DictTokenizer{wdict}
+	dictTokenizer := tokenizer.DictTokenizer{
+		WDict: wdict,
+	}
 
 	// Simple cases, no validation done
 	if len(*sourceText) > 0 {
@@ -588,7 +553,7 @@ func main() {
 		}
 		const vocabFormat = `<details><summary>%s</summary>%s %s</details>`
 		err = generator.WriteDoc(tokens, f, *template, true, "Marked up page",
-				vocabFormat, generator.MarkVocabSummary)
+			vocabFormat, generator.MarkVocabSummary)
 		if err != nil {
 			log.Fatalf("error creating opening pos file %s, %v", fName, err)
 		}
@@ -631,7 +596,7 @@ func main() {
 	if len(*collectionFile) > 0 {
 		log.Printf("main: writing collection %s\n", *collectionFile)
 		err := analysis.WriteCorpusCol(*collectionFile, libraryLoader,
-				dictTokenizer, outputConfig, corpusConfig, wdict, c)
+			dictTokenizer, outputConfig, corpusConfig, wdict, c)
 		if err != nil {
 			log.Fatalf("error writing collection %v\n", err)
 		}
@@ -639,8 +604,8 @@ func main() {
 		conversions := getHTMLConversions(c)
 		log.Printf("main: Converting %d HTML files", len(conversions))
 		for _, conversion := range conversions {
-			src :=  outputConfig.WebDir + "/" + conversion.SrcFile
-			dest :=  outputConfig.WebDir + "/" + conversion.DestFile
+			src := outputConfig.WebDir + "/" + conversion.SrcFile
+			dest := outputConfig.WebDir + "/" + conversion.DestFile
 			// log.Printf("main, converting file %s to %s", src, dest)
 			r, err := os.Open(src)
 			if err != nil {
@@ -660,7 +625,7 @@ func main() {
 			}
 			vocabFormat := outputConfig.VocabFormat
 			err = generator.WriteDoc(tokens, f, *template, conversion.GlossChinese,
-					conversion.Title, vocabFormat, generator.MarkVocabLink)
+				conversion.Title, vocabFormat, generator.MarkVocabLink)
 			if err != nil {
 				log.Fatalf("main, unable to write doc %s: %v", dest, err)
 			}
@@ -672,30 +637,30 @@ func main() {
 			log.Fatalf("main, unable to read index: %v", err)
 		}
 		vocabAnalysis, err := analysis.GetWordFrequencies(libraryLoader,
-				dictTokenizer, wdict)
+			dictTokenizer, wdict)
 		if err != nil {
 			log.Fatalf("main, error getting freq: %v", err)
 		}
 		hww := newHwWriter(outputConfig)
 		err = analysis.WriteHwFiles(libraryLoader, dictTokenizer, outputConfig,
-				*indexState, wdict, *vocabAnalysis, hww)
+			*indexState, wdict, *vocabAnalysis, hww)
 		if err != nil {
 			log.Fatalf("main, unable to write headwords: %v", err)
 		}
 	} else if *librarymeta {
 		fname := c.ProjectHome + "/" + library.LibraryFile
 		log.Printf("main: Writing digital library metadata: %s\n", fname)
-		libraryLoader := library.NewLibraryLoader(fname, corpusConfig,)
+		libraryLoader := library.NewLibraryLoader(fname, corpusConfig)
 		dateUpdated := time.Now().Format("2006-01-02")
 		lib := library.Library{
-			Title: "Library",
-			Summary: "Top level collection in the Library",
-			DateUpdated: dateUpdated,
+			Title:        "Library",
+			Summary:      "Top level collection in the Library",
+			DateUpdated:  dateUpdated,
 			TargetStatus: "public",
-			Loader: libraryLoader,
+			Loader:       libraryLoader,
 		}
 		err := writeLibraryFiles(lib, dictTokenizer, outputConfig,
-				corpusConfig, indexConfig, wdict, c)
+			corpusConfig, indexConfig, wdict, c)
 		if err != nil {
 			log.Fatalf("main: could not write library files: %v\n", err)
 		}
@@ -722,7 +687,7 @@ func main() {
 	} else {
 		log.Println("main: writing out entire corpus")
 		_, err := analysis.WriteCorpusAll(libraryLoader, dictTokenizer,
-				outputConfig, indexConfig, wdict, c)
+			outputConfig, indexConfig, wdict, c)
 		if err != nil {
 			log.Fatalf("main: writing out corpus, err: %v\n", err)
 		}
@@ -730,11 +695,11 @@ func main() {
 
 	// Memory profiling
 	if *memprofile != "" {
-        f, err := os.Create(*memprofile)
-        if err != nil {
-            log.Fatal(err)
-        }
-        pprof.WriteHeapProfile(f)
-        f.Close()
-    }
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.WriteHeapProfile(f)
+		f.Close()
+	}
 }
