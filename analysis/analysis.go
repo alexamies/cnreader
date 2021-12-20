@@ -613,7 +613,7 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 // the entries contained in the collection
 // collectionEntry: the CollectionEntry struct
 // baseDir: The base directory to use
-func writeCollection(collectionEntry corpus.CollectionEntry,
+func writeCollection(collectionEntry *corpus.CollectionEntry,
 	outputConfig generator.HTMLOutPutConfig, libLoader library.LibraryLoader,
 	dictTokenizer tokenizer.Tokenizer,
 	wdict map[string]dicttypes.Word, c config.AppConfig) (*CollectionAResults, error) {
@@ -630,7 +630,6 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	}
 	aResults := NewCollectionAResults()
 	for _, entry := range *corpusEntries {
-		log.Printf("analysis.writeCollection: entry.RawFile = " + entry.RawFile)
 		text, err := corpLoader.ReadText(entry.RawFile)
 		if err != nil {
 			return nil, fmt.Errorf("analysis.writeCollection error reading src %s: %v",
@@ -672,11 +671,11 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 		w := bufio.NewWriter(df)
 
 		textTokens := dictTokenizer.Tokenize(text)
-		log.Printf("writeCollection, got %d tokens, AnalysisFile: %s",
-			len(textTokens), collectionEntry.AnalysisFile)
+		log.Printf("writeCollection: writing corpus doc, entry.RawFile = %s, got %d tokens, analysis file: %s",
+			entry.RawFile, len(textTokens), basename)
 		err = generator.WriteCorpusDoc(textTokens, results.Vocab, w,
 			collectionEntry.GlossFile, collectionEntry.Title, entry.Title,
-			collectionEntry.AnalysisFile, sourceFormat, outputConfig,
+			basename, sourceFormat, outputConfig,
 			corpusConfig, wdict)
 		w.Flush()
 		df.Close()
@@ -754,7 +753,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	bigramDF := index.NewDocumentFrequency()
 	aResults := NewCollectionAResults()
 	for _, collectionEntry := range collections {
-		results, err := writeCollection(collectionEntry, outputConfig, libLoader,
+		results, err := writeCollection(&collectionEntry, outputConfig, libLoader,
 			dictTokenizer, wdict, c)
 		if err != nil {
 			return nil, fmt.Errorf("WriteCorpus could not write collection: %v", err)
@@ -884,7 +883,7 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 	if err != nil {
 		return fmt.Errorf("analysis.WriteCorpusCol:  could not get entry %v", err)
 	}
-	_, err = writeCollection(*collectionEntry, outputConfig, libLoader,
+	_, err = writeCollection(collectionEntry, outputConfig, libLoader,
 		dictTokenizer, wdict, c)
 	if err != nil {
 		return fmt.Errorf("analysis.WriteCorpusCol: error writing collection %v", err)

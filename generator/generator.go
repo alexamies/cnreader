@@ -92,12 +92,12 @@ type CorpusEntryContent struct {
 // HTMLContent holds content for the template
 type HTMLContent struct {
 	Content, DateUpdated, Title, FileName string
-	Data interface{}
+	Data                                  interface{}
 }
 
 // CollectionListContent holds content for the template of a list of collections.
 type CollectionListContent struct {
-	ColIEntries []corpus.CollectionEntry
+	ColIEntries                      []corpus.CollectionEntry
 	DateUpdated, Title, AnalysisPage string
 }
 
@@ -105,8 +105,8 @@ type CollectionListContent struct {
 //   Return
 //      marked up text with links and highlight
 func DecodeUsageExample(usageText string, headword dicttypes.Word,
-		dictTokenizer tokenizer.Tokenizer, outputConfig HTMLOutPutConfig,
-		wdict map[string]dicttypes.Word) string {
+	dictTokenizer tokenizer.Tokenizer, outputConfig HTMLOutPutConfig,
+	wdict map[string]dicttypes.Word) string {
 	tokens := dictTokenizer.Tokenize(usageText)
 	replacementText := ""
 	for _, token := range tokens {
@@ -143,12 +143,12 @@ func hyperlink(w dicttypes.Word, text, vocabFormat string) string {
 	if len(w.Senses) > 1 {
 		english = ""
 		for i, entry := range w.Senses {
-			english += fmt.Sprintf("%d. %s, ", i + 1, entry.English)
+			english += fmt.Sprintf("%d. %s, ", i+1, entry.English)
 		}
-		english = english[0:len(english)-2]
+		english = english[0 : len(english)-2]
 	}
 	return fmt.Sprintf(vocabFormat, pinyin, english, classTxt,
-			w.HeadwordId, text)
+		w.HeadwordId, text)
 }
 
 // MarkVocabLink constructs a hyperlink for a headword, including Pinyin and English in the
@@ -167,9 +167,9 @@ func MarkVocabSummary(w dicttypes.Word, text, vocabFormat string) string {
 	if len(w.Senses) > 1 {
 		english = ""
 		for i, entry := range w.Senses {
-			english += fmt.Sprintf("%d. %s, ", i + 1, entry.English)
+			english += fmt.Sprintf("%d. %s, ", i+1, entry.English)
 		}
-		english = english[0:len(english)-2]
+		english = english[0 : len(english)-2]
 	}
 	return fmt.Sprintf(vocabFormat, text, pinyin, english)
 }
@@ -181,13 +181,13 @@ func span(w dicttypes.Word, text string) string {
 	classTxt := "vocabulary"
 	if w.IsProperNoun() {
 		classTxt += " propernoun"
-	} 
+	}
 	if w.IsQuote() {
 		classTxt += " quote"
-	} 
+	}
 	if w.HasNotesLabel("Sanskrit equivalent:") {
 		classTxt += " sanskrit"
-	} 
+	}
 	if w.HasNotesLabel("FGDB entry") {
 		classTxt = classTxt + " fgdb"
 	}
@@ -202,9 +202,9 @@ func span(w dicttypes.Word, text string) string {
 	if len(w.Senses) > 1 {
 		english = ""
 		for i, entry := range w.Senses {
-			english += fmt.Sprintf("%d. %s, ", i + 1, entry.English)
+			english += fmt.Sprintf("%d. %s, ", i+1, entry.English)
 		}
-		english = english[0:len(english)-2]
+		english = english[0 : len(english)-2]
 	}
 	vocabFormat := `<span title="%s | %s" class="%s" itemprop="HeadwordId" value="%d">%s</span>`
 	return fmt.Sprintf(vocabFormat, pinyin, english, classTxt, w.HeadwordId, text)
@@ -214,18 +214,18 @@ func span(w dicttypes.Word, text string) string {
 // Parameters:
 //   collectionFile: The name of the file describing the collection
 //   baseDir: The base directory for writing the file
-func WriteCollectionFile(colEntry corpus.CollectionEntry,
-		outputConfig HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
-		f io.Writer) error {
+func WriteCollectionFile(colEntry *corpus.CollectionEntry,
+	outputConfig HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
+	f io.Writer) error {
 	if len(outputConfig.GoStaticDir) > 0 {
 		colEntry.GlossFile = outputConfig.GoStaticDir + "/" + colEntry.GlossFile
 		entries := []corpus.CorpusEntry{}
 		for _, entry := range colEntry.CorpusEntries {
 			e := corpus.CorpusEntry{
-				RawFile: entry.RawFile,
+				RawFile:   entry.RawFile,
 				GlossFile: outputConfig.GoStaticDir + "/" + entry.GlossFile,
-				Title: entry.Title,
-				ColTitle: entry.ColTitle,
+				Title:     entry.Title,
+				ColTitle:  entry.ColTitle,
 			}
 			entries = append(entries, e)
 		}
@@ -237,11 +237,11 @@ func WriteCollectionFile(colEntry corpus.CollectionEntry,
 	tmpl := outputConfig.Templates["collection-template.html"]
 	dateUpdated := time.Now().Format("2006-01-02")
 	content := HTMLContent{
-		Content: "",
+		Content:     "",
 		DateUpdated: dateUpdated,
-		Title: outputConfig.Title,
-		FileName: "",
-		Data: colEntry,
+		Title:       outputConfig.Title,
+		FileName:    "",
+		Data:        colEntry,
 	}
 	err := tmpl.Execute(w, content)
 	if err != nil {
@@ -253,10 +253,10 @@ func WriteCollectionFile(colEntry corpus.CollectionEntry,
 
 // WriteCollectionList writes a HTML file listing all collections
 func WriteCollectionList(colIEntries []corpus.CollectionEntry, analysisFile string,
-		outputConfig HTMLOutPutConfig, f io.Writer) error {
+	outputConfig HTMLOutPutConfig, f io.Writer) error {
 	colListContent := CollectionListContent{
-		ColIEntries: colIEntries,
-		DateUpdated: time.Now().Format("2006-01-02"),
+		ColIEntries:  colIEntries,
+		DateUpdated:  time.Now().Format("2006-01-02"),
 		AnalysisPage: analysisFile,
 	}
 	w := bufio.NewWriter(f)
@@ -264,11 +264,11 @@ func WriteCollectionList(colIEntries []corpus.CollectionEntry, analysisFile stri
 	tmpl := outputConfig.Templates["texts-template.html"]
 	dateUpdated := time.Now().Format("2006-01-02")
 	content := HTMLContent{
-		Content: "",
+		Content:     "",
 		DateUpdated: dateUpdated,
-		Title: outputConfig.Title,
-		FileName: "",
-		Data: colListContent,
+		Title:       outputConfig.Title,
+		FileName:    "",
+		Data:        colListContent,
 	}
 	err := tmpl.Execute(w, content)
 	if err != nil {
@@ -288,9 +288,9 @@ func WriteCollectionList(colIEntries []corpus.CollectionEntry, analysisFile stri
 // aFile: The vocabulary analysis file written to or empty string for none
 // sourceFormat: TEXT, or HTML used for formatting output
 func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Writer,
-		collectionURL string, collectionTitle string, entryTitle string,
-		aFile string, sourceFormat string, outputConfig HTMLOutPutConfig,
-		corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) error {
+	collectionURL string, collectionTitle string, entryTitle string,
+	aFile string, sourceFormat string, outputConfig HTMLOutPutConfig,
+	corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) error {
 
 	var b bytes.Buffer
 	replacer := strings.NewReplacer("\n", "<br/>")
@@ -311,13 +311,13 @@ func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Wri
 	textContent := b.String()
 	dateUpdated := time.Now().Format("2006-01-02")
 	content := CorpusEntryContent{
-		Title: outputConfig.Title,
-		CorpusText: textContent,
-		DateUpdated: dateUpdated,
-		CollectionURL: collectionURL,
+		Title:           outputConfig.Title,
+		CorpusText:      textContent,
+		DateUpdated:     dateUpdated,
+		CollectionURL:   collectionURL,
 		CollectionTitle: collectionTitle,
-		EntryTitle: entryTitle,
-		AnalysisFile: aFile}
+		EntryTitle:      entryTitle,
+		AnalysisFile:    aFile}
 
 	tmpl := outputConfig.Templates["corpus-template.html"]
 	if tmpl == nil {
@@ -336,8 +336,8 @@ func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Wri
 // f: The writer to write to
 // GlossChinese: whether to convert the Chinese text in the file to markVocabs
 func WriteDoc(tokens []tokenizer.TextToken, f io.Writer, tmpl template.Template,
-		glossChinese bool, title, vocabFormat string, 
-		markVocab func(dicttypes.Word, string, string) string) error {
+	glossChinese bool, title, vocabFormat string,
+	markVocab func(dicttypes.Word, string, string) string) error {
 	var b bytes.Buffer
 	for _, e := range tokens {
 		chunk := e.Token
