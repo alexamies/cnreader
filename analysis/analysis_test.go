@@ -19,9 +19,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alexamies/chinesenotes-go/config"	
-	"github.com/alexamies/chinesenotes-go/dictionary"	
-	"github.com/alexamies/chinesenotes-go/dicttypes"	
+	"github.com/alexamies/chinesenotes-go/config"
+	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/corpus"
 	"github.com/alexamies/cnreader/generator"
@@ -32,35 +31,21 @@ import (
 func mockCorpusConfig() corpus.CorpusConfig {
 	return corpus.CorpusConfig{
 		CorpusDataDir: "data/corpus",
-		CorpusDir: "corpus",
-		Excluded: map[string]bool{},
-		ProjectHome: ".",
-	}
-}
-
-// IndexConfig encapsulates parameters for index configuration
-func mockIndexConfig() index.IndexConfig {
-	return index.IndexConfig{
-		IndexDir: "index",
+		CorpusDir:     "corpus",
+		Excluded:      map[string]bool{},
+		ProjectHome:   ".",
 	}
 }
 
 func mockOutputConfig() generator.HTMLOutPutConfig {
 	return generator.HTMLOutPutConfig{
 		ContainsByDomain: "",
-		Domain: "",
-		GoStaticDir: "static",
-		TemplateDir: "templates",
-		VocabFormat: "",
-		WebDir: "web-staging",
-		Templates: generator.NewTemplateMap(config.AppConfig{}),
-	}
-}
-
-func mockDictionaryConfig() dicttypes.DictionaryConfig {
-	return dicttypes.DictionaryConfig{
-		AvoidSubDomains: map[string]bool{},
-		DictionaryDir: "data",
+		Domain:           "",
+		GoStaticDir:      "static",
+		TemplateDir:      "templates",
+		VocabFormat:      "",
+		WebDir:           "web-staging",
+		Templates:        generator.NewTemplateMap(config.AppConfig{}),
 	}
 }
 
@@ -68,76 +53,76 @@ func mockSmallDict() map[string]dicttypes.Word {
 	s1 := "繁体中文"
 	t1 := "繁體中文"
 	hw1 := dicttypes.Word{
-		HeadwordId:  	1,
-		Simplified:  	s1,
-		Traditional: 	t1,
-		Pinyin:      	"fántǐ zhōngwén",
-		Senses:  			[]dicttypes.WordSense{},
+		HeadwordId:  1,
+		Simplified:  s1,
+		Traditional: t1,
+		Pinyin:      "fántǐ zhōngwén",
+		Senses:      []dicttypes.WordSense{},
 	}
 	s2 := "前"
 	t2 := "\\N"
 	hw2 := dicttypes.Word{
-		HeadwordId:  	2,
-		Simplified:  	s2,
-		Traditional: 	t2,
-		Pinyin:      	"qián",
-		Senses:  			[]dicttypes.WordSense{},
+		HeadwordId:  2,
+		Simplified:  s2,
+		Traditional: t2,
+		Pinyin:      "qián",
+		Senses:      []dicttypes.WordSense{},
 	}
 	s3 := "不见"
 	t3 := "不見"
 	hw3 := dicttypes.Word{
-		HeadwordId:  	3,
-		Simplified:  	s3,
-		Traditional: 	t3,
-		Pinyin:      	"bújiàn",
-		Senses:				[]dicttypes.WordSense{},
+		HeadwordId:  3,
+		Simplified:  s3,
+		Traditional: t3,
+		Pinyin:      "bújiàn",
+		Senses:      []dicttypes.WordSense{},
 	}
 	s4 := "古人"
 	t4 := "\\N"
 	hw4 := dicttypes.Word{
-		HeadwordId:  	4,
-		Simplified:  	s4,
-		Traditional: 	t4,
-		Pinyin:      	"gǔrén",
-		Senses:  			[]dicttypes.WordSense{},
+		HeadwordId:  4,
+		Simplified:  s4,
+		Traditional: t4,
+		Pinyin:      "gǔrén",
+		Senses:      []dicttypes.WordSense{},
 	}
 	s5 := "夫"
 	t5 := "\\N"
 	hw5 := dicttypes.Word{
-		HeadwordId:  	5,
-		Simplified:  	s5,
-		Traditional: 	t5,
-		Pinyin:      	"fú fū",
-		Senses:  			[]dicttypes.WordSense{},
+		HeadwordId:  5,
+		Simplified:  s5,
+		Traditional: t5,
+		Pinyin:      "fú fū",
+		Senses:      []dicttypes.WordSense{},
 	}
 	s6 := "起信论"
 	t6 := "起信論"
 	hw6 := dicttypes.Word{
-		HeadwordId:  	6,
-		Simplified:  	s6,
-		Traditional: 	t6,
-		Pinyin:      	"Qǐ Xìn Lùn",
-		Senses:  			[]dicttypes.WordSense{},
+		HeadwordId:  6,
+		Simplified:  s6,
+		Traditional: t6,
+		Pinyin:      "Qǐ Xìn Lùn",
+		Senses:      []dicttypes.WordSense{},
 	}
 	s7 := "者"
 	t7 := "\\N"
 	hw7 := dicttypes.Word{
-		HeadwordId:  	7,
-		Simplified:  	s7,
-		Traditional: 	t7,
-		Pinyin:      	"zhě zhuó",
-		Senses:  			[]dicttypes.WordSense{},
+		HeadwordId:  7,
+		Simplified:  s7,
+		Traditional: t7,
+		Pinyin:      "zhě zhuó",
+		Senses:      []dicttypes.WordSense{},
 	}
 	s8 := "乃是"
 	t8 := "\\N"
 	hw8 := dicttypes.Word{
-		HeadwordId:  	8,
-		Simplified:  	s8,
-		Traditional: 	t8,
-		Pinyin:      	"nǎishì",
-		Senses:  			[]dicttypes.WordSense{},
+		HeadwordId:  8,
+		Simplified:  s8,
+		Traditional: t8,
+		Pinyin:      "nǎishì",
+		Senses:      []dicttypes.WordSense{},
 	}
-	return map[string]dicttypes.Word {
+	return map[string]dicttypes.Word{
 		s1: hw1,
 		t1: hw1,
 		s2: hw2,
@@ -152,13 +137,6 @@ func mockSmallDict() map[string]dicttypes.Word {
 	}
 }
 
-func mockValidator() (dictionary.Validator, error) {
-	const posList = "noun\nverb\n"
-	posReader := strings.NewReader(posList)
-	const domainList = "艺术	Art	\\N	\\N\n佛教	Buddhism	\\N	\\N\n"
-	domainReader := strings.NewReader(domainList)
-	return dictionary.NewValidator(posReader, domainReader)
-}
 // Implements the CorpusLoader interface with no data
 type mockCorpusLoader struct {
 	collections []corpus.CollectionEntry
@@ -198,7 +176,7 @@ func (loader mockCorpusLoader) ReadText(src string) (string, error) {
 	return "你好 Hello!", nil
 }
 
-// A mock LibraryLoader 
+// A mock LibraryLoader
 type mockLibraryLoader struct {
 	corpLoader corpus.CorpusLoader
 }
@@ -214,15 +192,15 @@ func (loader mockLibraryLoader) LoadLibrary(r io.Reader) (*[]library.CorpusData,
 
 func TestContainsWord(t *testing.T) {
 	testCases := []struct {
-		name string
-		word  string
-		headwords []dicttypes.Word
+		name        string
+		word        string
+		headwords   []dicttypes.Word
 		expectedLen int
 	}{
 		{
-			name: "Empty",
-			word: "中文", 
-			headwords: []dicttypes.Word{},
+			name:        "Empty",
+			word:        "中文",
+			headwords:   []dicttypes.Word{},
 			expectedLen: 0,
 		},
 	}
@@ -230,39 +208,39 @@ func TestContainsWord(t *testing.T) {
 		result := containsWord(tc.word, tc.headwords)
 		if len(result) != tc.expectedLen {
 			t.Errorf("TestContainsWord %s: got %d, want %d", tc.name, len(result),
-					tc.expectedLen)
+				tc.expectedLen)
 		}
 	}
 }
 
 func TestGetChunks(t *testing.T) {
 	testCases := []struct {
-		name string
-		in  string
+		name        string
+		in          string
 		expectedLen int
 		expectedOut string
 	}{
 		{
-			name: "One chunk",
-			in: "中文", 
+			name:        "One chunk",
+			in:          "中文",
 			expectedLen: 1,
 			expectedOut: "中文",
 		},
 		{
-			name: "Two chunks",
-			in: "a中文", 
+			name:        "Two chunks",
+			in:          "a中文",
 			expectedLen: 2,
 			expectedOut: "a",
 		},
 		{
-			name: "Three chunks",
-			in: "a中文b", 
+			name:        "Three chunks",
+			in:          "a中文b",
 			expectedLen: 3,
 			expectedOut: "a",
 		},
 		{
-			name: "Simplified Chinese",
-			in: "简体中文", 
+			name:        "Simplified Chinese",
+			in:          "简体中文",
 			expectedLen: 1,
 			expectedOut: "简体中文",
 		},
@@ -283,49 +261,51 @@ func TestGetChunks(t *testing.T) {
 
 func TestGetDocFrequencies(t *testing.T) {
 	wdict := mockSmallDict()
-	tok := tokenizer.DictTokenizer{wdict}
+	tok := tokenizer.DictTokenizer{
+		WDict: wdict,
+	}
 	emptyCorpLoader := mockCorpusLoader{}
 	emptyLibLoader := mockLibraryLoader{emptyCorpLoader}
 	entry := corpus.CorpusEntry{
-		RawFile: "raw_file.txt",
+		RawFile:   "raw_file.txt",
 		GlossFile: "gloss_file.html",
-		Title: "標題 Entry Title",
-		ColTitle: "Collection Title",
+		Title:     "標題 Entry Title",
+		ColTitle:  "Collection Title",
 	}
 	collection := corpus.CollectionEntry{
 		CollectionFile: "collection.txt",
-		GlossFile: "collection.html",
-		Title: "My collection",
-		Summary: "xyz",
-		Intro: "abc",
-		CorpusEntries: []corpus.CorpusEntry{entry},
+		GlossFile:      "collection.html",
+		Title:          "My collection",
+		Summary:        "xyz",
+		Intro:          "abc",
+		CorpusEntries:  []corpus.CorpusEntry{entry},
 	}
 	collections := []corpus.CollectionEntry{collection}
 	smallCorpLoader := mockCorpusLoader{collections}
 	smallLibLoader := mockLibraryLoader{smallCorpLoader}
 	testCases := []struct {
-		name string
+		name      string
 		libLoader library.LibraryLoader
-		tok tokenizer.Tokenizer
-		wdict map[string]dicttypes.Word
+		tok       tokenizer.Tokenizer
+		wdict     map[string]dicttypes.Word
 	}{
 		{
-			name: "Empty",
+			name:      "Empty",
 			libLoader: emptyLibLoader,
-			tok: tok,
-			wdict: wdict,
+			tok:       tok,
+			wdict:     wdict,
 		},
 		{
-			name: "small",
+			name:      "small",
 			libLoader: smallLibLoader,
-			tok: tok,
-			wdict: wdict,
+			tok:       tok,
+			wdict:     wdict,
 		},
 	}
 	for _, tc := range testCases {
 		_, err := GetDocFrequencies(tc.libLoader, tc.tok, tc.wdict)
 		if err != nil {
-			t.Errorf("TestGetDocFrequencies %s: unexpected error %v",tc.name, err)
+			t.Errorf("TestGetDocFrequencies %s: unexpected error %v", tc.name, err)
 		}
 	}
 }
@@ -334,29 +314,29 @@ func TestGetHeadwords(t *testing.T) {
 	s1 := "繁体中文"
 	t1 := "繁體中文"
 	hw1 := dicttypes.Word{
-		HeadwordId:  	1,
-		Simplified:  	s1,
-		Traditional: 	t1,
-		Pinyin:      	"fántǐ zhōngwén",
-		Senses:  			[]dicttypes.WordSense{},
+		HeadwordId:  1,
+		Simplified:  s1,
+		Traditional: t1,
+		Pinyin:      "fántǐ zhōngwén",
+		Senses:      []dicttypes.WordSense{},
 	}
-	oneWordDict := map[string]dicttypes.Word {
+	oneWordDict := map[string]dicttypes.Word{
 		s1: hw1,
 		t1: hw1,
 	}
 	testCases := []struct {
-		name string
-		wdict  map[string]dicttypes.Word
+		name        string
+		wdict       map[string]dicttypes.Word
 		expectedLen int
 	}{
 		{
-			name: "Empty dict",
-			wdict: map[string]dicttypes.Word{}, 
+			name:        "Empty dict",
+			wdict:       map[string]dicttypes.Word{},
 			expectedLen: 0,
 		},
 		{
-			name: "One word dict",
-			wdict: oneWordDict, 
+			name:        "One word dict",
+			wdict:       oneWordDict,
 			expectedLen: 1,
 		},
 	}
@@ -371,36 +351,36 @@ func TestGetHeadwords(t *testing.T) {
 
 func TestGetWordFrequencies(t *testing.T) {
 	wdict := mockSmallDict()
-	tok := tokenizer.DictTokenizer{wdict}
+	tok := tokenizer.DictTokenizer{WDict: wdict}
 	emptyCorpLoader := mockCorpusLoader{}
 	emptyLibLoader := mockLibraryLoader{emptyCorpLoader}
 	entry := corpus.CorpusEntry{
-		RawFile: "raw_file.txt",
+		RawFile:   "raw_file.txt",
 		GlossFile: "gloss_file.html",
-		Title: "標題 Entry Title",
-		ColTitle: "Collection Title",
+		Title:     "標題 Entry Title",
+		ColTitle:  "Collection Title",
 	}
 	collection := corpus.CollectionEntry{
 		CollectionFile: "collection.txt",
-		GlossFile: "collection.html",
-		Title: "My collection",
-		Summary: "xyz",
-		Intro: "abc",
-		CorpusEntries: []corpus.CorpusEntry{entry},
+		GlossFile:      "collection.html",
+		Title:          "My collection",
+		Summary:        "xyz",
+		Intro:          "abc",
+		CorpusEntries:  []corpus.CorpusEntry{entry},
 	}
 	collections := []corpus.CollectionEntry{collection}
 	smallCorpLoader := mockCorpusLoader{collections}
 	smallLibLoader := mockLibraryLoader{smallCorpLoader}
 	testCases := []struct {
-		name string
+		name      string
 		libLoader library.LibraryLoader
 	}{
 		{
-			name: "Empty",
+			name:      "Empty",
 			libLoader: emptyLibLoader,
 		},
 		{
-			name: "Small",
+			name:      "Small",
 			libLoader: smallLibLoader,
 		},
 	}
@@ -425,59 +405,59 @@ func TestReadText(t *testing.T) {
 func TestParseText(t *testing.T) {
 	t.Log("TestParseText: Begin ********")
 	testCases := []struct {
-		name string
-		in  string
-		expectedFirst string
+		name           string
+		in             string
+		expectedFirst  string
 		expectedTokens int
-		expectedVocab int
-		expectedWC int
-		expectedCC int
+		expectedVocab  int
+		expectedWC     int
+		expectedCC     int
 	}{
 		{
-			name: "One token",
-			in: "繁體中文", 
-			expectedFirst: "繁體中文",
+			name:           "One token",
+			in:             "繁體中文",
+			expectedFirst:  "繁體中文",
 			expectedTokens: 1,
-			expectedVocab: 1,
-			expectedWC: 1,
-			expectedCC: 4,
+			expectedVocab:  1,
+			expectedWC:     1,
+			expectedCC:     4,
 		},
 		{
-			name: "ASCII and one token",
-			in: "a繁體中文", 
-			expectedFirst: "a",
+			name:           "ASCII and one token",
+			in:             "a繁體中文",
+			expectedFirst:  "a",
 			expectedTokens: 2,
-			expectedVocab: 1,
-			expectedWC: 1,
-			expectedCC: 4,
+			expectedVocab:  1,
+			expectedWC:     1,
+			expectedCC:     4,
 		},
 		{
-			name: "Three tokens",
-			in: "前不见古人", 
-			expectedFirst: "前",
+			name:           "Three tokens",
+			in:             "前不见古人",
+			expectedFirst:  "前",
 			expectedTokens: 3,
-			expectedVocab: 3,
-			expectedWC: 3,
-			expectedCC: 5,
+			expectedVocab:  3,
+			expectedWC:     3,
+			expectedCC:     5,
 		},
 		{
-			name: "More tokens",
-			in: "夫起信論者，乃是...。", 
-			expectedFirst: "夫",
+			name:           "More tokens",
+			in:             "夫起信論者，乃是...。",
+			expectedFirst:  "夫",
 			expectedTokens: 6,
-			expectedVocab: 4,
-			expectedWC: 4,
-			expectedCC: 7,
+			expectedVocab:  4,
+			expectedWC:     4,
+			expectedCC:     7,
 		},
 	}
 	wdict := mockSmallDict()
-	tok := tokenizer.DictTokenizer{wdict}
+	tok := tokenizer.DictTokenizer{WDict: wdict}
 	for _, tc := range testCases {
 		tokens, results := ParseText(tc.in, "", corpus.NewCorpusEntry(),
 			tok, mockCorpusConfig(), wdict)
 		if tokens.Len() != tc.expectedTokens {
 			t.Fatalf("%s: expectedTokens %d, got %d", tc.name, tc.expectedTokens,
-					tokens.Len())
+				tokens.Len())
 		}
 		first := tokens.Front().Value.(string)
 		if tc.expectedFirst != first {
@@ -485,7 +465,7 @@ func TestParseText(t *testing.T) {
 		}
 		if tc.expectedVocab != len(results.Vocab) {
 			t.Errorf("%s: expectedVocab = %d, got %d", tc.name, tc.expectedVocab,
-					len(results.Vocab))
+				len(results.Vocab))
 		}
 		if tc.expectedWC != results.WC {
 			t.Errorf("%s: expectedWC: %d, got %d", tc.name, tc.expectedWC, results.WC)
@@ -605,7 +585,7 @@ func TestSortedFreq(t *testing.T) {
 	wdict := make(map[string]dicttypes.Word)
 	text := "夫起信論者，乃是至極大乘甚深祕典"
 	_, results := ParseText(text, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
+		tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
 	sortedWords := index.SortedFreq(results.Vocab)
 	expected := len(results.Vocab)
 	got := len(sortedWords)
@@ -619,7 +599,7 @@ func TestWriteAnalysis(t *testing.T) {
 	term := "繁"
 	wdict := make(map[string]dicttypes.Word)
 	_, results := ParseText(term, "", corpus.NewCorpusEntry(),
-			tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
+		tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
 	srcFile := "test.txt"
 	glossFile := "test.html"
 	vocab := map[string]int{
@@ -632,7 +612,7 @@ func TestWriteAnalysis(t *testing.T) {
 	index.ReadDocumentFrequency(&buf)
 	var outBuf bytes.Buffer
 	err := writeAnalysis(results, srcFile, glossFile, "Test Collection", "Test Doc",
-			mockOutputConfig(), wdict, &outBuf)
+		mockOutputConfig(), wdict, &outBuf)
 	if err != nil {
 		t.Errorf("could write analysis: %v", err)
 	}
@@ -644,72 +624,72 @@ func TestWriteHwFile(t *testing.T) {
 	const trad = "繁體中文"
 	const p = "fántǐ zhōngwén"
 	hw0 := dicttypes.Word{
-		HeadwordId:  	1,
-		Simplified:  	s,
-		Traditional: 	trad,
-		Pinyin:      	p,
-		Senses:  			[]dicttypes.WordSense{},
+		HeadwordId:  1,
+		Simplified:  s,
+		Traditional: trad,
+		Pinyin:      p,
+		Senses:      []dicttypes.WordSense{},
 	}
 	dictEntry0 := DictEntry{
-		Headword: hw0,
-		RelevantDocs: nil,
+		Headword:         hw0,
+		RelevantDocs:     nil,
 		ContainsByDomain: nil,
-		Contains: nil,
-		Collocations: nil,
-		UsageArr: nil,
-		DateUpdated: "",
+		Contains:         nil,
+		Collocations:     nil,
+		UsageArr:         nil,
+		DateUpdated:      "",
 	}
 	ws := dicttypes.WordSense{
-		Simplified: s,
+		Simplified:  s,
 		Traditional: trad,
-		Pinyin: p,
-		English: "Traditional Chinese text",
-		Grammar: "phrase",
-		ConceptCN: "",
-		Concept: "",
-		DomainCN: "现代汉语",
-		Domain: "Modern Chinese",
+		Pinyin:      p,
+		English:     "Traditional Chinese text",
+		Grammar:     "phrase",
+		ConceptCN:   "",
+		Concept:     "",
+		DomainCN:    "现代汉语",
+		Domain:      "Modern Chinese",
 		SubdomainCN: "",
-		Subdomain: "",
-		Notes: "",
+		Subdomain:   "",
+		Notes:       "",
 	}
 	hw1 := dicttypes.Word{
-		HeadwordId:  	1,
-		Simplified:  	s,
-		Traditional: 	trad,
-		Pinyin:      	p,
-		Senses:  			[]dicttypes.WordSense{ws},
+		HeadwordId:  1,
+		Simplified:  s,
+		Traditional: trad,
+		Pinyin:      p,
+		Senses:      []dicttypes.WordSense{ws},
 	}
 	dictEntry1 := DictEntry{
-		Headword: hw1,
-		RelevantDocs: nil,
+		Headword:         hw1,
+		RelevantDocs:     nil,
 		ContainsByDomain: nil,
-		Contains: nil,
-		Collocations: nil,
-		UsageArr: nil,
-		DateUpdated: "",
+		Contains:         nil,
+		Collocations:     nil,
+		UsageArr:         nil,
+		DateUpdated:      "",
 	}
 	type test struct {
-		name string
-		dictEntry DictEntry
-		wantToInclude string
+		name             string
+		dictEntry        DictEntry
+		wantToInclude    string
 		wantToNotInclude []string
-  }
-  tests := []test{
+	}
+	tests := []test{
 		{
-			name: "No word senses",
-			dictEntry: dictEntry0,
-			wantToInclude: s,
+			name:             "No word senses",
+			dictEntry:        dictEntry0,
+			wantToInclude:    s,
 			wantToNotInclude: []string{"hello"},
 		},
 		{
-			name: "One word sense",
-			dictEntry: dictEntry1,
-			wantToInclude: s,
+			name:             "One word sense",
+			dictEntry:        dictEntry1,
+			wantToInclude:    s,
 			wantToNotInclude: []string{"Subdomain", "Concept"},
 		},
 	}
-  for _, tc := range tests {
+	for _, tc := range tests {
 		var buf bytes.Buffer
 		templates := generator.NewTemplateMap(config.AppConfig{})
 		tmpl, ok := templates["headword-template.html"]
@@ -726,20 +706,20 @@ func TestWriteHwFile(t *testing.T) {
 		}
 		if !strings.Contains(got, tc.wantToInclude) {
 			t.Errorf("TestWriteHwFile: %s, got %s\n but wantToInclude %s", tc.name,
-					got, tc.wantToInclude)
+				got, tc.wantToInclude)
 		}
 		for _, notInclude := range tc.wantToNotInclude {
-		  if strings.Contains(got, notInclude) {
-			  t.Errorf("TestWriteHwFile %s, got %s\n but wantToNotInclude %s",
-			  		tc.name, got, notInclude)
-		  }
+			if strings.Contains(got, notInclude) {
+				t.Errorf("TestWriteHwFile %s, got %s\n but wantToNotInclude %s",
+					tc.name, got, notInclude)
+			}
 		}
 	}
 }
 
 // testHwWriter writes to a bytes buffer instead of a file
 type testHwWriter struct {
-	buf *bytes.Buffer
+	buf        *bytes.Buffer
 	numWritten *int
 }
 
@@ -763,92 +743,92 @@ func TestWriteHwFiles(t *testing.T) {
 	const replace = `"<a href="/taisho/t000${2}.html">${1}</a>${3}","<a href="/taisho/t00${2}.html">${1}</a>${3}","<a href="/taisho/t0${2}.html">${1}</a>${3}","<a href="/taisho/t${2}.html">${1}</a>${3}"`
 	config := generator.HTMLOutPutConfig{
 		ContainsByDomain: "",
-		Domain: "",
-		GoStaticDir: "static",
-		TemplateDir: "templates",
-		VocabFormat: "",
-		WebDir: "web-staging",
-		Templates: generator.NewTemplateMap(config.AppConfig{}),
-		NotesReMatch: match,
-		NotesReplace: replace,
+		Domain:           "",
+		GoStaticDir:      "static",
+		TemplateDir:      "templates",
+		VocabFormat:      "",
+		WebDir:           "web-staging",
+		Templates:        generator.NewTemplateMap(config.AppConfig{}),
+		NotesReMatch:     match,
+		NotesReplace:     replace,
 	}
 	const s = "金刚经"
 	const tr = "金剛經"
 	const p = "Jīngāng Jīng"
 	ws := dicttypes.WordSense{
-		Simplified: s,
+		Simplified:  s,
 		Traditional: tr,
-		Pinyin: p,
-		English: "Diamond Sutra",
-		Notes: "(T 235)",
+		Pinyin:      p,
+		English:     "Diamond Sutra",
+		Notes:       "(T 235)",
 	}
 	hw := dicttypes.Word{
-		HeadwordId:  	1,
-		Simplified:  	s,
-		Traditional: 	tr,
-		Pinyin:      	p,
-		Senses:  			[]dicttypes.WordSense{ws},
+		HeadwordId:  1,
+		Simplified:  s,
+		Traditional: tr,
+		Pinyin:      p,
+		Senses:      []dicttypes.WordSense{ws},
 	}
 	oneWordDict[s] = hw
 	oneWordDict[tr] = hw
 	type test struct {
-		name string
-		wdict map[string]dicttypes.Word
-		config generator.HTMLOutPutConfig
+		name      string
+		wdict     map[string]dicttypes.Word
+		config    generator.HTMLOutPutConfig
 		expectNum int
-		contains string
-  }
-  tests := []test{
+		contains  string
+	}
+	tests := []test{
 		{
-			name: "Empty",
-			wdict: map[string]dicttypes.Word{},
-			config: mockOutputConfig(),
+			name:      "Empty",
+			wdict:     map[string]dicttypes.Word{},
+			config:    mockOutputConfig(),
 			expectNum: 0,
-			contains: "",
+			contains:  "",
 		},
 		{
-			name: "Small",
-			wdict: mockSmallDict(),
-			config: mockOutputConfig(),
+			name:      "Small",
+			wdict:     mockSmallDict(),
+			config:    mockOutputConfig(),
 			expectNum: 8,
-			contains: "",
+			contains:  "",
 		},
 		{
-			name: "Has notes",
-			wdict: oneWordDict,
-			config: mockOutputConfig(),
+			name:      "Has notes",
+			wdict:     oneWordDict,
+			config:    mockOutputConfig(),
 			expectNum: 1,
-			contains: "T 235",
+			contains:  "T 235",
 		},
 		{
-			name: "Transforms notes",
-			wdict: oneWordDict,
-			config: config,
+			name:      "Transforms notes",
+			wdict:     oneWordDict,
+			config:    config,
 			expectNum: 1,
-			contains: `<a href="/taisho/t0235.html">T 235</a>`,
+			contains:  `<a href="/taisho/t0235.html">T 235</a>`,
 		},
 	}
-  for _, tc := range tests {
-		tok := tokenizer.DictTokenizer{tc.wdict}
+	for _, tc := range tests {
+		tok := tokenizer.DictTokenizer{WDict: tc.wdict}
 		var buf bytes.Buffer
 		numWritten := 0
 		tw := testHwWriter{
-			buf: &buf,
+			buf:        &buf,
 			numWritten: &numWritten,
 		}
 		err := WriteHwFiles(loader, tok, tc.config, indexState, tc.wdict,
-				vocabAnalysis, tw)
+			vocabAnalysis, tw)
 		if err != nil {
 			t.Fatalf("TestWriteHwFiles: %s, Unexpected error: %v", tc.name, err)
 		}
 		got := buf.String()
 		if *tw.numWritten != tc.expectNum {
 			t.Fatalf("TestWriteHwFiles %s, Got numWritten = %d, want: %d, buf:\n%s",
-					tc.name, tw.numWritten, tc.expectNum, got)
+				tc.name, tw.numWritten, tc.expectNum, got)
 		}
 		if !strings.Contains(got, tc.contains) {
 			t.Fatalf("TestWriteHwFiles %s, did not contain expected string %s buf:\n%s",
-					tc.name, tc.contains, buf.String())
+				tc.name, tc.contains, buf.String())
 		}
 	}
 }

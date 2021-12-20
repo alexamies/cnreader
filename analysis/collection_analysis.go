@@ -13,25 +13,25 @@
 package analysis
 
 import (
-	"github.com/alexamies/chinesenotes-go/dicttypes"	
+	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"github.com/alexamies/cnreader/index"
 	"github.com/alexamies/cnreader/ngram"
 )
 
 // A struct to hold the analysis results for the collection
 type CollectionAResults struct {
-	Vocab				map[string]int
-	Bigrams				map[string]int
-	Usage				map[string]string
-	BigramFrequencies	ngram.BigramFreqMap
-	Collocations		ngram.CollocationMap
-	WC, CCount			int
-	UnknownChars		map[string]int
-	WFDocMap			index.TermFreqDocMap
-	BigramDocMap		index.TermFreqDocMap
-	DocFreq				index.DocumentFrequency
-	BigramDF			index.DocumentFrequency
-	DocLengthArray		[]index.DocLength
+	Vocab             map[string]int
+	Bigrams           map[string]int
+	Usage             map[string]string
+	BigramFrequencies ngram.BigramFreqMap
+	Collocations      ngram.CollocationMap
+	WC, CCount        int
+	UnknownChars      map[string]int
+	WFDocMap          index.TermFreqDocMap
+	BigramDocMap      index.TermFreqDocMap
+	DocFreq           index.DocumentFrequency
+	BigramDF          index.DocumentFrequency
+	DocLengthArray    []index.DocLength
 }
 
 // Add more results to this set of results
@@ -59,14 +59,12 @@ func (results *CollectionAResults) AddResults(more *CollectionAResults) {
 	for k, v := range more.UnknownChars {
 		results.UnknownChars[k] += v
 	}
-	for _, dl := range more.DocLengthArray {
-		results.DocLengthArray = append(results.DocLengthArray, dl)
-	}
+	results.DocLengthArray = append(results.DocLengthArray, more.DocLengthArray...)
 }
 
 // Returns the subset of words that are lexical (content) words
 func (results *CollectionAResults) GetLexicalWordFreq(sortedWords []index.SortedWordItem,
-		wdict map[string]dicttypes.Word) []wFResult {
+	wdict map[string]dicttypes.Word) []wFResult {
 	wfResults := make([]wFResult, 0)
 	for _, value := range sortedWords {
 		if word, ok := wdict[value.Word]; ok {
@@ -99,12 +97,12 @@ func (results *CollectionAResults) GetHeadwords(wdict map[string]dicttypes.Word)
 
 // Returns the subset of words that are lexical (content) words
 func (results *CollectionAResults) GetWordFreq(sortedWords []index.SortedWordItem,
-		wdict map[string]dicttypes.Word) []wFResult {
+	wdict map[string]dicttypes.Word) []wFResult {
 
 	wfResults := make([]wFResult, 0)
 	maxWFOutput := len(sortedWords)
-	if maxWFOutput > maxWFOutput {
-		maxWFOutput = maxWFOutput
+	if maxWFOutput > 100 {
+		maxWFOutput = 100
 	}
 	for _, value := range sortedWords[:maxWFOutput] {
 		if word, ok := wdict[value.Word]; ok {
@@ -125,21 +123,17 @@ func (results *CollectionAResults) GetWordFreq(sortedWords []index.SortedWordIte
 // Constructor for empty CollectionAResults
 func NewCollectionAResults() CollectionAResults {
 	return CollectionAResults{
-		Vocab:				map[string]int{},
-		Bigrams:				map[string]int{},
-		Usage:				map[string]string{},
-		BigramFrequencies:	ngram.BigramFreqMap{},
-		Collocations:		ngram.CollocationMap{},
-		WC:					0,
-		UnknownChars:		map[string]int{},
-		WFDocMap:			index.TermFreqDocMap{},
-		BigramDocMap:		index.TermFreqDocMap{},
-		DocFreq:			index.NewDocumentFrequency(),
-		BigramDF:			index.NewDocumentFrequency(),
-		DocLengthArray:		[]index.DocLength{},
+		Vocab:             map[string]int{},
+		Bigrams:           map[string]int{},
+		Usage:             map[string]string{},
+		BigramFrequencies: ngram.BigramFreqMap{},
+		Collocations:      ngram.CollocationMap{},
+		WC:                0,
+		UnknownChars:      map[string]int{},
+		WFDocMap:          index.TermFreqDocMap{},
+		BigramDocMap:      index.TermFreqDocMap{},
+		DocFreq:           index.NewDocumentFrequency(),
+		BigramDF:          index.NewDocumentFrequency(),
+		DocLengthArray:    []index.DocLength{},
 	}
-}
-
-func setDocLength(wfDocMap index.TermFreqDocMap, wc int) {
-
 }

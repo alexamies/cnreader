@@ -269,7 +269,10 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 					Corpus: col.Corpus,
 					Word:   word,
 				}
-				cwf := &index.CorpusWordFreq{col.Corpus, word, count}
+				cwf := &index.CorpusWordFreq{
+					Corpus: col.Corpus,
+					Word:   word,
+					Freq:   count}
 				if cwfPrev, found := wfTotal[cw]; found {
 					cwf.Freq += cwfPrev.Freq
 				}
@@ -377,7 +380,9 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 			}
 		}
 	}
-	dl := index.DocLength{document.GlossFile, wc}
+	dl := index.DocLength{
+		GlossFile: document.GlossFile,
+		WordCount: wc}
 	dlArray := []index.DocLength{dl}
 	results := CollectionAResults{
 		Vocab:             vocab,
@@ -500,7 +505,10 @@ func writeAnalysisCorpus(results *CollectionAResults,
 		return fmt.Errorf("could not open write ngramFile: %v", err)
 	}
 	defer ngramFile.Close()
-	wordFreqStore := index.WordFreqStore{wfFile, unknownCharsFile, ngramFile}
+	wordFreqStore := index.WordFreqStore{
+		WFWriter:           wfFile,
+		UnknownCharsWriter: unknownCharsFile,
+		BigramWriter:       ngramFile}
 	err = index.WriteWFCorpus(wordFreqStore, sortedWords, sortedUnknownWords,
 		bFreq, results.WC, indexConfig)
 	if err != nil {
@@ -823,7 +831,10 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 		return nil, fmt.Errorf("index.writeKeywordIndex: Could not create file: %v", err)
 	}
 	defer indexWriter.Close()
-	indexStore := index.IndexStore{wfFile, wfDocReader, indexWriter}
+	indexStore := index.IndexStore{
+		WfReader:    wfFile,
+		WfDocReader: wfDocReader,
+		IndexWriter: indexWriter}
 	indexState, err := index.BuildIndex(indexConfig, indexStore)
 	if err != nil {
 		return nil, fmt.Errorf("error building index: %v", err)

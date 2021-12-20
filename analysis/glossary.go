@@ -15,13 +15,13 @@ package analysis
 import (
 	"sort"
 
-	"github.com/alexamies/chinesenotes-go/dicttypes"	
+	"github.com/alexamies/chinesenotes-go/dicttypes"
 )
 
 // The content for a corpus entry
 type Glossary struct {
 	Domain string
-	Words dicttypes.Words
+	Words  dicttypes.Words
 }
 
 // Makes a glossary by filtering by the domain label and sorting by Chinese
@@ -46,11 +46,11 @@ func MakeGlossary(domain string, headwords []dicttypes.Word) Glossary {
 // Makes a list of proper nouns, sorted by Pinyin
 func makePNList(vocab map[string]int, wdict map[string]dicttypes.Word) dicttypes.Words {
 	hws := dicttypes.Words{}
-	for w, _ := range vocab {
+	for w := range vocab {
 		hw, ok := wdict[w]
-			if ok && hw.IsProperNoun() {
-				hws = append(hws, hw)
-			}
+		if ok && hw.IsProperNoun() {
+			hws = append(hws, hw)
+		}
 	}
 	sort.Sort(hws)
 	return hws
