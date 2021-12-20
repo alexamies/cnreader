@@ -729,7 +729,7 @@ func writeCollection(collectionEntry corpus.CollectionEntry,
 	}
 	defer colF.Close()
 	collectionEntry.CorpusEntries = *corpusEntries
-	collectionEntry.AnalysisFile = filename
+	collectionEntry.AnalysisFile = basename
 	collectionEntry.Intro = introText
 	err = generator.WriteCollectionFile(collectionEntry, outputConfig,
 		corpusConfig, colF)
