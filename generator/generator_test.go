@@ -147,7 +147,7 @@ func TestDecodeUsageExample(t *testing.T) {
 	wdict[s1] = hw1
 	wdict[s2] = hw2
 	wdict[t2] = hw2
-	dictTokenizer := tokenizer.DictTokenizer{wdict}
+	dictTokenizer := tokenizer.DictTokenizer{WDict: wdict}
 	type testCase struct {
 		name     string
 		input    string
@@ -190,7 +190,7 @@ func TestWriteCorpusDoc(t *testing.T) {
 	corpusConfig := mockCorpusConfig()
 	wdict := make(map[string]dicttypes.Word)
 	const usageText = "繁"
-	dictTokenizer := tokenizer.DictTokenizer{wdict}
+	dictTokenizer := tokenizer.DictTokenizer{WDict: wdict}
 	tokens := dictTokenizer.Tokenize(usageText)
 	var buf bytes.Buffer
 	vocab := make(map[string]int)
@@ -230,7 +230,7 @@ func TestWriteCorpusDoc(t *testing.T) {
 func TestWriteDoc(t *testing.T) {
 	t.Log("generator.TestWriteDoc: Begin +++++++++++")
 	wdict := make(map[string]dicttypes.Word)
-	tokenizer := tokenizer.DictTokenizer{wdict}
+	tokenizer := tokenizer.DictTokenizer{WDict: wdict}
 	input1 := `
   	A test document
     繁體中文

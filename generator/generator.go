@@ -245,7 +245,7 @@ func WriteCollectionFile(colEntry *corpus.CollectionEntry,
 	}
 	err := tmpl.Execute(w, content)
 	if err != nil {
-		return fmt.Errorf("Error executing collection-template: %v ", err)
+		return fmt.Errorf("error executing collection-template: %v ", err)
 	}
 	w.Flush()
 	return nil
@@ -272,7 +272,7 @@ func WriteCollectionList(colIEntries []corpus.CollectionEntry, analysisFile stri
 	}
 	err := tmpl.Execute(w, content)
 	if err != nil {
-		return fmt.Errorf("Error executing collection-template: %v ", err)
+		return fmt.Errorf("error executing collection-template: %v ", err)
 	}
 	w.Flush()
 	return nil
@@ -299,7 +299,7 @@ func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Wri
 	for _, token := range tokens {
 		chunk := token.Token
 		if entries, ok := wdict[chunk]; ok && !corpus.IsExcluded(corpusConfig.Excluded, chunk) {
-			fmt.Fprintf(&b, span(entries, chunk))
+			fmt.Fprint(&b, span(entries, chunk))
 		} else {
 			if sourceFormat != "HTML" {
 				chunk = replacer.Replace(chunk)
@@ -343,12 +343,12 @@ func WriteDoc(tokens []tokenizer.TextToken, f io.Writer, tmpl template.Template,
 		chunk := e.Token
 		word := e.DictEntry
 		if !glossChinese {
-			fmt.Fprintf(&b, chunk)
+			fmt.Fprint(&b, chunk)
 		} else if len(word.Senses) > 0 {
 			markedText := markVocab(word, chunk, vocabFormat)
 			fmt.Fprint(&b, markedText)
 		} else {
-			fmt.Fprintf(&b, chunk)
+			fmt.Fprint(&b, chunk)
 		}
 	}
 	dateUpdated := time.Now().Format("2006-01-02")
