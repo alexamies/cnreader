@@ -75,7 +75,7 @@ import (
 const (
 	conversionsFile = "data/corpus/html-conversion.csv"
 	file2RefKey = "File2Ref"
-	refNo2TransKey = "File2Ref"
+	refNo2TransKey = "RefNo2Trans"
 	titleIndexFN    = "documents.tsv"
 )
 
@@ -374,7 +374,8 @@ func getBibNotes(cfg config.AppConfig) (bibnotes.BibNotesClient, error) {
 	}
 	file2RefFile, err := os.Open(file2RefFN)
 	if err != nil {
-		return nil, fmt.Errorf("bibnotes error opening file2RefFile: %v", err)
+		return nil, fmt.Errorf("bibnotes error opening file2RefFile %s: %v",
+				file2RefFN, err)
 	}
 	defer file2RefFile.Close()
 
@@ -384,10 +385,12 @@ func getBibNotes(cfg config.AppConfig) (bibnotes.BibNotesClient, error) {
 	}
 	refNo2TransFNFile, err := os.Open(refNo2TransFN)
 	if err != nil {
-		return nil, fmt.Errorf("bibnotes error opening refNo2TransFNFile: %v", err)
+		return nil, fmt.Errorf("bibnotes error opening refNo2TransFNFile %s: %v", 
+				refNo2TransFN, err)
 	}
 	defer refNo2TransFNFile.Close()
 
+	log.Printf("Loading bib notes from %s, %s", file2RefFN, refNo2TransFN)
 	client, err := bibnotes.LoadBibNotes(file2RefFile, refNo2TransFNFile)
 	if err != nil {
 		return nil, fmt.Errorf("bibnotes loading error: %v", err)
