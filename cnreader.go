@@ -59,6 +59,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/alexamies/chinesenotes-go/bibnotes"
 	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dictionary"
 	"github.com/alexamies/chinesenotes-go/dicttypes"
@@ -73,6 +74,8 @@ import (
 
 const (
 	conversionsFile = "data/corpus/html-conversion.csv"
+	file2RefKey = "File2Ref"
+	refNo2TransKey = "File2Ref"
 	titleIndexFN    = "documents.tsv"
 )
 
@@ -363,6 +366,35 @@ func getIndexConfig(c config.AppConfig) index.IndexConfig {
 	}
 }
 
+// getBibNotes initializes the BibNotesClient for bibliographic notes
+func getBibNotes(cfg config.AppConfig) (bibnotes.BibNotesClient, error) {
+	file2RefFN := cfg.GetVar(file2RefKey)
+	if len(file2RefFN) == 0 {
+		return nil, fmt.Errorf("bibnotes file2Ref not configured")
+	}
+	file2RefFile, err := os.Open(file2RefFN)
+	if err != nil {
+		return nil, fmt.Errorf("bibnotes error opening file2RefFile: %v", err)
+	}
+	defer file2RefFile.Close()
+
+	refNo2TransFN := cfg.GetVar(refNo2TransKey)
+	if len(refNo2TransFN) == 0 {
+		return nil, fmt.Errorf("bibnotes refNo2Trans not configured")
+	}
+	refNo2TransFNFile, err := os.Open(refNo2TransFN)
+	if err != nil {
+		return nil, fmt.Errorf("bibnotes error opening refNo2TransFNFile: %v", err)
+	}
+	defer refNo2TransFNFile.Close()
+
+	client, err := bibnotes.LoadBibNotes(file2RefFile, refNo2TransFNFile)
+	if err != nil {
+		return nil, fmt.Errorf("bibnotes loading error: %v", err)
+	}
+	return client, nil
+}
+
 // readIndex reads the index files from disk
 func readIndex(indexConfig index.IndexConfig) (*index.IndexState, error) {
 	fname := indexConfig.IndexDir + "/" + index.WfCorpusFile
@@ -593,6 +625,12 @@ func main() {
 		log.Fatalf("main: unexpected error reading headwords, %v", err)
 	}
 
+	// Bibliographic notes client
+	bibNotesClient, err := getBibNotes(c)
+	if err != nil {
+		log.Fatalf("main: non-fatal error, could not load bib notes: %v", err)
+	}
+
 	if len(*collectionFile) > 0 {
 		log.Printf("main: writing collection %s\n", *collectionFile)
 		err := analysis.WriteCorpusCol(*collectionFile, libraryLoader,
@@ -642,8 +680,17 @@ func main() {
 			log.Fatalf("main, error getting freq: %v", err)
 		}
 		hww := newHwWriter(outputConfig)
-		err = analysis.WriteHwFiles(libraryLoader, dictTokenizer, outputConfig,
-			*indexState, wdict, *vocabAnalysis, hww)
+		hWFileDependencies := analysis.HWFileDependencies {
+			Loader: libraryLoader,
+			DictTokenizer: dictTokenizer,
+			OutputConfig: outputConfig,
+			IndexState: *indexState,
+			Wdict: wdict,
+			VocabAnalysis: *vocabAnalysis,
+			Hww: hww,
+			BibNotesClient: bibNotesClient,
+		}
+		err = analysis.WriteHwFiles(hWFileDependencies)
 		if err != nil {
 			log.Fatalf("main, unable to write headwords: %v", err)
 		}

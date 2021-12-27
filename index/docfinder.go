@@ -16,6 +16,7 @@ package index
 import (
 	"log"
 
+	"github.com/alexamies/chinesenotes-go/bibnotes"
 	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"github.com/alexamies/cnreader/corpus"
 )
@@ -27,6 +28,7 @@ const maxDocsDisplayed = 10
 type RetrievalResult struct {
 	HTMLFile, Title, ColTitle string
 	Count int
+	HasEngTrans bool
 }
 
 // IndexConfig encapsulates parameters for index configuration
@@ -37,7 +39,7 @@ type IndexConfig struct {
 // Retrieves documents with title for a single keyword
 func FindDocsForKeyword(keyword dicttypes.Word,
 		corpusEntryMap map[string]corpus.CorpusEntry,
-		indexState IndexState) []RetrievalResult {
+		indexState IndexState, bibnotesClient bibnotes.BibNotesClient) []RetrievalResult {
 	docs := make([]RetrievalResult, 0)
 	if indexState.wfdoc == nil {
 		log.Print("FindDocsForKeyword: indexState.wfdoc == nil")
@@ -58,12 +60,23 @@ func FindDocsForKeyword(keyword dicttypes.Word,
 		if i < maxDocsDisplayed {
 			corpusEntry, ok := corpusEntryMap[raw.Filename]
 			if !ok {
-				log.Printf("index.FindForKeyword, no entry for %s\n",
+				log.Printf("index.FindForKeyword, no entry for %s",
 					raw.Filename)
 				continue
 			}
-			item := RetrievalResult{corpusEntry.GlossFile, corpusEntry.Title,
-				corpusEntry.ColTitle, raw.Count}
+			var hasEngTrans bool
+			if bibnotesClient != nil {
+				hasEngTrans = len(bibnotesClient.GetTransRefs(corpusEntry.ColFile)) > 0
+				log.Printf("index.FindForKeyword, colFile %s for entry file %s, eng %t",
+					corpusEntry.ColFile, corpusEntry.RawFile, hasEngTrans)
+			}
+			item := RetrievalResult{
+				HTMLFile: corpusEntry.GlossFile,
+				Title: corpusEntry.Title,
+				ColTitle: corpusEntry.ColTitle,
+				Count: raw.Count,
+				HasEngTrans: hasEngTrans,
+			}
 			docs = append(docs, item)
 			i++
 		} else {

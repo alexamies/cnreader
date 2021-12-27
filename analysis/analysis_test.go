@@ -19,6 +19,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alexamies/chinesenotes-go/bibnotes"
 	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
@@ -816,8 +817,23 @@ func TestWriteHwFiles(t *testing.T) {
 			buf:        &buf,
 			numWritten: &numWritten,
 		}
-		err := WriteHwFiles(loader, tok, tc.config, indexState, tc.wdict,
-			vocabAnalysis, tw)
+  	ref2FileReader := strings.NewReader("")
+  	refNo2TransReader := strings.NewReader("")
+  	bibNotesClient, err := bibnotes.LoadBibNotes(ref2FileReader, refNo2TransReader)
+  	if err != nil {
+  		t.Fatalf("TestWriteHwFiles error loading bibnotes: %v", err)
+  	}
+		hWFileDependencies := HWFileDependencies {
+			Loader: loader,
+			DictTokenizer: tok,
+			OutputConfig: tc.config,
+			IndexState: indexState,
+			Wdict: tc.wdict,
+			VocabAnalysis: vocabAnalysis,
+			Hww: tw,
+			BibNotesClient: bibNotesClient,
+		}
+		err = WriteHwFiles(hWFileDependencies)
 		if err != nil {
 			t.Fatalf("TestWriteHwFiles: %s, Unexpected error: %v", tc.name, err)
 		}

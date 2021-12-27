@@ -14,9 +14,11 @@ package index
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/alexamies/cnreader/corpus"
+	"github.com/alexamies/chinesenotes-go/bibnotes"	
 	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
@@ -73,7 +75,13 @@ func TestFindDocsForKeyword(t *testing.T) {
 	if err != nil {
 		t.Fatalf("index.TestFindDocsForKeyword: error: %v", err)
 	}
-	documents := FindDocsForKeyword(hw, *outfileMap, *indexState)
+  ref2FileReader := strings.NewReader("")
+  refNo2TransReader := strings.NewReader("")
+  bibNotesClient, err := bibnotes.LoadBibNotes(ref2FileReader, refNo2TransReader)
+  if err != nil {
+  	t.Fatalf("TestFindDocsForKeyword error loading bibnotes: %v", err)
+  }
+	documents := FindDocsForKeyword(hw, *outfileMap, *indexState, bibNotesClient)
 	if len(documents) != 0 {
 		t.Errorf("index.TestFindDocsForKeyword: expected no documents: %d", len(documents))
 	}

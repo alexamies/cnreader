@@ -182,7 +182,7 @@ example_collection/example_collection001.txt	example_collection/example_collecti
 	for _, tc := range tests {
 		var buf bytes.Buffer
 		io.WriteString(&buf, tc.input)
-		corpusEntries, err := loadCorpusEntries(&buf, "")
+		corpusEntries, err := loadCorpusEntries(&buf, "", "")
 		if err != nil {
 			t.Fatalf("%s: unexpected error: %v", tc.name, err)
 		}

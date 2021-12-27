@@ -33,6 +33,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/alexamies/chinesenotes-go/bibnotes"
 	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dictionary"
 	"github.com/alexamies/chinesenotes-go/dicttypes"
@@ -117,6 +118,17 @@ type wordUsage struct {
 type wFResult struct {
 	Freq, HeadwordId                int
 	Chinese, Pinyin, English, Usage string
+}
+
+type HWFileDependencies struct {
+	Loader library.LibraryLoader
+	DictTokenizer tokenizer.Tokenizer
+	OutputConfig generator.HTMLOutPutConfig
+	IndexState index.IndexState
+	Wdict map[string]dicttypes.Word
+	VocabAnalysis VocabAnalysis
+	Hww HeadwordWriter
+	BibNotesClient bibnotes.BibNotesClient
 }
 
 // containsWord gets a list of words that contain the given word
@@ -903,18 +915,23 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 }
 
 // Writes dictionary headword entries
-func WriteHwFiles(loader library.LibraryLoader,
-	dictTokenizer tokenizer.Tokenizer,
-	outputConfig generator.HTMLOutPutConfig,
-	indexState index.IndexState,
-	wdict map[string]dicttypes.Word,
-	vocabAnalysis VocabAnalysis,
-	hww HeadwordWriter) error {
+//func WriteHwFiles(loader library.LibraryLoader,
+//	dictTokenizer tokenizer.Tokenizer,
+//	outputConfig generator.HTMLOutPutConfig,
+//	indexState index.IndexState,
+//	wdict map[string]dicttypes.Word,
+//	vocabAnalysis VocabAnalysis,
+//	hww HeadwordWriter) error {
+func WriteHwFiles(dep HWFileDependencies) error {
+	// hWFileDependencies := analysis.HWFileDependencies
 	log.Printf("analysis.WriteHwFiles: Begin +++++++++++\n")
+	outputConfig := dep.OutputConfig
+	wdict := dep.Wdict
+	vocabAnalysis := dep.VocabAnalysis
 	hwArray := getHeadwords(wdict)
 	usageMap := vocabAnalysis.UsageMap
 	collocations := vocabAnalysis.Collocations
-	outfileMap, err := corpus.GetOutfileMap(loader.GetCorpusLoader())
+	outfileMap, err := corpus.GetOutfileMap(dep.Loader.GetCorpusLoader())
 	if err != nil {
 		return fmt.Errorf("WriteHwFiles, Error getting outfile map: %v", err)
 	}
@@ -981,7 +998,7 @@ func WriteHwFiles(loader library.LibraryLoader,
 		// Decorate useage text
 		hlUsageArr := []wordUsage{}
 		for _, wu := range *usageArrPtr {
-			hlText := generator.DecodeUsageExample(wu.Example, hw, dictTokenizer,
+			hlText := generator.DecodeUsageExample(wu.Example, hw, dep.DictTokenizer,
 				outputConfig, wdict)
 			hlWU := wordUsage{
 				Freq:       wu.Freq,
@@ -998,21 +1015,22 @@ func WriteHwFiles(loader library.LibraryLoader,
 		dictEntry := DictEntry{
 			Title:            hw.Simplified,
 			Headword:         hw,
-			RelevantDocs:     index.FindDocsForKeyword(hw, *outfileMap, indexState),
+			RelevantDocs:     index.FindDocsForKeyword(hw, *outfileMap, dep.IndexState,
+					dep.BibNotesClient),
 			ContainsByDomain: cByDomain,
 			Contains:         contains,
 			Collocations:     wordCollocations,
 			UsageArr:         hlUsageArr,
 			DateUpdated:      dateUpdated,
 		}
-		f := hww.NewWriter(hw.HeadwordId)
+		f := dep.Hww.NewWriter(hw.HeadwordId)
 		err = writeHwFile(f, dictEntry, *tmpl)
 		if err != nil {
 			return fmt.Errorf("generator.WriteHwFile: error executing template for "+
 				"hw.Id: %d, Simplified: %s, error: %v", hw.HeadwordId,
 				hw.Simplified, err)
 		}
-		hww.CloseWriter(hw.HeadwordId)
+		dep.Hww.CloseWriter(hw.HeadwordId)
 		i++
 	}
 	return nil

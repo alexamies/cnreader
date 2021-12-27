@@ -36,7 +36,7 @@ type CollectionEntry struct {
 
 // An entry in a collection
 type CorpusEntry struct {
-	RawFile, GlossFile, Title, ColTitle string
+	RawFile, GlossFile, Title, ColTitle, ColFile string
 }
 
 // CorpusConfig encapsulates parameters for corpus configuration
@@ -115,7 +115,7 @@ func NewFileCorpusConfig(corpusDataDir, corpusDir string,
 					collectionsFile, err)
 		}
 		defer r.Close()
-		return loadCorpusEntries(r, colTitle)
+		return loadCorpusEntries(r, colTitle, collectionsFile)
 	}
 
 	readTextImpl := func(srcFile string) (string, error) {
@@ -304,7 +304,7 @@ func loadCorpusCollections(r io.Reader) (*[]CollectionEntry, error) {
 }
 
 // Get a list of files for a corpus
-func loadCorpusEntries(r io.Reader, colTitle string) (*[]CorpusEntry, error) {
+func loadCorpusEntries(r io.Reader, colTitle, colFile string) (*[]CorpusEntry, error) {
 	reader := csv.NewReader(r)
 	reader.FieldsPerRecord = -1
 	reader.Comma = rune('\t')
@@ -318,8 +318,14 @@ func loadCorpusEntries(r io.Reader, colTitle string) (*[]CorpusEntry, error) {
 		if len(row) != 3 {
 			return nil, fmt.Errorf("corpus.loadCorpusEntries len(row) != 3: %s", row)
 		}
-		corpusEntries = append(corpusEntries, CorpusEntry{row[0], row[1],
-			row[2], colTitle})
+		entry := CorpusEntry{
+			RawFile: row[0],
+			GlossFile: row[1],
+			Title: row[2],
+			ColTitle: colTitle,
+			ColFile: colFile,
+		}
+		corpusEntries = append(corpusEntries, entry)
 	}
 	return &corpusEntries, nil
 }
