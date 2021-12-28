@@ -691,8 +691,8 @@ func writeCollection(collectionEntry *corpus.CollectionEntry,
 		w := bufio.NewWriter(df)
 
 		textTokens := dictTokenizer.Tokenize(text)
-		log.Printf("writeCollection: writing corpus doc, entry.RawFile = %s, got %d tokens, analysis file: %s",
-			entry.RawFile, len(textTokens), basename)
+		// log.Printf("writeCollection: writing corpus doc, entry.RawFile = %s, got %d tokens, analysis file: %s",
+		//	entry.RawFile, len(textTokens), basename)
 		err = generator.WriteCorpusDoc(textTokens, results.Vocab, w,
 			collectionEntry.GlossFile, collectionEntry.Title, entry.Title,
 			basename, sourceFormat, outputConfig,

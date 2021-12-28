@@ -75,6 +75,7 @@ import (
 const (
 	conversionsFile = "data/corpus/html-conversion.csv"
 	file2RefKey = "File2Ref"
+	refNo2ParallelKey = "RefNo2ParallelKey"
 	refNo2TransKey = "RefNo2Trans"
 	titleIndexFN    = "documents.tsv"
 )
@@ -379,6 +380,17 @@ func getBibNotes(cfg config.AppConfig) (bibnotes.BibNotesClient, error) {
 	}
 	defer file2RefFile.Close()
 
+	refNo2ParallelFN := cfg.GetVar(refNo2ParallelKey)
+	if len(refNo2ParallelFN) == 0 {
+		return nil, fmt.Errorf("bibnotes refNo2ParallelKey not configured")
+	}
+	refNo2ParallelFNFile, err := os.Open(refNo2ParallelFN)
+	if err != nil {
+		return nil, fmt.Errorf("bibnotes error opening refNo2TransFNFile %s: %v", 
+				refNo2ParallelFN, err)
+	}
+	defer refNo2ParallelFNFile.Close()
+
 	refNo2TransFN := cfg.GetVar(refNo2TransKey)
 	if len(refNo2TransFN) == 0 {
 		return nil, fmt.Errorf("bibnotes refNo2Trans not configured")
@@ -391,7 +403,7 @@ func getBibNotes(cfg config.AppConfig) (bibnotes.BibNotesClient, error) {
 	defer refNo2TransFNFile.Close()
 
 	log.Printf("Loading bib notes from %s, %s", file2RefFN, refNo2TransFN)
-	client, err := bibnotes.LoadBibNotes(file2RefFile, refNo2TransFNFile)
+	client, err := bibnotes.LoadBibNotes(file2RefFile, refNo2ParallelFNFile, refNo2TransFNFile)
 	if err != nil {
 		return nil, fmt.Errorf("bibnotes loading error: %v", err)
 	}

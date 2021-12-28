@@ -28,7 +28,7 @@ const maxDocsDisplayed = 10
 type RetrievalResult struct {
 	HTMLFile, Title, ColTitle string
 	Count int
-	HasEngTrans bool
+	HasEngTrans, HasParallel bool
 }
 
 // IndexConfig encapsulates parameters for index configuration
@@ -65,11 +65,13 @@ func FindDocsForKeyword(keyword dicttypes.Word,
 				continue
 			}
 			var hasEngTrans bool
+			var hasParallel bool
 			if bibnotesClient != nil {
 				hasEngTrans = len(bibnotesClient.GetTransRefs(corpusEntry.ColFile)) > 0
 				// log.Printf("index.FindForKeyword, colFile %s for entry file %s, eng %t",
 				//	corpusEntry.ColFile, corpusEntry.RawFile, hasEngTrans)
 				// index.FindForKeyword, colFile ./data/corpus/taisho/t0848.csv for entry file taisho/t0848_02.txt, eng false
+				hasParallel = len(bibnotesClient.GetParallelRefs(corpusEntry.ColFile)) > 0
 			}
 			item := RetrievalResult{
 				HTMLFile: corpusEntry.GlossFile,
@@ -77,6 +79,7 @@ func FindDocsForKeyword(keyword dicttypes.Word,
 				ColTitle: corpusEntry.ColTitle,
 				Count: raw.Count,
 				HasEngTrans: hasEngTrans,
+				HasParallel: hasParallel,
 			}
 			docs = append(docs, item)
 			i++

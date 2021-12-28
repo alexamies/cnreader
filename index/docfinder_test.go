@@ -76,8 +76,9 @@ func TestFindDocsForKeyword(t *testing.T) {
 		t.Fatalf("index.TestFindDocsForKeyword: error: %v", err)
 	}
   ref2FileReader := strings.NewReader("")
+  refNo2ParallelReader := strings.NewReader("")
   refNo2TransReader := strings.NewReader("")
-  bibNotesClient, err := bibnotes.LoadBibNotes(ref2FileReader, refNo2TransReader)
+  bibNotesClient, err := bibnotes.LoadBibNotes(ref2FileReader, refNo2ParallelReader, refNo2TransReader)
   if err != nil {
   	t.Fatalf("TestFindDocsForKeyword error loading bibnotes: %v", err)
   }
