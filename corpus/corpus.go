@@ -115,7 +115,7 @@ func NewFileCorpusConfig(corpusDataDir, corpusDir string,
 					collectionsFile, err)
 		}
 		defer r.Close()
-		return loadCorpusEntries(r, colTitle, collectionsFile)
+		return loadCorpusEntries(r, colTitle, fName)
 	}
 
 	readTextImpl := func(srcFile string) (string, error) {

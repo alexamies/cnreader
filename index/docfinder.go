@@ -67,8 +67,9 @@ func FindDocsForKeyword(keyword dicttypes.Word,
 			var hasEngTrans bool
 			if bibnotesClient != nil {
 				hasEngTrans = len(bibnotesClient.GetTransRefs(corpusEntry.ColFile)) > 0
-				log.Printf("index.FindForKeyword, colFile %s for entry file %s, eng %t",
-					corpusEntry.ColFile, corpusEntry.RawFile, hasEngTrans)
+				// log.Printf("index.FindForKeyword, colFile %s for entry file %s, eng %t",
+				//	corpusEntry.ColFile, corpusEntry.RawFile, hasEngTrans)
+				// index.FindForKeyword, colFile ./data/corpus/taisho/t0848.csv for entry file taisho/t0848_02.txt, eng false
 			}
 			item := RetrievalResult{
 				HTMLFile: corpusEntry.GlossFile,
