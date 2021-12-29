@@ -643,7 +643,7 @@ func main() {
 	// Bibliographic notes client
 	bibNotesClient, err := getBibNotes(c)
 	if err != nil {
-		log.Fatalf("main: non-fatal error, could not load bib notes: %v", err)
+		log.Printf("main: non-fatal error, could not load bib notes: %v", err)
 	}
 
 	if len(*collectionFile) > 0 {
