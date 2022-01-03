@@ -151,7 +151,7 @@ func getHeadwords(wdict map[string]dicttypes.Word) []dicttypes.Word {
 	for _, w := range hwMap {
 		hwArray = append(hwArray, w)
 	}
-	log.Printf("dictionary.GetHeadwords: hwcount = %d\n", len(hwArray))
+	log.Printf("analysis.GetHeadwords: hwcount = %d", len(hwArray))
 	return hwArray
 }
 
@@ -160,6 +160,13 @@ func getHwMap(wdict map[string]dicttypes.Word) map[int]dicttypes.Word {
 	hwIdMap := make(map[int]dicttypes.Word)
 	for _, w := range wdict {
 		hwIdMap[w.HeadwordId] = w
+	}
+	// Debug
+	w, ok := hwIdMap[393]
+	if ok {
+		log.Printf("analysis.getHwMap: Got 393, senses: %d", len(w.Senses))
+	} else {
+		log.Print("analysis.getHwMap: Did not get 393")
 	}
 	return hwIdMap
 }
@@ -960,7 +967,7 @@ func WriteHwFiles(dep HWFileDependencies) error {
 			log.Printf("analysis.WriteHwFiles: wrote %d words", i)
 		}
 
-		if hw.HeadwordId == 393 {
+		if hw.HeadwordId < 400 {
 			log.Printf("analysis.WriteHwFiles: HeadwordId: %d, num senses: %d",
 					hw.HeadwordId, len(hw.Senses))
 		}

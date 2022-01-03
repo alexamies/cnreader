@@ -350,6 +350,39 @@ func TestGetHeadwords(t *testing.T) {
 	}
 }
 
+func TestGetHwMap(t *testing.T) {
+	s1 := "了"
+	t1 := "\\N"
+	hw1 := dicttypes.Word{
+		HeadwordId:  1,
+		Simplified:  s1,
+		Traditional: t1,
+		Pinyin:      "le",
+		Senses:      []dicttypes.WordSense{},
+	}
+	oneWordDict := map[string]dicttypes.Word{
+		s1: hw1,
+	}
+	testCases := []struct {
+		name        string
+		wdict       map[string]dicttypes.Word
+		expectedLen int
+	}{
+		{
+			name:        "One word dict",
+			wdict:       oneWordDict,
+			expectedLen: 1,
+		},
+	}
+	for _, tc := range testCases {
+		words := getHwMap(tc.wdict)
+		if len(words) != tc.expectedLen {
+			t.Errorf("TestGetHwMap %s, Expected length of map: got %d, want %d",
+				tc.name, len(words), tc.expectedLen)
+		}
+	}
+}
+
 func TestGetWordFrequencies(t *testing.T) {
 	wdict := mockSmallDict()
 	tok := tokenizer.DictTokenizer{WDict: wdict}

@@ -559,6 +559,14 @@ func main() {
 	var err error
 	if len(c.LUFileNames) > 0 {
 		wdict, err = dictionary.LoadDictFile(c)
+		w, ok := wdict["了"]
+		if ok {
+			log.Printf("main: loaded dict file with %d entries, sense for 了: %d",
+					len(wdict), len(w.Senses))
+		} else {
+			log.Printf("main: loaded dict file with %d entries, no entry for 了",
+					len(wdict))
+		}
 	} else {
 		const url = "https://github.com/alexamies/chinesenotes.com/blob/master/data/words.txt?raw=true"
 		wdict, err = dictionary.LoadDictURL(c, url)
