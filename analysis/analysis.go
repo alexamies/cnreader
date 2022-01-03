@@ -960,6 +960,11 @@ func WriteHwFiles(dep HWFileDependencies) error {
 			log.Printf("analysis.WriteHwFiles: wrote %d words", i)
 		}
 
+		if hw.HeadwordId == 393 {
+			log.Printf("analysis.WriteHwFiles: HeadwordId: %d, num senses: %d",
+					hw.HeadwordId, len(hw.Senses))
+		}
+
 		// Replace text in notes, if configured
 		if len(outputConfig.NotesReMatch) > 0 {
 			hw = processor.Process(hw)
