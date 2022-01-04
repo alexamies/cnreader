@@ -16,9 +16,11 @@ package tmindex
 import (
 	"bufio"
 	"fmt"
-	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"io"
+	"log"
 	"os"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"
 )
 
 const (
@@ -34,7 +36,7 @@ type indexEntry struct {
 }
 
 // Builds a unigram index with domain
-func BuildIndexes(indexDir string, wdict map[string]dicttypes.Word) error {
+func BuildIndexes(indexDir string, wdict map[string]*dicttypes.Word) error {
 	pathUni := fmt.Sprintf("%s/%s", indexDir, fnameUni)
 	fUni, err := os.Create(pathUni)
 	defer fUni.Close()
@@ -62,13 +64,13 @@ func BuildIndexes(indexDir string, wdict map[string]dicttypes.Word) error {
 }
 
 // Builds a unigram index with domain
-func buildUniDomainIndex(w io.Writer, wdict map[string]dicttypes.Word) error {
+func buildUniDomainIndex(w io.Writer, wdict map[string]*dicttypes.Word) error {
 	tmindexUni := make(map[string]bool)
 	for term, word := range wdict {
 		for _, sense := range word.Senses {
-			domain := sense.Domain
 			for _, c := range term {
-		  	line := fmt.Sprintf("%c\t%s\t%s\n", c, term, domain)
+		  	line := fmt.Sprintf("%c\t%s\t%s\n", c, term, sense.Domain)
+				log.Printf("buildUniDomainIndex, line: %s", line)
 				if _, ok := tmindexUni[line]; ok {
 					continue
 				}
@@ -84,7 +86,7 @@ func buildUniDomainIndex(w io.Writer, wdict map[string]dicttypes.Word) error {
 }
 
 // Builds a unigram index, skip for strings > maxChars
-func buildUnigramIndex(w io.Writer, wdict map[string]dicttypes.Word) error {
+func buildUnigramIndex(w io.Writer, wdict map[string]*dicttypes.Word) error {
 	tmindexUni := make(map[string]bool)
 	for term := range wdict {
 		if len([]rune(term)) > maxChars {

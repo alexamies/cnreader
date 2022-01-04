@@ -64,7 +64,7 @@ func (sortedWF *SortedWF) Swap(i, j int) {
  * senses matches the label.
  */
 func FilterByDomain(words []SortedWordItem,
-		domain string, wdict map[string]dicttypes.Word) []dicttypes.Word {
+		domain string, wdict map[string]*dicttypes.Word) []dicttypes.Word {
 	headwords := []dicttypes.Word{}
 	if len(domain) == 0 {
 		return headwords
@@ -79,7 +79,7 @@ func FilterByDomain(words []SortedWordItem,
 				}
 			}
 			if len(wsArr) > 0 {
-				h := dicttypes.CloneWord(w)
+				h := dicttypes.CloneWord(*w)
 				h.Senses = wsArr
 				headwords = append(headwords, h)
 			}

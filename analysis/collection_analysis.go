@@ -64,7 +64,7 @@ func (results *CollectionAResults) AddResults(more *CollectionAResults) {
 
 // Returns the subset of words that are lexical (content) words
 func (results *CollectionAResults) GetLexicalWordFreq(sortedWords []index.SortedWordItem,
-	wdict map[string]dicttypes.Word) []wFResult {
+	wdict map[string]*dicttypes.Word) []wFResult {
 	wfResults := make([]wFResult, 0)
 	for _, value := range sortedWords {
 		if word, ok := wdict[value.Word]; ok {
@@ -85,11 +85,11 @@ func (results *CollectionAResults) GetLexicalWordFreq(sortedWords []index.Sorted
 }
 
 // Returns the subset of words that are lexical (content) words
-func (results *CollectionAResults) GetHeadwords(wdict map[string]dicttypes.Word) []dicttypes.Word {
+func (results *CollectionAResults) GetHeadwords(wdict map[string]*dicttypes.Word) []dicttypes.Word {
 	headwords := make([]dicttypes.Word, 0, len(results.Vocab))
 	for k := range results.Vocab {
 		if hw, ok := wdict[k]; ok {
-			headwords = append(headwords, hw)
+			headwords = append(headwords, *hw)
 		}
 	}
 	return headwords
@@ -97,7 +97,7 @@ func (results *CollectionAResults) GetHeadwords(wdict map[string]dicttypes.Word)
 
 // Returns the subset of words that are lexical (content) words
 func (results *CollectionAResults) GetWordFreq(sortedWords []index.SortedWordItem,
-	wdict map[string]dicttypes.Word) []wFResult {
+	wdict map[string]*dicttypes.Word) []wFResult {
 
 	wfResults := make([]wFResult, 0)
 	maxWFOutput := len(sortedWords)

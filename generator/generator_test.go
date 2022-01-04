@@ -143,10 +143,10 @@ func TestDecodeUsageExample(t *testing.T) {
 		Pinyin:      "guó",
 		Senses:      []dicttypes.WordSense{},
 	}
-	wdict := make(map[string]dicttypes.Word)
-	wdict[s1] = hw1
-	wdict[s2] = hw2
-	wdict[t2] = hw2
+	wdict := make(map[string]*dicttypes.Word)
+	wdict[s1] = &hw1
+	wdict[s2] = &hw2
+	wdict[t2] = &hw2
 	dictTokenizer := tokenizer.DictTokenizer{WDict: wdict}
 	type testCase struct {
 		name     string
@@ -188,7 +188,7 @@ func TestDecodeUsageExample(t *testing.T) {
 func TestWriteCorpusDoc(t *testing.T) {
 	t.Log("TestWriteCorpusDoc: Begin +++++++++++")
 	corpusConfig := mockCorpusConfig()
-	wdict := make(map[string]dicttypes.Word)
+	wdict := make(map[string]*dicttypes.Word)
 	const usageText = "繁"
 	dictTokenizer := tokenizer.DictTokenizer{WDict: wdict}
 	tokens := dictTokenizer.Tokenize(usageText)
@@ -229,7 +229,7 @@ func TestWriteCorpusDoc(t *testing.T) {
 
 func TestWriteDoc(t *testing.T) {
 	t.Log("generator.TestWriteDoc: Begin +++++++++++")
-	wdict := make(map[string]dicttypes.Word)
+	wdict := make(map[string]*dicttypes.Word)
 	tokenizer := tokenizer.DictTokenizer{WDict: wdict}
 	input1 := `
   	A test document

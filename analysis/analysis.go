@@ -125,7 +125,7 @@ type HWFileDependencies struct {
 	DictTokenizer tokenizer.Tokenizer
 	OutputConfig generator.HTMLOutPutConfig
 	IndexState index.IndexState
-	Wdict map[string]dicttypes.Word
+	Dict *dictionary.Dictionary
 	VocabAnalysis VocabAnalysis
 	Hww HeadwordWriter
 	BibNotesClient bibnotes.BibNotesClient
@@ -145,30 +145,13 @@ func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
 
 // getHeadwords compute headword numbers for all lexical units listed in data/words.txt
 // Return a sorted array of headwords
-func getHeadwords(wdict map[string]dicttypes.Word) []dicttypes.Word {
+func getHeadwords(dict *dictionary.Dictionary) []dicttypes.Word {
 	hwArray := []dicttypes.Word{}
-	hwMap := getHwMap(wdict)
-	for _, w := range hwMap {
-		hwArray = append(hwArray, w)
+	for _, w := range dict.HeadwordIds {
+		hwArray = append(hwArray, *w)
 	}
 	log.Printf("analysis.GetHeadwords: hwcount = %d", len(hwArray))
 	return hwArray
-}
-
-// getHwMap gets a map of headword id to word
-func getHwMap(wdict map[string]dicttypes.Word) map[int]dicttypes.Word {
-	hwIdMap := make(map[int]dicttypes.Word)
-	for _, w := range wdict {
-		hwIdMap[w.HeadwordId] = w
-	}
-	// Debug
-	w, ok := hwIdMap[393]
-	if ok {
-		log.Printf("analysis.getHwMap: Got 393, senses: %d", len(w.Senses))
-	} else {
-		log.Print("analysis.getHwMap: Did not get 393")
-	}
-	return hwIdMap
 }
 
 // isCJKChar tests whether the symbol is a CJK character, excluding punctuation
@@ -210,7 +193,7 @@ func getChunks(text string) list.List {
 // getWordFrequencies compute word doc frequencies for corpus
 func GetDocFrequencies(libLoader library.LibraryLoader,
 	dictTokenizer tokenizer.Tokenizer,
-	wdict map[string]dicttypes.Word) (*index.DocumentFrequency, error) {
+	dict *dictionary.Dictionary) (*index.DocumentFrequency, error) {
 	log.Printf("analysis.GetDocFrequencies: enter")
 	df := index.NewDocumentFrequency()
 	corpLoader := libLoader.GetCorpusLoader()
@@ -233,7 +216,7 @@ func GetDocFrequencies(libLoader library.LibraryLoader,
 					entry.RawFile, err)
 			}
 			_, results := ParseText(text, col.Title, &entry, dictTokenizer,
-				corpusConfig, wdict)
+				corpusConfig, dict)
 			df.AddDocFreq(results.DocFreq)
 		}
 	}
@@ -243,7 +226,7 @@ func GetDocFrequencies(libLoader library.LibraryLoader,
 // getWordFrequencies compute word frequencies, collocations, and usage for corpus
 func GetWordFrequencies(libLoader library.LibraryLoader,
 	dictTokenizer tokenizer.Tokenizer,
-	wdict map[string]dicttypes.Word) (*VocabAnalysis, error) {
+	dict *dictionary.Dictionary) (*VocabAnalysis, error) {
 
 	log.Printf("analysis.getWordFrequencies: enter")
 
@@ -276,7 +259,7 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 			}
 			ccount += utf8.RuneCountInString(text)
 			_, results := ParseText(text, col.Title, &entry, dictTokenizer,
-				corpusConfig, wdict)
+				corpusConfig, dict)
 			wcTotal[col.Corpus] += results.WC
 
 			// Process collocations
@@ -333,8 +316,8 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 //   tokens: the tokens for the parsed text
 //   results: vocabulary analysis results
 func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
-	dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig,
-	wdict map[string]dicttypes.Word) (list.List, *CollectionAResults) {
+		dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig,
+		dict *dictionary.Dictionary) (list.List, *CollectionAResults) {
 	tokens := list.List{}
 	vocab := map[string]int{}
 	bigrams := map[string]int{}
@@ -345,10 +328,10 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 	wc := 0
 	cc := 0
 	chunks := getChunks(text)
-	hwIdMap := getHwMap(wdict)
 	lastHWPtr := &dicttypes.Word{}
-	lastHW := *lastHWPtr
+	lastHW := lastHWPtr
 	lastHWText := ""
+	hwIdMap := dict.HeadwordIds
 	//fmt.Printf("ParseText: For text %s got %d chunks\n", colTitle, chunks.Len())
 	for e := chunks.Front(); e != nil; e = e.Next() {
 		chunk := e.Value.(string)
@@ -357,7 +340,7 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 		if !isCJKChar(characters[0]) || corpus.IsExcluded(corpusConfig.Excluded, chunk) {
 			tokens.PushBack(chunk)
 			lastHWPtr = &dicttypes.Word{}
-			lastHW = *lastHWPtr
+			lastHW = lastHWPtr
 			lastHWText = ""
 			continue
 		}
@@ -380,7 +363,7 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 				}
 				hwid := token.DictEntry.HeadwordId
 				hw := hwIdMap[hwid]
-				if lastHW.HeadwordId != 0 {
+				if lastHW != nil && lastHW.HeadwordId != 0 {
 					if len(hw.Senses) == 0 {
 						log.Printf("ParseText: WordSenses nil for %s "+
 							", id = %d, in %s, %s\n", w, hwid,
@@ -388,7 +371,7 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 					}
 					bigram, ok := bigramMap.GetBigramVal(lastHW.HeadwordId, hwid)
 					if !ok {
-						bigram = ngram.NewBigram(lastHW, hw, chunk,
+						bigram = ngram.NewBigram(*lastHW, *hw, chunk,
 							document.GlossFile, document.Title, colTitle)
 					}
 					bigramMap.PutBigram(bigram)
@@ -448,7 +431,7 @@ func sampleUsage(usageMap map[string]*[]wordUsage) map[string]*[]wordUsage {
 // Returns: the name of the file written to
 func writeAnalysisCorpus(results *CollectionAResults,
 	docFreq index.DocumentFrequency, outputConfig generator.HTMLOutPutConfig,
-	indexConfig index.IndexConfig, wdict map[string]dicttypes.Word,
+	indexConfig index.IndexConfig, wdict map[string]*dicttypes.Word,
 	c config.AppConfig, analysisFile io.Writer) error {
 
 	// Parse template and organize template parameters
@@ -547,7 +530,7 @@ func writeAnalysisCorpus(results *CollectionAResults,
 func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 	collectionTitle, docTitle string,
 	outputConfig generator.HTMLOutPutConfig,
-	wdict map[string]dicttypes.Word, f io.Writer) error {
+	wdict map[string]*dicttypes.Word, f io.Writer) error {
 
 	// Parse template and organize template parameters
 	properNouns := makePNList(results.Vocab, wdict)
@@ -643,7 +626,7 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 func writeCollection(collectionEntry *corpus.CollectionEntry,
 	outputConfig generator.HTMLOutPutConfig, libLoader library.LibraryLoader,
 	dictTokenizer tokenizer.Tokenizer,
-	wdict map[string]dicttypes.Word, c config.AppConfig) (*CollectionAResults, error) {
+	dict *dictionary.Dictionary, c config.AppConfig) (*CollectionAResults, error) {
 
 	log.Printf("analysis.writeCollection: enter CollectionFile =" +
 		collectionEntry.CollectionFile)
@@ -656,6 +639,7 @@ func writeCollection(collectionEntry *corpus.CollectionEntry,
 			cFile, err)
 	}
 	aResults := NewCollectionAResults()
+	wdict := dict.Wdict
 	for _, entry := range *corpusEntries {
 		text, err := corpLoader.ReadText(entry.RawFile)
 		if err != nil {
@@ -663,7 +647,7 @@ func writeCollection(collectionEntry *corpus.CollectionEntry,
 				entry.RawFile, err)
 		}
 		_, results := ParseText(text, collectionEntry.Title, &entry,
-			dictTokenizer, corpusConfig, wdict)
+			dictTokenizer, corpusConfig, dict)
 
 		srcFile := entry.RawFile
 		i := strings.Index(srcFile, ".")
@@ -771,7 +755,7 @@ func writeCollection(collectionEntry *corpus.CollectionEntry,
 func WriteCorpus(collections []corpus.CollectionEntry,
 	outputConfig generator.HTMLOutPutConfig,
 	libLoader library.LibraryLoader, dictTokenizer tokenizer.Tokenizer,
-	indexConfig index.IndexConfig, wdict map[string]dicttypes.Word,
+	indexConfig index.IndexConfig, dict *dictionary.Dictionary,
 	c config.AppConfig, corpusConfig corpus.CorpusConfig) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpus: enter %d collections", len(collections))
 	wfDocMap := index.TermFreqDocMap{}
@@ -781,7 +765,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	aResults := NewCollectionAResults()
 	for _, collectionEntry := range collections {
 		results, err := writeCollection(&collectionEntry, outputConfig, libLoader,
-			dictTokenizer, wdict, c)
+			dictTokenizer, dict, c)
 		if err != nil {
 			return nil, fmt.Errorf("WriteCorpus could not write collection: %v", err)
 		}
@@ -801,7 +785,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	}
 	defer analysisWriter.Close()
 	if err := writeAnalysisCorpus(&aResults, docFreq, outputConfig, indexConfig,
-		wdict, c, analysisWriter); err != nil {
+			dict.Wdict, c, analysisWriter); err != nil {
 		return nil, fmt.Errorf("WriteCorpus could not write analysis: %v", err)
 	}
 
@@ -884,7 +868,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 // (collections.csv file)
 func WriteCorpusAll(libLoader library.LibraryLoader,
 	dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
-	indexConfig index.IndexConfig, wdict map[string]dicttypes.Word,
+	indexConfig index.IndexConfig, dict *dictionary.Dictionary,
 	c config.AppConfig) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpusAll: enter")
 	corpLoader := libLoader.GetCorpusLoader()
@@ -894,7 +878,7 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 		return nil, fmt.Errorf("writeCorpusAll could not load corpus: %v", err)
 	}
 	indexState, err := WriteCorpus(*collections, outputConfig, libLoader, dictTokenizer,
-		indexConfig, wdict, c, corpusConfig)
+		indexConfig, dict, c, corpusConfig)
 	if err != nil {
 		return nil, fmt.Errorf("writeCorpusAll error: %v", err)
 	}
@@ -906,7 +890,7 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 // collectionFile: the name of the collection file
 func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 	dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
-	corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word,
+	corpusConfig corpus.CorpusConfig, dict *dictionary.Dictionary,
 	c config.AppConfig) error {
 
 	collectionEntry, err := libLoader.GetCorpusLoader().GetCollectionEntry(collectionFile)
@@ -914,7 +898,7 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 		return fmt.Errorf("analysis.WriteCorpusCol:  could not get entry %v", err)
 	}
 	_, err = writeCollection(collectionEntry, outputConfig, libLoader,
-		dictTokenizer, wdict, c)
+		dictTokenizer, dict, c)
 	if err != nil {
 		return fmt.Errorf("analysis.WriteCorpusCol: error writing collection %v", err)
 	}
@@ -933,9 +917,9 @@ func WriteHwFiles(dep HWFileDependencies) error {
 	// hWFileDependencies := analysis.HWFileDependencies
 	log.Printf("analysis.WriteHwFiles: Begin +++++++++++\n")
 	outputConfig := dep.OutputConfig
-	wdict := dep.Wdict
+	wdict := dep.Dict.Wdict
 	vocabAnalysis := dep.VocabAnalysis
-	hwArray := getHeadwords(wdict)
+	hwArray := getHeadwords(dep.Dict)
 	usageMap := vocabAnalysis.UsageMap
 	collocations := vocabAnalysis.Collocations
 	outfileMap, err := corpus.GetOutfileMap(dep.Loader.GetCorpusLoader())

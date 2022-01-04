@@ -22,6 +22,7 @@ import (
 	"github.com/alexamies/chinesenotes-go/bibnotes"
 	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dicttypes"
+	"github.com/alexamies/chinesenotes-go/dictionary"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/corpus"
 	"github.com/alexamies/cnreader/generator"
@@ -50,7 +51,7 @@ func mockOutputConfig() generator.HTMLOutPutConfig {
 	}
 }
 
-func mockSmallDict() map[string]dicttypes.Word {
+func mockSmallDict() *dictionary.Dictionary {
 	s1 := "繁体中文"
 	t1 := "繁體中文"
 	hw1 := dicttypes.Word{
@@ -123,19 +124,20 @@ func mockSmallDict() map[string]dicttypes.Word {
 		Pinyin:      "nǎishì",
 		Senses:      []dicttypes.WordSense{},
 	}
-	return map[string]dicttypes.Word{
-		s1: hw1,
-		t1: hw1,
-		s2: hw2,
-		s3: hw3,
-		t3: hw3,
-		s4: hw4,
-		s5: hw5,
-		s6: hw6,
-		t6: hw6,
-		s7: hw7,
-		s8: hw8,
+	wdict := map[string]*dicttypes.Word{
+		s1: &hw1,
+		t1: &hw1,
+		s2: &hw2,
+		s3: &hw3,
+		t3: &hw3,
+		s4: &hw4,
+		s5: &hw5,
+		s6: &hw6,
+		t6: &hw6,
+		s7: &hw7,
+		s8: &hw8,
 	}
+	return dictionary.NewDictionary(wdict)
 }
 
 // Implements the CorpusLoader interface with no data
@@ -261,9 +263,9 @@ func TestGetChunks(t *testing.T) {
 }
 
 func TestGetDocFrequencies(t *testing.T) {
-	wdict := mockSmallDict()
+	dict := mockSmallDict()
 	tok := tokenizer.DictTokenizer{
-		WDict: wdict,
+		WDict: dict.Wdict,
 	}
 	emptyCorpLoader := mockCorpusLoader{}
 	emptyLibLoader := mockLibraryLoader{emptyCorpLoader}
@@ -288,23 +290,23 @@ func TestGetDocFrequencies(t *testing.T) {
 		name      string
 		libLoader library.LibraryLoader
 		tok       tokenizer.Tokenizer
-		wdict     map[string]dicttypes.Word
+		dict     *dictionary.Dictionary
 	}{
 		{
 			name:      "Empty",
 			libLoader: emptyLibLoader,
 			tok:       tok,
-			wdict:     wdict,
+			dict:     dict,
 		},
 		{
 			name:      "small",
 			libLoader: smallLibLoader,
 			tok:       tok,
-			wdict:     wdict,
+			dict:     dict,
 		},
 	}
 	for _, tc := range testCases {
-		_, err := GetDocFrequencies(tc.libLoader, tc.tok, tc.wdict)
+		_, err := GetDocFrequencies(tc.libLoader, tc.tok, tc.dict)
 		if err != nil {
 			t.Errorf("TestGetDocFrequencies %s: unexpected error %v", tc.name, err)
 		}
@@ -321,28 +323,29 @@ func TestGetHeadwords(t *testing.T) {
 		Pinyin:      "fántǐ zhōngwén",
 		Senses:      []dicttypes.WordSense{},
 	}
-	oneWordDict := map[string]dicttypes.Word{
-		s1: hw1,
-		t1: hw1,
+	oneWordDict := map[string]*dicttypes.Word{
+		s1: &hw1,
+		t1: &hw1,
 	}
+	dict := dictionary.NewDictionary(oneWordDict)
 	testCases := []struct {
 		name        string
-		wdict       map[string]dicttypes.Word
+		dict       *dictionary.Dictionary
 		expectedLen int
 	}{
 		{
 			name:        "Empty dict",
-			wdict:       map[string]dicttypes.Word{},
+			dict:       dictionary.NewDictionary(make(map[string]*dicttypes.Word)),
 			expectedLen: 0,
 		},
 		{
 			name:        "One word dict",
-			wdict:       oneWordDict,
+			dict:       dict,
 			expectedLen: 1,
 		},
 	}
 	for _, tc := range testCases {
-		words := getHeadwords(tc.wdict)
+		words := getHeadwords(tc.dict)
 		if len(words) != tc.expectedLen {
 			t.Errorf("TestGetHeadwords %s: Expected length of wdict got %d, want %d",
 				tc.name, len(words), tc.expectedLen)
@@ -350,42 +353,11 @@ func TestGetHeadwords(t *testing.T) {
 	}
 }
 
-func TestGetHwMap(t *testing.T) {
-	s1 := "了"
-	t1 := "\\N"
-	hw1 := dicttypes.Word{
-		HeadwordId:  1,
-		Simplified:  s1,
-		Traditional: t1,
-		Pinyin:      "le",
-		Senses:      []dicttypes.WordSense{},
-	}
-	oneWordDict := map[string]dicttypes.Word{
-		s1: hw1,
-	}
-	testCases := []struct {
-		name        string
-		wdict       map[string]dicttypes.Word
-		expectedLen int
-	}{
-		{
-			name:        "One word dict",
-			wdict:       oneWordDict,
-			expectedLen: 1,
-		},
-	}
-	for _, tc := range testCases {
-		words := getHwMap(tc.wdict)
-		if len(words) != tc.expectedLen {
-			t.Errorf("TestGetHwMap %s, Expected length of map: got %d, want %d",
-				tc.name, len(words), tc.expectedLen)
-		}
-	}
-}
-
 func TestGetWordFrequencies(t *testing.T) {
 	wdict := mockSmallDict()
-	tok := tokenizer.DictTokenizer{WDict: wdict}
+	tok := tokenizer.DictTokenizer{
+		WDict: wdict.Wdict,
+	}
 	emptyCorpLoader := mockCorpusLoader{}
 	emptyLibLoader := mockLibraryLoader{emptyCorpLoader}
 	entry := corpus.CorpusEntry{
@@ -484,11 +456,11 @@ func TestParseText(t *testing.T) {
 			expectedCC:     7,
 		},
 	}
-	wdict := mockSmallDict()
-	tok := tokenizer.DictTokenizer{WDict: wdict}
+	dict := mockSmallDict()
+	tok := tokenizer.DictTokenizer{WDict: dict.Wdict}
 	for _, tc := range testCases {
 		tokens, results := ParseText(tc.in, "", corpus.NewCorpusEntry(),
-			tok, mockCorpusConfig(), wdict)
+			tok, mockCorpusConfig(), dict)
 		if tokens.Len() != tc.expectedTokens {
 			t.Fatalf("%s: expectedTokens %d, got %d", tc.name, tc.expectedTokens,
 				tokens.Len())
@@ -616,10 +588,11 @@ func TestSampleUsage4(t *testing.T) {
 }
 
 func TestSortedFreq(t *testing.T) {
-	wdict := make(map[string]dicttypes.Word)
+	wdict := make(map[string]*dicttypes.Word)
+	dict := dictionary.NewDictionary(wdict)
 	text := "夫起信論者，乃是至極大乘甚深祕典"
 	_, results := ParseText(text, "", corpus.NewCorpusEntry(),
-		tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
+		tokenizer.DictTokenizer{}, mockCorpusConfig(), dict)
 	sortedWords := index.SortedFreq(results.Vocab)
 	expected := len(results.Vocab)
 	got := len(sortedWords)
@@ -631,9 +604,10 @@ func TestSortedFreq(t *testing.T) {
 func TestWriteAnalysis(t *testing.T) {
 	t.Log("analysis.TestWriteAnalysis: Begin +++++++++++")
 	term := "繁"
-	wdict := make(map[string]dicttypes.Word)
+	wdict := make(map[string]*dicttypes.Word)
+	dict := dictionary.NewDictionary(wdict)
 	_, results := ParseText(term, "", corpus.NewCorpusEntry(),
-		tokenizer.DictTokenizer{}, mockCorpusConfig(), wdict)
+		tokenizer.DictTokenizer{}, mockCorpusConfig(), dict)
 	srcFile := "test.txt"
 	glossFile := "test.html"
 	vocab := map[string]int{
@@ -772,7 +746,7 @@ func TestWriteHwFiles(t *testing.T) {
 	loader := mockLibraryLoader{}
 	indexState := index.IndexState{}
 	vocabAnalysis := VocabAnalysis{}
-	oneWordDict := make(map[string]dicttypes.Word)
+	oneWordDict := make(map[string]*dicttypes.Word)
 	const match = `"(T ([0-9]))(\)|,|;)","(T ([0-9]{2}))(\)|,|;)","(T ([0-9]{3}))(\)|,|;)","(T ([0-9]{4}))(\)|,|;)"`
 	const replace = `"<a href="/taisho/t000${2}.html">${1}</a>${3}","<a href="/taisho/t00${2}.html">${1}</a>${3}","<a href="/taisho/t0${2}.html">${1}</a>${3}","<a href="/taisho/t${2}.html">${1}</a>${3}"`
 	config := generator.HTMLOutPutConfig{
@@ -803,47 +777,49 @@ func TestWriteHwFiles(t *testing.T) {
 		Pinyin:      p,
 		Senses:      []dicttypes.WordSense{ws},
 	}
-	oneWordDict[s] = hw
-	oneWordDict[tr] = hw
+	oneWordDict[s] = &hw
+	oneWordDict[tr] = &hw
+	oWDict := dictionary.NewDictionary(oneWordDict)
 	type test struct {
 		name      string
-		wdict     map[string]dicttypes.Word
+		dict     	*dictionary.Dictionary
 		config    generator.HTMLOutPutConfig
 		expectNum int
 		contains  string
 	}
 	tests := []test{
 		{
-			name:      "Empty",
-			wdict:     map[string]dicttypes.Word{},
-			config:    mockOutputConfig(),
-			expectNum: 0,
-			contains:  "",
+			name:      	"Empty",
+			dict:     	dictionary.NewDictionary(map[string]*dicttypes.Word{}),
+			config:    	mockOutputConfig(),
+			expectNum: 	0,
+			contains:  	"",
 		},
 		{
 			name:      "Small",
-			wdict:     mockSmallDict(),
+			dict:     mockSmallDict(),
 			config:    mockOutputConfig(),
 			expectNum: 8,
 			contains:  "",
 		},
 		{
-			name:      "Has notes",
-			wdict:     oneWordDict,
-			config:    mockOutputConfig(),
-			expectNum: 1,
-			contains:  "T 235",
+			name:      	"Has notes",
+			dict:     	oWDict,
+			config:    	mockOutputConfig(),
+			expectNum: 	1,
+			contains:  	"T 235",
 		},
 		{
-			name:      "Transforms notes",
-			wdict:     oneWordDict,
-			config:    config,
-			expectNum: 1,
-			contains:  `<a href="/taisho/t0235.html">T 235</a>`,
+			name:      	"Transforms notes",
+			dict:     	oWDict,
+			config:    	config,
+			expectNum: 	1,
+			contains:  	`<a href="/taisho/t0235.html">T 235</a>`,
 		},
 	}
 	for _, tc := range tests {
-		tok := tokenizer.DictTokenizer{WDict: tc.wdict}
+		tok := tokenizer.DictTokenizer{
+			WDict: tc.dict.Wdict}
 		var buf bytes.Buffer
 		numWritten := 0
 		tw := testHwWriter{
@@ -862,7 +838,7 @@ func TestWriteHwFiles(t *testing.T) {
 			DictTokenizer: tok,
 			OutputConfig: tc.config,
 			IndexState: indexState,
-			Wdict: tc.wdict,
+			Dict: tc.dict,
 			VocabAnalysis: vocabAnalysis,
 			Hww: tw,
 			BibNotesClient: bibNotesClient,

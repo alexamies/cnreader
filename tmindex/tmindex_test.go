@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-func mockDictionary() map[string]dicttypes.Word {
+func mockDictionary() map[string]*dicttypes.Word {
 	s1 := "结实"
 	t1 := "結實"
 	p1 := "jiēshi"
@@ -56,12 +56,14 @@ func mockDictionary() map[string]dicttypes.Word {
 		Senses: []dicttypes.WordSense{ws2},
 	}
   headwords := []dicttypes.Word{hw1, hw2}
-  wdict := make(map[string]dicttypes.Word)
+  wdict := make(map[string]*dicttypes.Word)
   for _, hw := range headwords {
-  	wdict[hw.Simplified] = hw
+  	fmt.Printf("mockDictionary adding simplified key %s: %v\n", hw.Simplified, hw.Senses)
+  	wdict[hw.Simplified] = &hw
   	trad := hw.Traditional
   	if trad != "\\N" {
-  		wdict[trad] = hw
+  	fmt.Printf("mockDictionary adding trad key %s: %v\n", trad, hw.Senses)
+  		wdict[trad] = &hw
   	}
   }
   return wdict
@@ -71,6 +73,11 @@ func mockDictionary() map[string]dicttypes.Word {
 func TestBuildUniDomainIndex(t *testing.T) {
 	fmt.Printf("TestBuildIndex: Begin unit test\n")
 	wdict := mockDictionary()
+	for k, w := range wdict {
+		for _, s := range w.Senses {
+			fmt.Printf("TestBuildIndex: %s %d %s: %s %s\n", k, w.HeadwordId, s.Pinyin, s.English, s.Domain)
+		}
+	}
 	var buf bytes.Buffer
 	err := buildUniDomainIndex(&buf, wdict)
 	expected := 
@@ -85,7 +92,8 @@ func TestBuildUniDomainIndex(t *testing.T) {
 	}
 	result := buf.String()
 	if len(result) != len(expected) {
-		t.Errorf("expected: %d, got: %d", len(expected), len(result))
+		t.Errorf("got: %d, expected: %d, got:\n%s, want:\n%s", len(result),
+				len(expected), result, expected)
 	}
 }
 
@@ -107,6 +115,6 @@ func TestBuildUnigramIndex(t *testing.T) {
 	}
 	result := buf.String()
 	if len(result) != len(expected) {
-		t.Errorf("expected: %d, got: %d", len(expected), len(result))
+		t.Errorf("got: %d, expected: %d, index:\n%s", len(result), len(expected), result)
 	}
 }

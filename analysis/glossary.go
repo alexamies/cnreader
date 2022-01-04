@@ -44,12 +44,12 @@ func MakeGlossary(domain string, headwords []dicttypes.Word) Glossary {
 }
 
 // Makes a list of proper nouns, sorted by Pinyin
-func makePNList(vocab map[string]int, wdict map[string]dicttypes.Word) dicttypes.Words {
+func makePNList(vocab map[string]int, wdict map[string]*dicttypes.Word) dicttypes.Words {
 	hws := dicttypes.Words{}
 	for w := range vocab {
 		hw, ok := wdict[w]
 		if ok && hw.IsProperNoun() {
-			hws = append(hws, hw)
+			hws = append(hws, *hw)
 		}
 	}
 	sort.Sort(hws)

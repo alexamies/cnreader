@@ -170,7 +170,7 @@ func TestGetLexicalWordFreq0(t *testing.T) {
 	}
 
 	// Method to test
-	wdict := make(map[string]dicttypes.Word)
+	wdict := make(map[string]*dicttypes.Word)
 	lexicalWF := results.GetLexicalWordFreq(sortedWords, wdict)
 
 	// Check results
@@ -199,7 +199,7 @@ func TestGetWordFreq0(t *testing.T) {
 	}
 
 	// Method to test
-	wdict := make(map[string]dicttypes.Word)
+	wdict := make(map[string]*dicttypes.Word)
 	lexicalWF := results.GetWordFreq(sortedWords, wdict)
 
 	// Check results

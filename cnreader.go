@@ -62,7 +62,6 @@ import (
 	"github.com/alexamies/chinesenotes-go/bibnotes"
 	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dictionary"
-	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/analysis"
 	"github.com/alexamies/cnreader/corpus"
@@ -449,7 +448,7 @@ func readIndex(indexConfig index.IndexConfig) (*index.IndexState, error) {
 func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 	outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
 	indexConfig index.IndexConfig,
-	wdict map[string]dicttypes.Word, appConfig config.AppConfig) error {
+	dict *dictionary.Dictionary, appConfig config.AppConfig) error {
 	log.Printf("writeLibraryFiles, LibraryFile: %s", library.LibraryFile)
 	libFle, err := os.Open(library.LibraryFile)
 	if err != nil {
@@ -487,7 +486,7 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		log.Printf("writeLibraryFiles, loaded %d collections from corpus: %s",
 			len(*collections), srcFileName)
 		_, err = analysis.WriteCorpus(*collections, outputConfig, lib.Loader,
-			dictTokenizer, indexConfig, wdict, appConfig, corpusConfig)
+			dictTokenizer, indexConfig, dict, appConfig, corpusConfig)
 		if err != nil {
 			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
 		}
@@ -555,27 +554,31 @@ func main() {
 	}
 
 	// Minimal config for simple cases
-	var wdict map[string]dicttypes.Word
+	var dict *dictionary.Dictionary
 	var err error
 	if len(c.LUFileNames) > 0 {
-		wdict, err = dictionary.LoadDictFile(c)
-		w, ok := wdict["了"]
+		dict, err = dictionary.LoadDictFile(c)
+		if err != nil {
+			log.Fatalf("main, could not load dictionary: %v", err)
+		}
+		// Some debug logging
+		w, ok := dict.Wdict["了"]
 		if ok {
 			log.Printf("main: loaded dict file with %d entries, sense for 了: %d",
-					len(wdict), len(w.Senses))
+					len(dict.Wdict), len(w.Senses))
 		} else {
 			log.Printf("main: loaded dict file with %d entries, no entry for 了",
-					len(wdict))
+					len(dict.Wdict))
 		}
 	} else {
 		const url = "https://github.com/alexamies/chinesenotes.com/blob/master/data/words.txt?raw=true"
-		wdict, err = dictionary.LoadDictURL(c, url)
+		dict, err = dictionary.LoadDictURL(c, url)
 	}
 	if err != nil {
 		log.Fatalf("Error opening dictionary: %v", err)
 	}
 	dictTokenizer := tokenizer.DictTokenizer{
-		WDict: wdict,
+		WDict: dict.Wdict,
 	}
 
 	// Simple cases, no validation done
@@ -643,7 +646,7 @@ func main() {
 	libraryLoader := library.NewLibraryLoader(fname, corpusConfig)
 
 	// Validate dictionary for cases below
-	err = dictionary.ValidateDict(wdict, validator)
+	err = dictionary.ValidateDict(dict.Wdict, validator)
 	if err != nil {
 		log.Fatalf("main: unexpected error reading headwords, %v", err)
 	}
@@ -657,7 +660,7 @@ func main() {
 	if len(*collectionFile) > 0 {
 		log.Printf("main: writing collection %s\n", *collectionFile)
 		err := analysis.WriteCorpusCol(*collectionFile, libraryLoader,
-			dictTokenizer, outputConfig, corpusConfig, wdict, c)
+			dictTokenizer, outputConfig, corpusConfig, dict, c)
 		if err != nil {
 			log.Fatalf("error writing collection %v\n", err)
 		}
@@ -698,7 +701,7 @@ func main() {
 			log.Fatalf("main, unable to read index: %v", err)
 		}
 		vocabAnalysis, err := analysis.GetWordFrequencies(libraryLoader,
-			dictTokenizer, wdict)
+			dictTokenizer, dict)
 		if err != nil {
 			log.Fatalf("main, error getting freq: %v", err)
 		}
@@ -708,7 +711,7 @@ func main() {
 			DictTokenizer: dictTokenizer,
 			OutputConfig: outputConfig,
 			IndexState: *indexState,
-			Wdict: wdict,
+			Dict: dict,
 			VocabAnalysis: *vocabAnalysis,
 			Hww: hww,
 			BibNotesClient: bibNotesClient,
@@ -730,14 +733,14 @@ func main() {
 			Loader:       libraryLoader,
 		}
 		err := writeLibraryFiles(lib, dictTokenizer, outputConfig,
-			corpusConfig, indexConfig, wdict, c)
+			corpusConfig, indexConfig, dict, c)
 		if err != nil {
 			log.Fatalf("main: could not write library files: %v\n", err)
 		}
 
 	} else if *writeTMIndex {
 		log.Println("main: writing translation memory index")
-		err := tmindex.BuildIndexes(indexConfig.IndexDir, wdict)
+		err := tmindex.BuildIndexes(indexConfig.IndexDir, dict.Wdict)
 		if err != nil {
 			log.Fatalf("main: could not create tm index file, err: %v\n", err)
 		}
@@ -757,7 +760,7 @@ func main() {
 	} else {
 		log.Println("main: writing out entire corpus")
 		_, err := analysis.WriteCorpusAll(libraryLoader, dictTokenizer,
-			outputConfig, indexConfig, wdict, c)
+			outputConfig, indexConfig, dict, c)
 		if err != nil {
 			log.Fatalf("main: writing out corpus, err: %v\n", err)
 		}

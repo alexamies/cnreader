@@ -106,7 +106,7 @@ type CollectionListContent struct {
 //      marked up text with links and highlight
 func DecodeUsageExample(usageText string, headword dicttypes.Word,
 	dictTokenizer tokenizer.Tokenizer, outputConfig HTMLOutPutConfig,
-	wdict map[string]dicttypes.Word) string {
+	wdict map[string]*dicttypes.Word) string {
 	tokens := dictTokenizer.Tokenize(usageText)
 	replacementText := ""
 	for _, token := range tokens {
@@ -117,7 +117,7 @@ func DecodeUsageExample(usageText string, headword dicttypes.Word,
 		} else {
 			ws, ok := wdict[word.Simplified]
 			if ok {
-				replacementText = replacementText + hyperlink(ws, token.Token, outputConfig.VocabFormat)
+				replacementText = replacementText + hyperlink(*ws, token.Token, outputConfig.VocabFormat)
 			} else {
 				replacementText = replacementText + token.Token
 			}
@@ -290,7 +290,7 @@ func WriteCollectionList(colIEntries []corpus.CollectionEntry, analysisFile stri
 func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Writer,
 	collectionURL string, collectionTitle string, entryTitle string,
 	aFile string, sourceFormat string, outputConfig HTMLOutPutConfig,
-	corpusConfig corpus.CorpusConfig, wdict map[string]dicttypes.Word) error {
+	corpusConfig corpus.CorpusConfig, wdict map[string]*dicttypes.Word) error {
 
 	var b bytes.Buffer
 	replacer := strings.NewReplacer("\n", "<br/>")
@@ -299,7 +299,7 @@ func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Wri
 	for _, token := range tokens {
 		chunk := token.Token
 		if entries, ok := wdict[chunk]; ok && !corpus.IsExcluded(corpusConfig.Excluded, chunk) {
-			fmt.Fprint(&b, span(entries, chunk))
+			fmt.Fprint(&b, span(*entries, chunk))
 		} else {
 			if sourceFormat != "HTML" {
 				chunk = replacer.Replace(chunk)

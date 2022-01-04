@@ -66,7 +66,7 @@ func TestIntegration(t *testing.T) {
 	appConfig := config.AppConfig{
 		LUFileNames: []string{"data/testwords.tsv"},
 	}
-	wdict, err := dictionary.LoadDictFile(appConfig)
+	dict, err := dictionary.LoadDictFile(appConfig)
 	if err != nil {
 		t.Fatalf("main, could not load dict: %v", err)
 	}
@@ -77,9 +77,9 @@ func TestIntegration(t *testing.T) {
 	}
 	defer r.Close()
 	text := corpus.ReadText(r)
-	tok := tokenizer.DictTokenizer{wdict}
+	tok := tokenizer.DictTokenizer{dict.Wdict}
 	tokens, results := analysis.ParseText(text, "", corpus.NewCorpusEntry(),
-			tok, corpusConfig, wdict)
+			tok, corpusConfig, dict)
 	tokenText := listToString(tokens)
 	if len(text) != len(tokenText) {
 		t.Error("Expected to string length ", len(text), ", got ",
