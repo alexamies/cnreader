@@ -17,7 +17,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/alexamies/chinesenotes-go/dicttypes"
@@ -70,7 +69,7 @@ func buildUniDomainIndex(w io.Writer, wdict map[string]*dicttypes.Word) error {
 		for _, sense := range word.Senses {
 			for _, c := range term {
 		  	line := fmt.Sprintf("%c\t%s\t%s\n", c, term, sense.Domain)
-				log.Printf("buildUniDomainIndex, line: %s", line)
+				// log.Printf("buildUniDomainIndex, line: %s", line)
 				if _, ok := tmindexUni[line]; ok {
 					continue
 				}
