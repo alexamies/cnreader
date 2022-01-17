@@ -134,6 +134,8 @@ func hyperlink(w dicttypes.Word, text, vocabFormat string) string {
 		classTxt = classTxt + " propernoun"
 	} else if w.IsQuote() {
 		classTxt = classTxt + " quote"
+	} else if w.HasNotesLabel("Parallel") {
+		classTxt = classTxt + " parallel"
 	}
 	pinyin := w.Pinyin
 	english := ""
