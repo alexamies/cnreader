@@ -34,6 +34,60 @@ func mockCorpusConfig() corpus.CorpusConfig {
 	}
 }
 
+func TestHyperlink(t *testing.T) {
+	const vocabFormat = `<a title="%s | %s" class="%s" href="/words/%d.html">%s</a>`
+	ws1 := dicttypes.WordSense{
+		Pinyin:  "hǎi",
+		English: "sea",
+	}
+	hw1 := dicttypes.Word{
+		HeadwordId:  1,
+		Simplified:  "海",
+		Traditional: "\\N",
+		Pinyin:      "hǎi",
+		Senses:      []dicttypes.WordSense{ws1},
+	}
+	ws2 := dicttypes.WordSense{
+		Pinyin:  "hǎi",
+		English: "Simile of Medicinal Herbs",
+		Notes:   "Parallel, Sanskrit equivalent: oṣadhīparivartaḥ",
+	}
+	hw2 := dicttypes.Word{
+		HeadwordId:  2,
+		Simplified:  "药草喻品",
+		Traditional: "藥草喻品",
+		Pinyin:      "yàocǎo yù pǐn",
+		Senses:      []dicttypes.WordSense{ws2},
+	}
+	type test struct {
+		name                    string
+		word                    dicttypes.Word
+		text, vocabFormat, want string
+	}
+	tests := []test{
+		{
+			name:        "Simple",
+			word:        hw1,
+			text:        "海",
+			vocabFormat: vocabFormat,
+			want:        `<a title="hǎi | sea" class="vocabulary" href="/words/1.html">海</a>`,
+		},
+		{
+			name:        "Parallel",
+			word:        hw2,
+			text:        "藥草喻品",
+			vocabFormat: vocabFormat,
+			want:        `<a title="yàocǎo yù pǐn | Simile of Medicinal Herbs" class="vocabulary parallel" href="/words/2.html">藥草喻品</a>`,
+		},
+	}
+	for _, tc := range tests {
+		got := hyperlink(tc.word, tc.text, tc.vocabFormat)
+		if got != tc.want {
+			t.Errorf("%s got %s but want %s", tc.name, got, tc.want)
+		}
+	}
+}
+
 func TestSpan(t *testing.T) {
 	s1 := "海"
 	t1 := "\\N"
