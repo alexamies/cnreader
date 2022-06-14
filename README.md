@@ -149,3 +149,39 @@ Run an integration test with the command
 ```shell
 go test -integration ./...
 ```
+
+## Dataflow
+
+Follow instructions at
+[Create a Dataflow pipeline using Go](https://cloud.google.com/dataflow/docs/quickstarts/create-pipeline-go)
+
+Create a GCP service account
+
+````
+export GOOGLE_APPLICATION_CREDENTIALS=${PWD}/dataflow-service-account.json
+```
+
+```
+DF_BUCKET=chinesenotes_tfidf
+```
+
+Run the pipeline locally
+
+```
+cd tfidf
+go run tfidf.go \
+  --input gs://${DF_BUCKET}/test/samplestest.txt \
+  --output outputs
+```  
+
+Run the pipeline on Dataflow
+
+```
+DATAFLOW_REGION=us-central1
+go run tfidf.go --input gs://${DF_BUCKET}/test/samplestest.txt \
+            --output gs://${DF_BUCKET}/results/outputs \
+            --runner dataflow \
+            --project $PROJECT_ID \
+            --region $DATAFLOW_REGION \
+            --staging_location gs://${DF_BUCKET}/binaries/
+```
