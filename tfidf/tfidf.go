@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// tfidf is an early prototype that counts characters in a Chinese text file 
+// tfidf is an early prototype that counts characters in a Chinese text file
 package main
 
 import (
@@ -22,7 +22,11 @@ import (
 	"fmt"
 	"log"
 	"reflect"
-	"strings"
+
+	"github.com/alexamies/chinesenotes-go/config"
+	"github.com/alexamies/chinesenotes-go/dictionary"
+	"github.com/alexamies/chinesenotes-go/dicttypes"
+	"github.com/alexamies/chinesenotes-go/tokenizer"
 
 	"github.com/apache/beam/sdks/v2/go/pkg/beam"
 	"github.com/apache/beam/sdks/v2/go/pkg/beam/io/textio"
@@ -31,7 +35,7 @@ import (
 )
 
 var (
-	input = flag.String("input", "", "File(s) to read.")
+	input  = flag.String("input", "", "File(s) to read.")
 	output = flag.String("output", "", "Output file (required).")
 )
 
@@ -41,22 +45,20 @@ func init() {
 }
 
 var (
-	empty           = beam.NewCounter("extract", "emptyLines")
-	smallWordLength = flag.Int("small_word_length", 9, "length of small words (default: 9)")
-	smallWords      = beam.NewCounter("extract", "smallWords")
-	lineLen         = beam.NewDistribution("extract", "lineLenDistro")
+	termFreq = beam.NewCounter("extract", "termFreq")
 )
 
-// extractFn is a DoFn that emits the terms in a given line and keeps a count for small terms.
-type extractFn struct {}
+// extractFn is a DoFn that emits the terms in a given line and keeps the terms frequency
+type extractFn struct {
+	Dict map[string]*dicttypes.Word
+}
 
 func (f *extractFn) ProcessElement(ctx context.Context, line string, emit func(string)) {
-	lineLen.Update(ctx, int64(len(line)))
-	if len(strings.TrimSpace(line)) == 0 {
-		empty.Inc(ctx, 1)
-	}
-	for _, word := range tokenize(line) {
-		emit(word)
+	dt := tokenizer.DictTokenizer{f.Dict}
+	textTokens := dt.Tokenize(line)
+	for _, token := range textTokens {
+		termFreq.Inc(ctx, 1)
+		emit(token.Token)
 	}
 }
 
@@ -67,12 +69,14 @@ func formatFn(w string, c int) string {
 
 func CountTerms(s beam.Scope, lines beam.PCollection) beam.PCollection {
 	s = s.Scope("CountTerms")
-	col := beam.ParDo(s, &extractFn{}, lines)
+	c := config.InitConfig()
+	dict, err := dictionary.LoadDictFile(c)
+	if err != nil {
+		log.Fatalf("CountTerms, could not load dictionary: %v", err)
+	}
+	log.Printf("CountTerms, loaded dictionary with %d terms", len(dict.Wdict))
+	col := beam.ParDo(s, &extractFn{Dict: dict.Wdict}, lines)
 	return stats.Count(s, col)
-}
-
-func tokenize(text string) []string {
-	return strings.Split(text, "")	
 }
 
 func main() {

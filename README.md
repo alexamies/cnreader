@@ -150,7 +150,7 @@ Run an integration test with the command
 go test -integration ./...
 ```
 
-## Dataflow
+## Dataflow - Not Finished
 
 Follow instructions at
 [Create a Dataflow pipeline using Go](https://cloud.google.com/dataflow/docs/quickstarts/create-pipeline-go)
@@ -160,9 +160,15 @@ Create a GCP service account
 ````
 export GOOGLE_APPLICATION_CREDENTIALS=${PWD}/dataflow-service-account.json
 ```
+Create a GCS bucket to read text from
+```
+TEXT_BUCKET=[your GCS bucket]
+```
+
+Copy the file `test/samplestest.txt` to the bucket.
 
 ```
-DF_BUCKET=chinesenotes_tfidf
+export CNREADER_HOME=${PWD}
 ```
 
 Run the pipeline locally
@@ -170,7 +176,7 @@ Run the pipeline locally
 ```
 cd tfidf
 go run tfidf.go \
-  --input gs://${DF_BUCKET}/test/samplestest.txt \
+  --input gs://${TEXT_BUCKET}/test/samplestest.txt \
   --output outputs
 ```  
 
@@ -178,10 +184,10 @@ Run the pipeline on Dataflow
 
 ```
 DATAFLOW_REGION=us-central1
-go run tfidf.go --input gs://${DF_BUCKET}/test/samplestest.txt \
-            --output gs://${DF_BUCKET}/results/outputs \
+go run tfidf.go --input gs://${TEXT_BUCKET}/test/samplestest.txt \
+            --output gs://${TEXT_BUCKET}/results/outputs \
             --runner dataflow \
             --project $PROJECT_ID \
             --region $DATAFLOW_REGION \
-            --staging_location gs://${DF_BUCKET}/binaries/
+            --staging_location gs://${TEXT_BUCKET}/binaries/
 ```

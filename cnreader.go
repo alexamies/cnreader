@@ -72,11 +72,11 @@ import (
 )
 
 const (
-	conversionsFile = "data/corpus/html-conversion.csv"
-	file2RefKey = "File2Ref"
+	conversionsFile   = "data/corpus/html-conversion.csv"
+	file2RefKey       = "File2Ref"
 	refNo2ParallelKey = "RefNo2ParallelKey"
-	refNo2TransKey = "RefNo2Trans"
-	titleIndexFN    = "documents.tsv"
+	refNo2TransKey    = "RefNo2Trans"
+	titleIndexFN      = "documents.tsv"
 )
 
 // A type that holds the source and destination files for HTML conversion
@@ -100,7 +100,7 @@ func newHwWriter(outputConfig generator.HTMLOutPutConfig) hwWriter {
 	}
 }
 
-// OpenWriter opens the file to write HTML
+// NewWriter opens the file to write HTML
 func (w hwWriter) NewWriter(hwId int) io.Writer {
 	filename := fmt.Sprintf("%s%s%d%s", w.outputConfig.WebDir, "/words/",
 		hwId, ".html")
@@ -125,7 +125,7 @@ func (w hwWriter) CloseWriter(hwId int) {
 	}
 }
 
-// Initialize the app config data
+// initApp initializes the app config data
 func initApp() config.AppConfig {
 	return config.InitConfig()
 }
@@ -375,7 +375,7 @@ func getBibNotes(cfg config.AppConfig) (bibnotes.BibNotesClient, error) {
 	file2RefFile, err := os.Open(file2RefFN)
 	if err != nil {
 		return nil, fmt.Errorf("bibnotes error opening file2RefFile %s: %v",
-				file2RefFN, err)
+			file2RefFN, err)
 	}
 	defer file2RefFile.Close()
 
@@ -385,8 +385,8 @@ func getBibNotes(cfg config.AppConfig) (bibnotes.BibNotesClient, error) {
 	}
 	refNo2ParallelFNFile, err := os.Open(refNo2ParallelFN)
 	if err != nil {
-		return nil, fmt.Errorf("bibnotes error opening refNo2TransFNFile %s: %v", 
-				refNo2ParallelFN, err)
+		return nil, fmt.Errorf("bibnotes error opening refNo2TransFNFile %s: %v",
+			refNo2ParallelFN, err)
 	}
 	defer refNo2ParallelFNFile.Close()
 
@@ -396,8 +396,8 @@ func getBibNotes(cfg config.AppConfig) (bibnotes.BibNotesClient, error) {
 	}
 	refNo2TransFNFile, err := os.Open(refNo2TransFN)
 	if err != nil {
-		return nil, fmt.Errorf("bibnotes error opening refNo2TransFNFile %s: %v", 
-				refNo2TransFN, err)
+		return nil, fmt.Errorf("bibnotes error opening refNo2TransFNFile %s: %v",
+			refNo2TransFN, err)
 	}
 	defer refNo2TransFNFile.Close()
 
@@ -565,10 +565,10 @@ func main() {
 		w, ok := dict.Wdict["了"]
 		if ok {
 			log.Printf("main: loaded dict file with %d entries, sense for 了: %d",
-					len(dict.Wdict), len(w.Senses))
+				len(dict.Wdict), len(w.Senses))
 		} else {
 			log.Printf("main: loaded dict file with %d entries, no entry for 了",
-					len(dict.Wdict))
+				len(dict.Wdict))
 		}
 	} else {
 		const url = "https://github.com/alexamies/chinesenotes.com/blob/master/data/words.txt?raw=true"
@@ -706,14 +706,14 @@ func main() {
 			log.Fatalf("main, error getting freq: %v", err)
 		}
 		hww := newHwWriter(outputConfig)
-		hWFileDependencies := analysis.HWFileDependencies {
-			Loader: libraryLoader,
-			DictTokenizer: dictTokenizer,
-			OutputConfig: outputConfig,
-			IndexState: *indexState,
-			Dict: dict,
-			VocabAnalysis: *vocabAnalysis,
-			Hww: hww,
+		hWFileDependencies := analysis.HWFileDependencies{
+			Loader:         libraryLoader,
+			DictTokenizer:  dictTokenizer,
+			OutputConfig:   outputConfig,
+			IndexState:     *indexState,
+			Dict:           dict,
+			VocabAnalysis:  *vocabAnalysis,
+			Hww:            hww,
 			BibNotesClient: bibNotesClient,
 		}
 		err = analysis.WriteHwFiles(hWFileDependencies)
