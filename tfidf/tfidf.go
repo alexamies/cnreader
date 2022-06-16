@@ -35,7 +35,7 @@ import (
 )
 
 var (
-	input  = flag.String("input", "", "File(s) to read.")
+	input  = flag.String("input", "", "Directory containing files to read.")
 	output = flag.String("output", "", "Output file (required).")
 )
 
@@ -48,18 +48,30 @@ var (
 	termFreq = beam.NewCounter("extract", "termFreq")
 )
 
-// extractFn is a DoFn that emits the terms in a given line and keeps the terms frequency
+// extractFn is a DoFn that emits the terms in a given text doc and keeps the term frequencies
 type extractFn struct {
 	Dict map[string]*dicttypes.Word
 }
 
-func (f *extractFn) ProcessElement(ctx context.Context, line string, emit func(string)) {
+func (f *extractFn) ProcessElement(ctx context.Context, doc string, emit func(string)) {
 	dt := tokenizer.DictTokenizer{f.Dict}
-	textTokens := dt.Tokenize(line)
+	textTokens := dt.Tokenize(doc)
 	for _, token := range textTokens {
 		termFreq.Inc(ctx, 1)
 		emit(token.Token)
 	}
+}
+
+// extractDocs reads the text from the files in a directory and returns a PCollection of strings
+func extractDocs(s beam.Scope, directory, corpusFN string) beam.PCollection {
+	fNames := readFileNames(s, directory, corpusFN)
+	return textio.ReadAll(s, fNames)
+}
+
+func readFileNames(s beam.Scope, directory, corpusFN string) beam.PCollection {
+	fName := fmt.Sprintf("%s%s", directory, "/test/samplestest.txt")
+	fNames := []string{fName}
+	return beam.CreateList(s, fNames)
 }
 
 // formatFn is a DoFn that formats term count as a string.
@@ -90,9 +102,10 @@ func main() {
 	p := beam.NewPipeline()
 	s := p.Root()
 
-	lines := textio.Read(s, *input)
-	counted := CountTerms(s, lines)
-	formatted := beam.ParDo(s, formatFn, counted)
+	corpusFN := "../testdata/testcorpus.tsv"
+	lines := extractDocs(s, *input, corpusFN)
+	tfPCol := CountTerms(s, lines)
+	formatted := beam.ParDo(s, formatFn, tfPCol)
 	textio.Write(s, *output, formatted)
 
 	if err := beamx.Run(context.Background(), p); err != nil {
