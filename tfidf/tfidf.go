@@ -17,10 +17,12 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"reflect"
 
 	"github.com/alexamies/chinesenotes-go/config"
@@ -35,8 +37,9 @@ import (
 )
 
 var (
-	input  = flag.String("input", "", "Directory containing files to read.")
-	output = flag.String("output", "", "Output file (required).")
+	input    = flag.String("input", "", "Location containing documents to read.")
+	corpusFN = flag.String("corpus_fn", "", "File containing list of documents to read.")
+	output   = flag.String("output", "", "Output file (required).")
 )
 
 func init() {
@@ -54,7 +57,9 @@ type extractFn struct {
 }
 
 func (f *extractFn) ProcessElement(ctx context.Context, doc string, emit func(string)) {
-	dt := tokenizer.DictTokenizer{f.Dict}
+	dt := tokenizer.DictTokenizer{
+		WDict: f.Dict,
+	}
 	textTokens := dt.Tokenize(doc)
 	for _, token := range textTokens {
 		termFreq.Inc(ctx, 1)
@@ -69,8 +74,18 @@ func extractDocs(s beam.Scope, directory, corpusFN string) beam.PCollection {
 }
 
 func readFileNames(s beam.Scope, directory, corpusFN string) beam.PCollection {
-	fName := fmt.Sprintf("%s%s", directory, "/test/samplestest.txt")
-	fNames := []string{fName}
+	f, err := os.Open(corpusFN)
+	if err != nil {
+		log.Fatalf("readFileNames, could not open corpus file %s: %v", corpusFN, err)
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	scanner.Split(bufio.ScanLines)
+	fNames := []string{}
+	for scanner.Scan() {
+		fName := fmt.Sprintf("%s%s", directory, scanner.Text())
+		fNames = append(fNames, fName)
+	}
 	return beam.CreateList(s, fNames)
 }
 
@@ -102,8 +117,7 @@ func main() {
 	p := beam.NewPipeline()
 	s := p.Root()
 
-	corpusFN := "../testdata/testcorpus.tsv"
-	lines := extractDocs(s, *input, corpusFN)
+	lines := extractDocs(s, *input, *corpusFN)
 	tfPCol := CountTerms(s, lines)
 	formatted := beam.ParDo(s, formatFn, tfPCol)
 	textio.Write(s, *output, formatted)

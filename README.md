@@ -176,7 +176,8 @@ Run the pipeline locally
 ```
 cd tfidf
 go run tfidf.go \
-  --input gs://${TEXT_BUCKET}/test/samplestest.txt \
+  --input gs://${TEXT_BUCKET} \
+  --corpus_fn ${CNREADER_HOME}/testdata/testcorpus.tsv \
   --output outputs
 ```  
 
@@ -184,10 +185,12 @@ Run the pipeline on Dataflow
 
 ```
 DATAFLOW_REGION=us-central1
-go run tfidf.go --input gs://${TEXT_BUCKET}/test/samplestest.txt \
-            --output gs://${TEXT_BUCKET}/results/outputs \
-            --runner dataflow \
-            --project $PROJECT_ID \
-            --region $DATAFLOW_REGION \
-            --staging_location gs://${TEXT_BUCKET}/binaries/
+go run tfidf.go \
+  --input gs://${TEXT_BUCKET} \
+  --corpus_fn ${CNREADER_HOME}/testdata/testcorpus.tsv \
+  --output gs://${TEXT_BUCKET}/results/outputs \
+  --runner dataflow \
+  --project $PROJECT_ID \
+  --region $DATAFLOW_REGION \
+  --staging_location gs://${TEXT_BUCKET}/binaries/
 ```

@@ -4,5 +4,5 @@ go 1.15
 
 require (
 	github.com/alexamies/chinesenotes-go v0.0.85
-	github.com/gomarkdown/markdown v0.0.0-20210208175418-bda154fe17d8
+	github.com/apache/beam/sdks/v2 v2.39.0
 )
