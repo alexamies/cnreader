@@ -67,7 +67,7 @@ func (f *extractFn) ProcessElement(ctx context.Context, doc string, emit func(st
 	}
 }
 
-// extractDocs reads the text from the files in a directory and returns a PCollection of strings
+// extractDocs reads the text from the files in a directory and returns a PCollection of documents
 func extractDocs(s beam.Scope, directory, corpusFN string) beam.PCollection {
 	fNames := readFileNames(s, directory, corpusFN)
 	return textio.ReadAll(s, fNames)
@@ -94,7 +94,7 @@ func formatFn(w string, c int) string {
 	return fmt.Sprintf("%s: %v", w, c)
 }
 
-func CountTerms(s beam.Scope, lines beam.PCollection) beam.PCollection {
+func CountTerms(s beam.Scope, docs beam.PCollection) beam.PCollection {
 	s = s.Scope("CountTerms")
 	c := config.InitConfig()
 	dict, err := dictionary.LoadDictFile(c)
@@ -102,7 +102,7 @@ func CountTerms(s beam.Scope, lines beam.PCollection) beam.PCollection {
 		log.Fatalf("CountTerms, could not load dictionary: %v", err)
 	}
 	log.Printf("CountTerms, loaded dictionary with %d terms", len(dict.Wdict))
-	col := beam.ParDo(s, &extractFn{Dict: dict.Wdict}, lines)
+	col := beam.ParDo(s, &extractFn{Dict: dict.Wdict}, docs)
 	return stats.Count(s, col)
 }
 
@@ -117,8 +117,8 @@ func main() {
 	p := beam.NewPipeline()
 	s := p.Root()
 
-	lines := extractDocs(s, *input, *corpusFN)
-	tfPCol := CountTerms(s, lines)
+	docs := extractDocs(s, *input, *corpusFN)
+	tfPCol := CountTerms(s, docs)
 	formatted := beam.ParDo(s, formatFn, tfPCol)
 	textio.Write(s, *output, formatted)
 

@@ -165,7 +165,12 @@ Create a GCS bucket to read text from
 TEXT_BUCKET=[your GCS bucket]
 ```
 
-Copy the file `test/samplestest.txt` to the bucket.
+Copy the files `testdatatest/sampletest.txt` and `testdata/sampletest2.txt` to
+the bucket:
+
+```
+gsutil cp testdata/sampletest*.txt gs://${TEXT_BUCKET}/testdata/
+```
 
 ```
 export CNREADER_HOME=${PWD}
@@ -179,7 +184,7 @@ go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
   --corpus_fn ${CNREADER_HOME}/testdata/testcorpus.tsv \
   --output outputs
-```  
+```
 
 Run the pipeline on Dataflow
 
