@@ -303,7 +303,7 @@ func loadCorpusCollections(r io.Reader) (*[]CollectionEntry, error) {
 	return &collections, nil
 }
 
-// Get a list of files for a corpus
+// Get a list of files for a collection
 func loadCorpusEntries(r io.Reader, colTitle, colFile string) (*[]CorpusEntry, error) {
 	reader := csv.NewReader(r)
 	reader.FieldsPerRecord = -1

@@ -152,14 +152,40 @@ go test -integration ./...
 
 ## Dataflow - Not Finished
 
-Follow instructions at
+The goal of the Dataflow job is to analyze the corpus to create two index files,
+one for term frequencies and the other for bigram frequencies. The file for
+term frequencies has tab separated variable entries like this:
+
+```
+Term    Frequency  Collection     File                    IDF     Doc len
+秘      3          jinshu.html    jinshu/jinshu058.html   0.8642  6520
+堅冰    1          weishu.html    weishu/weishu130.html   2.1332  13168
+...
+```
+
+The file for bigram frequencies has entries like this:
+
+```
+Bigram    Frequency  Collection       File                            IDF     Doc len
+此初      1          shiji.html       shiji/shiji123.html              2.5626  4508
+偶示      1          jiuwudaishi.html jiuwudaishi/jiuwudaishi030.html  3.7667  3850
+...
+```
+
+where IDF is the inverse document frequency.
+
+The corpus files are text files indexed by collection files with the example
+format given by `testdata/testcollection.tsv`.
+
+To get setup with Dataflow, follow instructions at
 [Create a Dataflow pipeline using Go](https://cloud.google.com/dataflow/docs/quickstarts/create-pipeline-go)
 
 Create a GCP service account
 
-````
+```
 export GOOGLE_APPLICATION_CREDENTIALS=${PWD}/dataflow-service-account.json
 ```
+
 Create a GCS bucket to read text from
 ```
 TEXT_BUCKET=[your GCS bucket]
@@ -182,7 +208,7 @@ Run the pipeline locally
 cd tfidf
 go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
-  --corpus_fn ${CNREADER_HOME}/testdata/testcorpus.tsv \
+  --corpus_fn ${CNREADER_HOME}/testdata/testcollection.tsv \
   --output outputs
 ```
 
@@ -192,7 +218,7 @@ Run the pipeline on Dataflow
 DATAFLOW_REGION=us-central1
 go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
-  --corpus_fn ${CNREADER_HOME}/testdata/testcorpus.tsv \
+  --corpus_fn ${CNREADER_HOME}/testdata/testcollection.tsv \
   --output gs://${TEXT_BUCKET}/results/outputs \
   --runner dataflow \
   --project $PROJECT_ID \

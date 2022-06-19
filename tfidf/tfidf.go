@@ -17,10 +17,11 @@
 package main
 
 import (
-	"bufio"
 	"context"
+	"encoding/csv"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"regexp"
@@ -29,6 +30,8 @@ import (
 	"github.com/alexamies/chinesenotes-go/dictionary"
 	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
+
+	"github.com/alexamies/cnreader/corpus"
 
 	"github.com/apache/beam/sdks/v2/go/pkg/beam"
 	"github.com/apache/beam/sdks/v2/go/pkg/beam/io/textio"
@@ -75,7 +78,7 @@ func (f *extractFn) ProcessElement(ctx context.Context, fileName, line string, e
 	textTokens := dt.Tokenize(line)
 	for _, token := range textTokens {
 		charFreq.Inc(ctx, int64(len(token.Token)))
-		emit(fmt.Sprintf("%s\t%s", fileName, token.Token))
+		emit(fmt.Sprintf("%s\t%s", token.Token, fileName))
 	}
 }
 
@@ -91,39 +94,63 @@ func (f *filterFn) Setup() {
 }
 
 func (f *filterFn) ProcessElement(ctx context.Context, fileName, line string, emit func(string, string)) {
-	if f.re.MatchString(line) {
-		log.Infof(ctx, "%s: matched: %s", fileName, line)
-	} else {
+	if !f.re.MatchString(line) {
 		emit(fileName, line)
 	}
 }
 
 // extractLines reads the text from the files in a directory and returns a PCollection of lines
 func extractLines(ctx context.Context, s beam.Scope, directory, corpusFN string) beam.PCollection {
-	fNames := readFileNames(ctx, s, directory, corpusFN)
+	entries := readCorpusEntries(ctx, s, corpusFN)
 	lDoc := []beam.PCollection{}
-	for _, fName := range fNames {
-		lines :=  textio.Read(s, fName)
-		ld := beam.ParDo(s, &addFileNameFn{FileName: fName}, lines)
+	for _, entry := range entries {
+		fn := fmt.Sprintf("%s/%s", directory, entry.RawFile)
+		lines :=  textio.Read(s, fn)
+		ld := beam.ParDo(s, &addFileNameFn{FileName: entry.GlossFile}, lines)
 		lDoc = append(lDoc, ld)
 	}
 	return beam.Flatten(s, lDoc...)
 }
 
-func readFileNames(ctx context.Context, s beam.Scope, directory, corpusFN string) []string {
-	f, err := os.Open(corpusFN)
+// readCorpusEntryList read the list of entries listed in a collection file
+func readCorpusEntries(ctx context.Context, s beam.Scope, collectionFN string) []corpus.CorpusEntry {
+	f, err := os.Open(collectionFN)
 	if err != nil {
-		log.Fatalf(ctx, "readFileNames, could not open corpus file %s: %v", corpusFN, err)
+		log.Fatalf(ctx, "readCorpusEntryList, could not open collection file %s: %v", collectionFN, err)
 	}
 	defer f.Close()
-	scanner := bufio.NewScanner(f)
-	scanner.Split(bufio.ScanLines)
-	fNames := []string{}
-	for scanner.Scan() {
-		fName := fmt.Sprintf("%s%s", directory, scanner.Text())
-		fNames = append(fNames, fName)
+	entries, err := loadCorpusEntries(f, "Sample Collection", collectionFN)
+	if err != nil {
+		log.Fatalf(ctx, "readCorpusEntryList, could not open read collection file %s: %v", collectionFN, err)
 	}
-	return fNames
+	return entries
+}
+
+// loadCorpusEntries Get a list of files for a collection
+func loadCorpusEntries(r io.Reader, colTitle, colFile string) ([]corpus.CorpusEntry, error) {
+	reader := csv.NewReader(r)
+	reader.FieldsPerRecord = -1
+	reader.Comma = rune('\t')
+	reader.Comment = rune('#')
+	rawCSVdata, err := reader.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("loadCorpusEntries, unable to read corpus document: %v", err)
+	}
+	corpusEntries := []corpus.CorpusEntry{}
+	for _, row := range rawCSVdata {
+		if len(row) != 3 {
+			return nil, fmt.Errorf("corpus.loadCorpusEntries len(row) != 3: %s", row)
+		}
+		entry := corpus.CorpusEntry{
+			RawFile: row[0],
+			GlossFile: row[1],
+			Title: row[2],
+			ColTitle: colTitle,
+			ColFile: colFile,
+		}
+		corpusEntries = append(corpusEntries, entry)
+	}
+	return corpusEntries, nil
 }
 
 // formatFn is a DoFn that formats term count as a string.
@@ -157,9 +184,9 @@ func main() {
 
 	lines := extractLines(ctx, s, *input, *corpusFN)
 	filtered := beam.ParDo(s, &filterFn{Filter: *filter}, lines)
-	tfPCol := CountTerms(ctx, s, filtered)
-	formatted := beam.ParDo(s, formatFn, tfPCol)
-	textio.Write(s, *output, formatted)
+	termFreq := CountTerms(ctx, s, filtered)
+	tfFormatted := beam.ParDo(s, formatFn, termFreq)
+	textio.Write(s, *output, tfFormatted)
 
 	if err := beamx.Run(ctx, p); err != nil {
 		log.Fatalf(ctx, "Failed to execute job: %v", err)
