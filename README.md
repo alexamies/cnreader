@@ -154,7 +154,8 @@ go test -integration ./...
 
 The goal of the Dataflow job is to analyze the corpus to create two index files,
 one for term frequencies and the other for bigram frequencies. The file for
-term frequencies has tab separated variable entries like this:
+term frequencies has tab separated variable entries like this
+(word_freq_doc.txt):
 
 ```
 Term    Frequency  Collection     File                    IDF     Doc len
@@ -163,7 +164,7 @@ Term    Frequency  Collection     File                    IDF     Doc len
 ...
 ```
 
-The file for bigram frequencies has entries like this:
+The file for bigram frequencies has entries like this (bigram_doc_freq.txt):
 
 ```
 Bigram    Frequency  Collection       File                            IDF     Doc len
@@ -231,6 +232,7 @@ go run tfidf.go \
   --corpus_fn testdata/testcorpus.tsv \
   --tfdoc_out gs://${TEXT_BUCKET}/results/word_freq_doc.txt \
   --df_out gs://${TEXT_BUCKET}/results/doc_freq.txt \
+  --bfdoc_out gs://${TEXT_BUCKET}/results/bigram_freq_doc.txt \
   --runner dataflow \
   --project $PROJECT_ID \
   --region $DATAFLOW_REGION \
