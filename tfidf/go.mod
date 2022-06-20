@@ -2,19 +2,19 @@ module github.com/alexamies/cnreader/tfidf
 
 go 1.18
 
-require github.com/apache/beam/sdks/v2 v2.39.0
+require (
+	github.com/alexamies/chinesenotes-go v0.0.98
+	github.com/apache/beam/sdks/v2 v2.39.0
+)
 
 require (
 	cloud.google.com/go v0.102.0 // indirect
 	cloud.google.com/go/compute v1.6.1 // indirect
 	cloud.google.com/go/iam v0.3.0 // indirect
 	cloud.google.com/go/storage v1.22.1 // indirect
-	github.com/alexamies/chinesenotes-go v0.0.98 // indirect
-	github.com/alexamies/cnreader v0.0.52 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/gomarkdown/markdown v0.0.0-20210208175418-bda154fe17d8 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.4.0 // indirect

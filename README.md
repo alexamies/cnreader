@@ -172,7 +172,14 @@ Bigram    Frequency  Collection       File                            IDF     Do
 ...
 ```
 
-where IDF is the inverse document frequency.
+where IDF is the inverse document frequency calculated as
+
+```
+idf(w) = log[(M + 1) / df(w)]
+
+```
+
+and M is the number of documents in the corpus.
 
 The corpus files are text files indexed by collection files with the example
 format given by `testdata/testcollection.tsv`.
