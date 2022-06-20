@@ -172,14 +172,16 @@ Bigram    Frequency  Collection       File                            IDF     Do
 ...
 ```
 
-where IDF is the inverse document frequency calculated as
+where IDF is the inverse document frequency for a term w calculated as
 
 ```
 idf(w) = log[(M + 1) / df(w)]
 
 ```
 
-and M is the number of documents in the corpus.
+and M is the number of documents in the corpus and df is the number of documents
+that the term occurs within. The IDF is used in computing the TF-IDF, which is
+done at the time when a user queries the corpus.
 
 The corpus files are text files indexed by collection files with the example
 format given by `testdata/testcollection.tsv`.
@@ -215,8 +217,7 @@ Run the pipeline locally
 cd tfidf
 go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
-  --corpus_fn ${CNREADER_HOME}/testdata/testcollection.tsv \
-  --output outputs
+  --corpus_fn ${CNREADER_HOME}/testdata/testcollection.tsv
 ```
 
 Run the pipeline on Dataflow
@@ -226,7 +227,8 @@ DATAFLOW_REGION=us-central1
 go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
   --corpus_fn ${CNREADER_HOME}/testdata/testcollection.tsv \
-  --output gs://${TEXT_BUCKET}/results/outputs \
+  --tfdoc_out gs://${TEXT_BUCKET}/results/word_freq_doc.txt \
+  --df_out gs://${TEXT_BUCKET}/results/doc_freq.txt \
   --runner dataflow \
   --project $PROJECT_ID \
   --region $DATAFLOW_REGION \

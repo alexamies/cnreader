@@ -1,2 +1,3 @@
-outputs
+doc_freq.txt
 tfidf
+word_freq_doc.txt
