@@ -53,7 +53,8 @@ var (
 
 func init() {
 	beam.RegisterFunction(extractDocFreqFn)
-	beam.RegisterFunction(formatFn)
+	beam.RegisterFunction(extractTF)
+	beam.RegisterFunction(formatTFDocEntries)
 	beam.RegisterFunction(formatDFFn)
 	beam.RegisterFunction(sumTermFreq)
 	beam.RegisterType(reflect.TypeOf((*addLineEntryMetaFn)(nil)))
@@ -87,7 +88,6 @@ type TermFreqEntry struct {
 	GlossFile string `beam:"glossFile"`
 	ColFile string `beam:"colFile"`
 	CorpusLen int `beam:"corpusLen"`
-	DocFreq int `beam:"docLen"`
 }
 
 // addLineEntryMetaFn adds metadata for an entry
@@ -175,6 +175,11 @@ func extractLines(ctx context.Context, s beam.Scope, directory, corpusFN, filter
 	return beam.Flatten(s, lDoc...)
 }
 
+// extractTF is a DoFn that transforms the key in KV<string, TermFreqEntry> from term + doc to the term only
+func extractTF(k string, entry TermFreqEntry, emit func(string, TermFreqEntry)) {
+	emit(entry.Term, entry)
+}
+
 // readLineEntryList read the list of entries listed in a collection file
 func readCorpusEntries(ctx context.Context, s beam.Scope, collectionFN string) []CorpusEntry {
 	f, err := os.Open(collectionFN)
@@ -220,11 +225,15 @@ func getColGlossFN(colRawFN string) string {
 	return strings.Replace(fn, ".tsv", ".html", 1)
 }
 
-// formatFn is a DoFn that formats term frequency as a string.
-func formatFn(k string, e TermFreqEntry) string {
+// formatTFDocEntries is a DoFn that formats TermFreqEntry objects co-grouped by docFreq int's as a string.
+func formatTFDocEntries(term string, tfIter func(*TermFreqEntry) bool, dfIter func(*int) bool) string {
+	var e TermFreqEntry
+	var docFreq int
+	tfIter(&e)
+	dfIter(&docFreq)
 	idf := 0.0
-	if e.DocFreq > 0 {
-		idf = math.Log10(float64(e.CorpusLen + 1) / float64(e.DocFreq))
+	if docFreq > 0 {
+		idf = math.Log10(float64(e.CorpusLen + 1) / float64(docFreq))
 	}
 	return fmt.Sprintf("%s\t%d\t%s\t%s\t%.4f", e.Term, e.Freq, e.ColFile, e.GlossFile, idf)
 }
@@ -247,8 +256,6 @@ func CountTerms(ctx context.Context, s beam.Scope, lines beam.PCollection) beam.
 	return beam.CombinePerKey(s, sumTermFreq, terms)
 }
 
-
-
 func main() {
 	flag.Parse()
 	beam.Init()
@@ -260,15 +267,19 @@ func main() {
 	// Compute term frequencies
 	lines := extractLines(ctx, s, *input, *corpusFN, *filter)
 	termFreq := CountTerms(ctx, s, lines)
-	tfFormatted := beam.ParDo(s, formatFn, termFreq)
-	textio.Write(s, *tfDocOut, tfFormatted)
-	log.Infof(ctx, "Term Frequency per document written to %s", *tfDocOut)
 
 	// Compute document frequencies
 	dfTerms := beam.ParDo(s, extractDocFreqFn, termFreq)
 	dfFormatted := beam.ParDo(s, formatDFFn, dfTerms)
 	textio.Write(s, *dfDocOut, dfFormatted)
 	log.Infof(ctx, "Document Frequency written to %s", *dfDocOut)
+
+	// Combine term and document frequencies
+	tfExtracted := beam.ParDo(s, extractTF, termFreq)
+	dfDocTerms := beam.CoGroupByKey(s, tfExtracted, dfTerms)
+	tfFormatted := beam.ParDo(s, formatTFDocEntries, dfDocTerms)
+	textio.Write(s, *tfDocOut, tfFormatted)
+	log.Infof(ctx, "Term Frequency per document written to %s", *tfDocOut)
 
 	if err := beamx.Run(ctx, p); err != nil {
 		log.Fatalf(ctx, "Failed to execute job: %v", err)
