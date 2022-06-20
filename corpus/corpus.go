@@ -246,7 +246,7 @@ func loadAll(loader CorpusLoader) (*map[string]CorpusEntry, error) {
 	return &corpusEntryMap, nil
 }
 
-// Gets the list of collections in the corpus
+// loadCorpusCollections gets the list of collections in the corpus
 func loadCorpusCollections(r io.Reader) (*[]CollectionEntry, error) {
 	reader := csv.NewReader(r)
 	reader.FieldsPerRecord = -1

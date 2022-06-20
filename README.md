@@ -217,7 +217,8 @@ Run the pipeline locally
 cd tfidf
 go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
-  --corpus_fn ${CNREADER_HOME}/testdata/testcollection.tsv
+  --cnreader_home ${CNREADER_HOME} \
+  --corpus_fn testdata/testcorpus.tsv
 ```
 
 Run the pipeline on Dataflow
@@ -226,7 +227,8 @@ Run the pipeline on Dataflow
 DATAFLOW_REGION=us-central1
 go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
-  --corpus_fn ${CNREADER_HOME}/testdata/testcollection.tsv \
+  --cnreader_home ${CNREADER_HOME} \
+  --corpus_fn testdata/testcorpus.tsv \
   --tfdoc_out gs://${TEXT_BUCKET}/results/word_freq_doc.txt \
   --df_out gs://${TEXT_BUCKET}/results/doc_freq.txt \
   --runner dataflow \

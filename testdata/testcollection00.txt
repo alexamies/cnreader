@@ -1,0 +1,1 @@
+Example of extended metadata for the test collection

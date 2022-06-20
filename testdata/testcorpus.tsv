@@ -1,3 +1,3 @@
-# Source file, Gloss output file, title
-testdata/sampletest.txt	testdata/sampletest.html	Sample Test File 1
-testdata/sampletest2.txt	testdata/sampletest2.html	Sample Test File 2
+# Top level file listing the corpus collections
+# Collection File, HTML Gloss File, Title, Description, Introduction File, Corpus, Language, Format, Period, Genre
+testdata/testcollection.tsv	testcollection.html	Test Collection A collection of text files	testdata/testcollection00.txt	Literary Chinese	Plain Text	Modern	Prose

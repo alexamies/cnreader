@@ -41,7 +41,8 @@ import (
 
 var (
 	input    = flag.String("input", "", "Location containing documents to read.")
-	corpusFN = flag.String("corpus_fn", "", "File containing list of documents to read.")
+	cnrHome    = flag.String("cnreader_home", "..", "Top level directory to search for config files.")
+	corpusFN = flag.String("corpus_fn", "", "File containing list of document collections to read.")
 	filter = flag.String("filter", "本作品在全世界都属于公有领域", "Regex filter pattern to use to filter out lines.")
 	tfDocOut   = flag.String("tfdoc_out", "word_freq_doc.txt", "Term frequency per document output file")
 	dfDocOut   = flag.String("df_out", "doc_freq.txt", "Document frequency output file")
@@ -65,6 +66,10 @@ func init() {
 	beam.RegisterType(reflect.TypeOf((*CorpusEntry)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*DocEntry)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*TermFreqEntry)(nil)).Elem())
+}
+
+type CollectionEntry struct {
+	CollectionFile, GlossFile string
 }
 
 // CorpusEntry contains metadata for a document that text will be read from
@@ -141,10 +146,10 @@ func (f *filterFn) ProcessElement(ctx context.Context, line string, emit func(st
 }
 
 // extractDocText reads the text from the files in a directory and returns a PCollection of <key, DocEntry>
-func extractDocText(ctx context.Context, s beam.Scope, directory, corpusFN, filter string) beam.PCollection {
+func extractDocText(ctx context.Context, s beam.Scope, cnrHome, directory, corpusFN, filter string) beam.PCollection {
 
 	// Get the list of files to read text from
-	entries := readCorpusEntries(ctx, s, corpusFN)
+	entries := readCorpusEntries(ctx, s, cnrHome, corpusFN)
 	corpusLen := len(entries)
 
 	// Read the text in the files line by line
@@ -211,21 +216,62 @@ func extractTF(k string, entry TermFreqEntry, emit func(string, TermFreqEntry)) 
 }
 
 // readCorpusEntries read the list of entries listed in a collection file
-func readCorpusEntries(ctx context.Context, s beam.Scope, collectionFN string) []CorpusEntry {
-	f, err := os.Open(collectionFN)
+func readCorpusEntries(ctx context.Context, s beam.Scope, cnrHome, corpusFN string) []CorpusEntry {
+	fn := fmt.Sprintf("%s/%s", cnrHome, corpusFN)
+	cf, err := os.Open(fn)
 	if err != nil {
-		log.Fatalf(ctx, "readCorpusEntries, could not open collection file %s: %v", collectionFN, err)
+		log.Fatalf(ctx, "readCorpusEntries, could not open corpus file %s: %v", corpusFN, err)
 	}
-	defer f.Close()
-	entries, err := loadCorpusEntries(f, "Sample Collection", collectionFN)
+	defer cf.Close()
+	collections, err := loadCorpusCollections(cf)
 	if err != nil {
-		log.Fatalf(ctx, "readCorpusEntries, could not open read collection file %s: %v", collectionFN, err)
+		log.Fatalf(ctx, "readCorpusEntries, could not read corpus file: %v", err)
+	}
+	entries := []CorpusEntry{}
+	for _, col := range collections {
+		colFN := fmt.Sprintf("%s/%s", cnrHome, col.CollectionFile)
+		f, err := os.Open(colFN)
+		if err != nil {
+			log.Fatalf(ctx, "readCorpusEntries, could not open collection file %s: %v", colFN, err)
+		}
+		ent, err := loadCorpusEntries(f, colFN)
+		f.Close()
+		if err != nil {
+			log.Fatalf(ctx, "readCorpusEntries, could not open read collection file %s: %v", colFN, err)
+		}
+		entries = append(entries, ent...)
 	}
 	return entries
 }
 
+// loadCorpusCollections gets the list of collections in the corpus
+func loadCorpusCollections(r io.Reader) ([]CollectionEntry, error) {
+	reader := csv.NewReader(r)
+	reader.FieldsPerRecord = -1
+	reader.Comma = rune('\t')
+	reader.Comment = rune('#')
+	rawCSVdata, err := reader.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("loadCorpusCollections, could not read collections: %v", err)
+	}
+	collections := make([]CollectionEntry, 0)
+	// log.Printf("loadCorpusCollections, reading collections")
+	for i, row := range rawCSVdata {
+		//log.Printf("loadCorpusCollections, i = %d, len(row) = %d", i, len(row))
+		if len(row) < 2 {
+			return nil, fmt.Errorf("loadCorpusCollections: not enough fields in file line %d: got %d, want %d",
+					i, len(row), 2)
+	  }
+		collections = append(collections, CollectionEntry{
+			CollectionFile: row[0],
+			GlossFile: row[1],
+		})
+	}
+	return collections, nil
+}
+
 // loadCorpusEntries Get a list of documents for a collection
-func loadCorpusEntries(r io.Reader, colTitle, colFile string) ([]CorpusEntry, error) {
+func loadCorpusEntries(r io.Reader, colFile string) ([]CorpusEntry, error) {
 	reader := csv.NewReader(r)
 	reader.FieldsPerRecord = -1
 	reader.Comma = rune('\t')
@@ -295,7 +341,7 @@ func main() {
 	s := p.Root()
 
 	// Compute term frequencies
-	docText := extractDocText(ctx, s, *input, *corpusFN, *filter)
+	docText := extractDocText(ctx, s, *cnrHome, *input, *corpusFN, *filter)
 	termFreq := CountTerms(ctx, s, docText)
 
 	// Compute document frequencies
