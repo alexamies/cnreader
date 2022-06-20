@@ -52,16 +52,18 @@ var (
 )
 
 func init() {
+	beam.RegisterFunction(concatLines)
 	beam.RegisterFunction(extractDocFreqFn)
 	beam.RegisterFunction(extractTF)
 	beam.RegisterFunction(formatTFDocEntries)
 	beam.RegisterFunction(formatDFFn)
+	beam.RegisterFunction(lineMap)
 	beam.RegisterFunction(sumTermFreq)
-	beam.RegisterType(reflect.TypeOf((*addLineEntryMetaFn)(nil)))
-	beam.RegisterType(reflect.TypeOf((*extractFn)(nil)))
+	beam.RegisterType(reflect.TypeOf((*addDocEntryMetaFn)(nil)))
+	beam.RegisterType(reflect.TypeOf((*extractTermsFn)(nil)))
 	beam.RegisterType(reflect.TypeOf((*filterFn)(nil)))
 	beam.RegisterType(reflect.TypeOf((*CorpusEntry)(nil)).Elem())
-	beam.RegisterType(reflect.TypeOf((*LineEntry)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*DocEntry)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*TermFreqEntry)(nil)).Elem())
 }
 
@@ -73,9 +75,9 @@ type CorpusEntry struct {
 	CorpusLen int `beam:"corpusLen"`
 }
 
-// LineEntry contains a line of text and metadata for the document that it was extracted from
-type LineEntry struct {
-	Line string `beam:"line"`
+// DocEntry contains all text and metadata for the document that it was extracted from
+type DocEntry struct {
+	Text string `beam:"text"`
 	GlossFile string `beam:"glossFile"`
 	ColFile string `beam:"colFile"`
 	CorpusLen int `beam:"corpusLen"`
@@ -87,48 +89,38 @@ type TermFreqEntry struct {
 	Freq int `beam:"freq"`
 	GlossFile string `beam:"glossFile"`
 	ColFile string `beam:"colFile"`
+	DocLen int `beam:"docLen"`
 	CorpusLen int `beam:"corpusLen"`
 }
 
-// addLineEntryMetaFn adds metadata for an entry
-type addLineEntryMetaFn struct {
+// addDocEntryMetaFn adds metadata for a doc entry
+type addDocEntryMetaFn struct {
 	CorpusEntry CorpusEntry `beam:"corpusEntry"`
 }
 
-func (f *addLineEntryMetaFn) ProcessElement(line string) LineEntry {
-	return LineEntry {
-		Line: line,
+func (f *addDocEntryMetaFn) ProcessElement(text string) DocEntry {
+	return DocEntry {
+		Text: text,
 		GlossFile: f.CorpusEntry.GlossFile,
 		ColFile: f.CorpusEntry.ColFile,
 		CorpusLen: f.CorpusEntry.CorpusLen,
 	}
 }
 
-// extractFn is a DoFn that parses terms in a line of text
-type extractFn struct {
-	Dict map[string]*dicttypes.Word
+// lineMap adds a key for the doc name
+func lineMap(entry DocEntry, emit func(string, DocEntry)) {
+	emit(entry.GlossFile, entry)
 }
 
-func (f *extractFn) ProcessElement(ctx context.Context, entry LineEntry, emit func(string, TermFreqEntry)) {
-	dt := tokenizer.DictTokenizer{
-		WDict: f.Dict,
+// concatLines is used for combining lines a doc
+func concatLines(ctx context.Context, d1, d2 DocEntry) DocEntry {
+	log.Infof(ctx, "concatLines, %s | %s", d1.Text, d2.Text)
+	return DocEntry{
+		Text: fmt.Sprintf("%s%s", d1.Text, d2.Text),
+		GlossFile: d1.GlossFile,
+		ColFile: d1.ColFile,
+		CorpusLen: d1.CorpusLen,
 	}
-	textTokens := dt.Tokenize(entry.Line)
-	for _, token := range textTokens {
-		charCounter.Inc(ctx, int64(len(token.Token)))
-		key := fmt.Sprintf("%s:%s", token.Token, entry.GlossFile)
-		emit(key, TermFreqEntry{
-			Term: token.Token,
-			Freq: 1,
-			GlossFile: entry.GlossFile,
-			ColFile: entry.ColFile,
-			CorpusLen: entry.CorpusLen,
-		})
-	}
-}
-
-func extractDocFreqFn(ctx context.Context, key string, entry TermFreqEntry, emit func(string, int)) {
-	emit(entry.Term, 1)
 }
 
 // filterFn is a DoFn for filtering out expressions that are not relevant to the term frequency, eg copyright statements.
@@ -148,6 +140,59 @@ func (f *filterFn) ProcessElement(ctx context.Context, line string, emit func(st
 	}
 }
 
+// extractDocText reads the text from the files in a directory and returns a PCollection of <key, DocEntry>
+func extractDocText(ctx context.Context, s beam.Scope, directory, corpusFN, filter string) beam.PCollection {
+
+	// Get the list of files to read text from
+	entries := readCorpusEntries(ctx, s, corpusFN)
+	corpusLen := len(entries)
+
+	// Read the text in the files line by line
+	lDoc := []beam.PCollection{}
+	for _, entry := range entries {
+		fn := fmt.Sprintf("%s/%s", directory, entry.RawFile)
+		lines :=  textio.Read(s, fn)
+		filtered := beam.ParDo(s, &filterFn{Filter: filter}, lines)
+		entry.CorpusLen = corpusLen
+		lineEntries := beam.ParDo(s, &addDocEntryMetaFn{CorpusEntry: entry}, filtered)
+		lDoc = append(lDoc, lineEntries)
+	}
+
+	// Combine the lines of text
+	flattened := beam.Flatten(s, lDoc...)
+	lineKV := beam.ParDo(s, lineMap, flattened)
+	return beam.CombinePerKey(s, concatLines, lineKV)
+}
+
+// extractTermsFn is a DoFn that parses terms in a line of text
+type extractTermsFn struct {
+	Dict map[string]*dicttypes.Word
+}
+
+func (f *extractTermsFn) ProcessElement(ctx context.Context, k string, entry DocEntry, emit func(string, TermFreqEntry)) {
+	dt := tokenizer.DictTokenizer{
+		WDict: f.Dict,
+	}
+	textTokens := dt.Tokenize(entry.Text)
+	log.Infof(ctx, "extractTermsFn, %s | %d", entry.Text, len(textTokens))
+	for _, token := range textTokens {
+		charCounter.Inc(ctx, int64(len(token.Token)))
+		key := fmt.Sprintf("%s:%s", token.Token, entry.GlossFile)
+		emit(key, TermFreqEntry{
+			Term: token.Token,
+			Freq: 1,
+			GlossFile: entry.GlossFile,
+			ColFile: entry.ColFile,
+			DocLen: len(textTokens),
+			CorpusLen: entry.CorpusLen,
+		})
+	}
+}
+
+func extractDocFreqFn(ctx context.Context, key string, entry TermFreqEntry, emit func(string, int)) {
+	emit(entry.Term, 1)
+}
+
 // sumTermFreq is used for forming a term + document key
 func sumTermFreq(tf1, tf2 TermFreqEntry) TermFreqEntry {
 	return TermFreqEntry{
@@ -155,24 +200,9 @@ func sumTermFreq(tf1, tf2 TermFreqEntry) TermFreqEntry {
 		Freq: tf1.Freq + tf2.Freq,
 		GlossFile: tf1.GlossFile,
 		ColFile: tf1.ColFile,
+		DocLen: tf1.DocLen,
 		CorpusLen: tf1.CorpusLen,
 	}
-}
-
-// extractLines reads the text from the files in a directory and returns a PCollection of LineEntry
-func extractLines(ctx context.Context, s beam.Scope, directory, corpusFN, filter string) beam.PCollection {
-	entries := readCorpusEntries(ctx, s, corpusFN)
-	corpusLen := len(entries)
-	lDoc := []beam.PCollection{}
-	for _, entry := range entries {
-		fn := fmt.Sprintf("%s/%s", directory, entry.RawFile)
-		lines :=  textio.Read(s, fn)
-		filtered := beam.ParDo(s, &filterFn{Filter: filter}, lines)
-		entry.CorpusLen = corpusLen
-		lineEntries := beam.ParDo(s, &addLineEntryMetaFn{CorpusEntry: entry}, filtered)
-		lDoc = append(lDoc, lineEntries)
-	}
-	return beam.Flatten(s, lDoc...)
 }
 
 // extractTF is a DoFn that transforms the key in KV<string, TermFreqEntry> from term + doc to the term only
@@ -180,16 +210,16 @@ func extractTF(k string, entry TermFreqEntry, emit func(string, TermFreqEntry)) 
 	emit(entry.Term, entry)
 }
 
-// readLineEntryList read the list of entries listed in a collection file
+// readCorpusEntries read the list of entries listed in a collection file
 func readCorpusEntries(ctx context.Context, s beam.Scope, collectionFN string) []CorpusEntry {
 	f, err := os.Open(collectionFN)
 	if err != nil {
-		log.Fatalf(ctx, "readLineEntryList, could not open collection file %s: %v", collectionFN, err)
+		log.Fatalf(ctx, "readCorpusEntries, could not open collection file %s: %v", collectionFN, err)
 	}
 	defer f.Close()
 	entries, err := loadCorpusEntries(f, "Sample Collection", collectionFN)
 	if err != nil {
-		log.Fatalf(ctx, "readLineEntryList, could not open read collection file %s: %v", collectionFN, err)
+		log.Fatalf(ctx, "readCorpusEntries, could not open read collection file %s: %v", collectionFN, err)
 	}
 	return entries
 }
@@ -235,7 +265,7 @@ func formatTFDocEntries(term string, tfIter func(*TermFreqEntry) bool, dfIter fu
 	if docFreq > 0 {
 		idf = math.Log10(float64(e.CorpusLen + 1) / float64(docFreq))
 	}
-	return fmt.Sprintf("%s\t%d\t%s\t%s\t%.4f", e.Term, e.Freq, e.ColFile, e.GlossFile, idf)
+	return fmt.Sprintf("%s\t%d\t%s\t%s\t%.4f\t%d", e.Term, e.Freq, e.ColFile, e.GlossFile, idf, e.DocLen)
 }
 
 // formatDFFn is a DoFn that formats document frequency as a string.
@@ -243,8 +273,8 @@ func formatDFFn(k string, freq int) string {
 	return fmt.Sprintf("%s\t%d", k, freq)
 }
 
-// CountTerms processes lines and outputs term frequencies in TermFreqEntry objects
-func CountTerms(ctx context.Context, s beam.Scope, lines beam.PCollection) beam.PCollection {
+// CountTerms processes DocEntries and outputs term frequencies in TermFreqEntry objects
+func CountTerms(ctx context.Context, s beam.Scope, docs beam.PCollection) beam.PCollection {
 	s = s.Scope("CountTerms")
 	c := config.InitConfig()
 	dict, err := dictionary.LoadDictFile(c)
@@ -252,7 +282,7 @@ func CountTerms(ctx context.Context, s beam.Scope, lines beam.PCollection) beam.
 		log.Fatalf(ctx, "CountTerms, could not load dictionary: %v", err)
 	}
 	log.Infof(ctx, "CountTerms, loaded dictionary with %d terms", len(dict.Wdict))
-	terms := beam.ParDo(s, &extractFn{Dict: dict.Wdict}, lines)
+	terms := beam.ParDo(s, &extractTermsFn{Dict: dict.Wdict}, docs)
 	return beam.CombinePerKey(s, sumTermFreq, terms)
 }
 
@@ -265,8 +295,8 @@ func main() {
 	s := p.Root()
 
 	// Compute term frequencies
-	lines := extractLines(ctx, s, *input, *corpusFN, *filter)
-	termFreq := CountTerms(ctx, s, lines)
+	docText := extractDocText(ctx, s, *input, *corpusFN, *filter)
+	termFreq := CountTerms(ctx, s, docText)
 
 	// Compute document frequencies
 	dfTerms := beam.ParDo(s, extractDocFreqFn, termFreq)
