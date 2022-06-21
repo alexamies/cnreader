@@ -43,6 +43,7 @@ var (
 	input    = flag.String("input", "", "Location containing documents to read.")
 	cnrHome    = flag.String("cnreader_home", "..", "Top level directory to search for config files.")
 	corpusFN = flag.String("corpus_fn", "", "File containing list of document collections to read.")
+	corpusDataDir = flag.String("corpus_data_dir", "", "Directory containing files with list of corpus documents.")
 	filter = flag.String("filter", "本作品在全世界都属于公有领域", "Regex filter pattern to use to filter out lines.")
 	tfDocOut = flag.String("tfdoc_out", "word_freq_doc.txt", "Term frequency per document output file")
 	dfDocOut = flag.String("df_out", "doc_freq.txt", "Document frequency output file")
@@ -233,6 +234,9 @@ func readCorpusEntries(ctx context.Context, s beam.Scope, cnrHome, corpusFN stri
 	entries := []CorpusEntry{}
 	for _, col := range collections {
 		colFN := fmt.Sprintf("%s/%s", cnrHome, col.CollectionFile)
+		if len(*corpusDataDir) > 0 {
+			colFN = fmt.Sprintf("%s/%s/%s", cnrHome, *corpusDataDir, col.CollectionFile)
+		}
 		f, err := os.Open(colFN)
 		if err != nil {
 			log.Fatalf(ctx, "readCorpusEntries, could not open collection file %s: %v", colFN, err)
