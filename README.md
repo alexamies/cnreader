@@ -209,7 +209,7 @@ gsutil cp testdata/sampletest*.txt gs://${TEXT_BUCKET}/testdata/
 ```
 
 ```
-export CNREADER_HOME=${PWD}
+CNREADER_HOME=${PWD}
 ```
 
 Run the pipeline locally
