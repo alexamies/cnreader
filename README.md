@@ -192,51 +192,62 @@ To get setup with Dataflow, follow instructions at
 
 Create a GCP service account
 
-```
+```shell
 export GOOGLE_APPLICATION_CREDENTIALS=${PWD}/dataflow-service-account.json
 ```
 
 Create a GCS bucket to read text from
-```
+
+```shell
 TEXT_BUCKET=[your GCS bucket]
 ```
 
 Copy the files `testdatatest/sampletest.txt` and `testdata/sampletest2.txt` to
 the bucket:
 
-```
+```shell
 gsutil cp testdata/sampletest*.txt gs://${TEXT_BUCKET}/testdata/
 ```
 
-```
+```shell
 CNREADER_HOME=${PWD}
 ```
 
 Run the pipeline locally
 
-```
+```shell
 cd tfidf
 go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
   --cnreader_home ${CNREADER_HOME} \
   --corpus_fn testdata/testcorpus.tsv \
-  --project_id $PROJECT_ID
+  --corpus cnreader \
+  --generation 0 \
+  --project $PROJECT_ID
 ```
 
 Run the pipeline on Dataflow
 
-```
+```shell
 DATAFLOW_REGION=us-central1
 go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
   --cnreader_home ${CNREADER_HOME} \
   --corpus_fn testdata/testcorpus.tsv \
-  --tfdoc_out gs://${TEXT_BUCKET}/results/word_freq_doc.txt \
-  --df_out gs://${TEXT_BUCKET}/results/doc_freq.txt \
-  --bfdoc_out gs://${TEXT_BUCKET}/results/bigram_freq_doc.txt \
+  --corpus cnreader \
+  --generation 0 \
   --runner dataflow \
   --project $PROJECT_ID \
-  --project_id $PROJECT_ID \
   --region $DATAFLOW_REGION \
   --staging_location gs://${TEXT_BUCKET}/binaries/
+```
+
+After saving the indexes, Firestore will need to generate its own indexes. The
+links for this can be found by running the following validation test:
+
+```shell
+cd ..
+./cnreader --test_index_corpus cnreader \
+  --test_index_gen 0 \
+  --project $PROJECT_ID
 ```
