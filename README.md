@@ -219,7 +219,8 @@ cd tfidf
 go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
   --cnreader_home ${CNREADER_HOME} \
-  --corpus_fn testdata/testcorpus.tsv
+  --corpus_fn testdata/testcorpus.tsv \
+  --project_id $PROJECT_ID
 ```
 
 Run the pipeline on Dataflow
@@ -235,6 +236,7 @@ go run tfidf.go \
   --bfdoc_out gs://${TEXT_BUCKET}/results/bigram_freq_doc.txt \
   --runner dataflow \
   --project $PROJECT_ID \
+  --project_id $PROJECT_ID \
   --region $DATAFLOW_REGION \
   --staging_location gs://${TEXT_BUCKET}/binaries/
 ```

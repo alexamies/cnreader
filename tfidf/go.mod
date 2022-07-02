@@ -3,13 +3,14 @@ module github.com/alexamies/cnreader/tfidf
 go 1.18
 
 require (
-	github.com/alexamies/chinesenotes-go v0.0.98
+	github.com/alexamies/chinesenotes-go v0.0.99
 	github.com/apache/beam/sdks/v2 v2.39.0
 )
 
 require (
 	cloud.google.com/go v0.102.0 // indirect
 	cloud.google.com/go/compute v1.6.1 // indirect
+	cloud.google.com/go/firestore v1.6.1 // indirect
 	cloud.google.com/go/iam v0.3.0 // indirect
 	cloud.google.com/go/storage v1.22.1 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
