@@ -210,19 +210,21 @@ gsutil cp testdata/sampletest*.txt gs://${TEXT_BUCKET}/testdata/
 ```
 
 ```shell
-CNREADER_HOME=${PWD}
+export CNREADER_HOME=${PWD}
 ```
 
 Run the pipeline locally
 
 ```shell
 cd tfidf
+CORPUS=cnreader
+GEN=0
 go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
   --cnreader_home ${CNREADER_HOME} \
   --corpus_fn testdata/testcorpus.tsv \
-  --corpus cnreader \
-  --generation 0 \
+  --corpus $CORPUS \
+  --generation $GEN \
   --project $PROJECT_ID
 ```
 
@@ -234,8 +236,8 @@ go run tfidf.go \
   --input gs://${TEXT_BUCKET} \
   --cnreader_home ${CNREADER_HOME} \
   --corpus_fn testdata/testcorpus.tsv \
-  --corpus cnreader \
-  --generation 0 \
+  --corpus $CORPUS \
+  --generation $GEN \
   --runner dataflow \
   --project $PROJECT_ID \
   --region $DATAFLOW_REGION \
@@ -247,7 +249,7 @@ links for this can be found by running the following validation test:
 
 ```shell
 cd ..
-./cnreader --test_index_corpus cnreader \
-  --test_index_gen 0 \
+./cnreader --test_index_corpus $CORPUS \
+  --test_index_gen $GEN \
   --project $PROJECT_ID
 ```

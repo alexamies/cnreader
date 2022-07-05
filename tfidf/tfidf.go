@@ -56,16 +56,21 @@ var (
 var (
 	charCounter = beam.NewCounter("extract", "charCounter")
 	bigramCounter = beam.NewCounter("extract", "bigramCounter")
+	docCounter = beam.NewCounter("extract", "docCounter")
+	termCounter = beam.NewCounter("extract", "termCounter")
+	termFreqCounter = beam.NewCounter("extract", "termFreqCounter")
+	bigramFreqCounter = beam.NewCounter("extract", "bigramFreqCounter")
 )
 
 func init() {
 	beam.RegisterFunction(extractDocFreqFn)
 	beam.RegisterFunction(extractTF)
+	beam.RegisterFunction(transformBFDocEntries)
 	beam.RegisterFunction(transformTFDocEntries)
-	beam.RegisterFunction(formatDFFn)
 	beam.RegisterFunction(sumTermFreq)
 	beam.RegisterType(reflect.TypeOf((*extractBigramsFn)(nil)))
 	beam.RegisterType(reflect.TypeOf((*extractTermsFn)(nil)))
+	beam.RegisterType(reflect.TypeOf((*DocFreqEntry)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*TermFreqEntry)(nil)).Elem())
 }
 
@@ -81,6 +86,12 @@ type TermFreqEntry struct {
 	ColFile string `beam:"colFile"`
 	DocLen int64 `beam:"docLen"`
 	CorpusLen int64 `beam:"corpusLen"`
+}
+
+// DocFreqEntry contains document frequency and metadata so that it can be combined with term frequency data
+type DocFreqEntry struct {
+	Term string `beam:"term"`
+	DocFreq int64 `beam:"freq"`
 }
 
 // extractDocText reads the text from the files in a directory and returns a PCollection of <DocEntry>
@@ -104,18 +115,17 @@ func (f *extractTermsFn) ProcessElement(ctx context.Context, entry documentio.Do
 		WDict: f.Dict,
 	}
 	textTokens := dt.Tokenize(entry.Text)
-	var docLen int64 = 0
+	tokens := []tokenizer.TextToken{}
 	for _, token := range textTokens {
 		if dicttypes.IsCJKChar(token.Token) {
-			docLen++
+			tokens = append(tokens, token)
+			charCounter.Inc(ctx, int64(len(token.Token)))
 		}
 	}
+	docLen := int64(len(tokens))
+	termCounter.Inc(ctx, docLen)
 	// log.Infof(ctx, "extractTermsFn, %s | %d", entry.Text, docLen)
-	for _, token := range textTokens {
-		if !dicttypes.IsCJKChar(token.Token) {
-			continue
-		}
-		charCounter.Inc(ctx, int64(len(token.Token)))
+	for _, token := range tokens {
 		key := fmt.Sprintf("%s:%s", token.Token, entry.DocumentId)
 		emit(key, TermFreqEntry{
 			Term: token.Token,
@@ -129,6 +139,7 @@ func (f *extractTermsFn) ProcessElement(ctx context.Context, entry documentio.Do
 }
 
 func extractDocFreqFn(ctx context.Context, key string, entry TermFreqEntry, emit func(string, int)) {
+	// log.Infof(ctx, "extractDocFreqFn key: %s", key)
 	emit(entry.Term, 1)
 }
 
@@ -144,8 +155,14 @@ func sumTermFreq(tf1, tf2 TermFreqEntry) TermFreqEntry {
 	}
 }
 
+// sumDocFreq is used for document frequency
+func sumDocFreq(m, n int) int {
+	return m + n
+}
+
 // extractTF is a DoFn that transforms the key in KV<string, TermFreqEntry> from term + doc to the term only
-func extractTF(k string, entry TermFreqEntry, emit func(string, TermFreqEntry)) {
+func extractTF(ctx context.Context, k string, entry TermFreqEntry, emit func(string, TermFreqEntry)) {
+	// log.Infof(ctx, "extractTF k: %s", k)
 	emit(entry.Term, entry)
 }
 
@@ -179,6 +196,7 @@ func readCorpusEntries(ctx context.Context, s beam.Scope, cnrHome, corpusFN stri
 		entries = append(entries, ent...)
 	}
 	log.Infof(ctx, "readCorpusEntries, got %d entries", len(entries))
+	docCounter.Inc(ctx, int64(len(entries)))
 	return entries
 }
 
@@ -241,28 +259,65 @@ func getColGlossFN(colRawFN string) string {
 }
 
 // transformTFDocEntries is a DoFn that transforms a TermFreqEntry object to a termfreq.TermFreqDoc
-func transformTFDocEntries(term string, tfIter func(*TermFreqEntry) bool, dfIter func(*int) bool) termfreq.TermFreqDoc {
+func transformTFDocEntries(ctx context.Context, key string, tfIter func(*TermFreqEntry) bool, dfIter func(*int) bool) termfreq.TermFreqDoc {
+	// log.Infof(ctx, "transformTFDocEntries, transforming key: %s", key)
+	tf := termfreq.TermFreqDoc{
+		Term: "",
+    Freq: 0,
+    Collection: "",
+    Document: "",
+    IDF: 0.0,
+    DocLen: 0,
+	}
 	var e TermFreqEntry
-	var docFreq int
-	tfIter(&e)
-	dfIter(&docFreq)
-	idf := 0.0
-	if e.DocLen > 0 {
-		idf = math.Log10(float64(e.CorpusLen + 1) / float64(e.DocLen))
+	var corpusLen int64 = 0
+	for tfIter(&e) {
+		// log.Infof(ctx, "transformTFDocEntries, key: %s, term: %s, doc: %s, freq: %d", key, e.Term, e.DocumentId, e.Freq)
+		tf.Term = e.Term
+		tf.Freq += e.Freq
+		tf.Collection = e.ColFile
+		tf.Document = e.DocumentId
+		tf.DocLen = e.DocLen
+		corpusLen = e.CorpusLen
 	}
-	return termfreq.TermFreqDoc{
-		Term: e.Term,
-    Freq: e.Freq,
-    Collection: e.ColFile,
-    Document: e.DocumentId,
-    IDF: idf,
-    DocLen: e.DocLen,
+	var df int
+	dfIter(&df)
+	if df > 0 {
+		tf.IDF = math.Log10(float64(corpusLen + 1) / float64(df))
 	}
+	// log.Infof(ctx, "transformTFDocEntries for key %s, docFreq: %d, IDF: %.3f", key, df, tf.IDF)
+	termFreqCounter.Inc(ctx, 1)
+	return tf
 }
 
-// formatDFFn is a DoFn that formats document frequency as a string.
-func formatDFFn(k string, freq int) string {
-	return fmt.Sprintf("%s\t%d", k, freq)
+// transformBFDocEntries is a DoFn that transforms a bigram TermFreqEntry object to a termfreq.TermFreqDoc
+func transformBFDocEntries(ctx context.Context, term string, tfIter func(*TermFreqEntry) bool, dfIter func(*int) bool) termfreq.TermFreqDoc {
+	tf := termfreq.TermFreqDoc{
+		Term: "",
+    Freq: 0,
+    Collection: "",
+    Document: "",
+    IDF: 0.0,
+    DocLen: 0,
+	}
+	var e TermFreqEntry
+	var corpusLen int64 = 0
+	for tfIter(&e) {
+		tf.Term = e.Term
+		tf.Freq += e.Freq
+		tf.Collection = e.ColFile
+		tf.Document = e.DocumentId
+		tf.DocLen = e.DocLen
+		corpusLen = e.CorpusLen
+	}
+	var df int
+	dfIter(&df)
+	if df > 0 {
+		tf.IDF = math.Log10(float64(corpusLen + 1) / float64(df))
+	}
+	// log.Infof(ctx, "transformBFDocEntries for term %s, docFreq: %d, corpusLen: %d, IDF: %.3f", term, df, corpusLen, tf.IDF)
+	bigramFreqCounter.Inc(ctx, 1)
+	return tf
 }
 
 // CountTerms processes DocEntries and outputs term frequencies in TermFreqEntry objects
@@ -282,7 +337,7 @@ func (f *extractBigramsFn) ProcessElement(ctx context.Context, entry documentio.
 		WDict: f.Dict,
 	}
 	textTokens := dt.Tokenize(entry.Text)
-	log.Infof(ctx, "extractBigramsFn, %s | %d", entry.Text, len(textTokens))
+	// log.Infof(ctx, "extractBigramsFn, %s | %d", entry.Text, len(textTokens))
 	lastToken := ""
 	bigrams := []string{}
 	for _, token := range textTokens {
@@ -328,9 +383,9 @@ func main() {
 	c := config.InitConfig()
 	dict, err := dictionary.LoadDictFile(c)
 	if err != nil {
-		log.Fatalf(ctx, "CountTerms, could not load dictionary: %v", err)
+		log.Fatalf(ctx, "main, could not load dictionary: %v", err)
 	}
-	log.Infof(ctx, "CountTerms, loaded dictionary with %d terms", len(dict.Wdict))
+	log.Infof(ctx, "main, loaded dictionary with %d terms", len(dict.Wdict))
 	project := gcpopts.GetProjectFromFlagOrEnvironment(ctx)
 	log.Infof(ctx, "project: %s", project)
 
@@ -343,31 +398,41 @@ func main() {
 	termFreq := CountTerms(ctx, s, dict.Wdict, docText)
 
 	// Compute document frequencies
-	dfTerms := beam.ParDo(s, extractDocFreqFn, termFreq)
+	dfListTerms := beam.ParDo(s, extractDocFreqFn, termFreq)
+	dfTerms := beam.CombinePerKey(s, sumDocFreq, dfListTerms)
 
 	// Combine term and document frequencies
 	tfExtracted := beam.ParDo(s, extractTF, termFreq)
-	dfDocTerms := beam.CoGroupByKey(s, tfExtracted, dfTerms)
-	tfFormatted := beam.ParDo(s, transformTFDocEntries, dfDocTerms)
+	dfGroupedTerms := beam.CoGroupByKey(s, tfExtracted, dfTerms)
+
+	// Write term frequencies to Firestore
+	tfDoc := beam.ParDo(s, transformTFDocEntries, dfGroupedTerms)
 	fbCol := fmt.Sprintf("%s_wordfreqdoc%d", *corpus, *generation)
 	uf := termfreqio.UpdateTermFreqDoc{
 		FbCol: fbCol,
 		ProjectID: project,
 	}
-	beam.ParDo0(s, &uf, tfFormatted)
+	beam.ParDo0(s, &uf, tfDoc)
 
 	// Compute bigram frequencies
 	bigramFreq := CountBigrams(ctx, s, dict.Wdict, docText)
-	dfBigrams := beam.ParDo(s, extractDocFreqFn, bigramFreq)
+
+	// Compute bigram document frequencies
+	dfListBigrams := beam.ParDo(s, extractDocFreqFn, bigramFreq)
+	dfBigrams := beam.CombinePerKey(s, sumDocFreq, dfListBigrams)
+
+	// Combine bigram and document frequencies
 	bfExtracted := beam.ParDo(s, extractTF, bigramFreq)
-	dfDocBigrams := beam.CoGroupByKey(s, bfExtracted, dfBigrams)
-	bfFormatted := beam.ParDo(s, transformTFDocEntries, dfDocBigrams)
+	dfGroupedBigrams := beam.CoGroupByKey(s, bfExtracted, dfBigrams)
+
+	// Write bigram frequencies to Firestore
+	bfDoc := beam.ParDo(s, transformBFDocEntries, dfGroupedBigrams)
 	fbBigramCol := fmt.Sprintf("%s_bigram_doc_freq%d", *corpus, *generation)
 	bf := termfreqio.UpdateTermFreqDoc{
 		FbCol: fbBigramCol,
 		ProjectID: project,
 	}
-	beam.ParDo0(s, &bf, bfFormatted)
+	beam.ParDo0(s, &bf, bfDoc)
 
 	if err := beamx.Run(ctx, p); err != nil {
 		log.Fatalf(ctx, "Failed to execute job: %v", err)
