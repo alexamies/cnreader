@@ -100,7 +100,6 @@ func extractDocText(ctx context.Context, s beam.Scope, cnrHome, input, corpusFN,
 	// Get the list of files to read text from
 	entries := readCorpusEntries(ctx, s, cnrHome, corpusFN)
 	corpusLen := len(entries)
-
 	entriesPCol := beam.CreateList(s, entries)
 	return documentio.Read(ctx, s, input, corpusLen, filter, entriesPCol)
 }

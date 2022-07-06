@@ -59,10 +59,9 @@ type DocEntry struct {
 // Read a PCollection of CorpusEntry and return a PCollection of DocEntry with the
 // contents of the file contained in the Text field.
 func Read(ctx context.Context, s beam.Scope, input string, corpusLen int, filter string, entries beam.PCollection) beam.PCollection {
-	s = s.Scope("tfidf.Read")
+	s = s.Scope("documentio.Read")
 	return beam.ParDo(s, &readFn{Input: input, CorpusLen: corpusLen, Filter: filter}, entries)
 }
-
 
 // readFn is a DoFn for reading files text and filtering out expressions that are not relevant
 // to the term frequency, eg copyright statements.
@@ -70,7 +69,7 @@ type readFn struct {
 	// Input is either a file path or GCS path to read the corpus entries from
 	Input string
 	// Filter is a regex identifying the terms to filter.
-	Filter string `json:"filter"`
+	Filter string `beam:"filter"`
 	CorpusLen int `beam:"corpusLen"`
 	re *regexp.Regexp
 	client *storage.Client
