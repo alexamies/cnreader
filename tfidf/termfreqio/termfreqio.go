@@ -19,7 +19,7 @@ package termfreqio
 
 import (
 	"context"
-  "fmt"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -39,9 +39,9 @@ func init() {
 
 // UpdateTermFreqDoc is a ParDo that writes entries to Firestore
 type UpdateTermFreqDoc struct {
-	FbCol string
+	FbCol     string
 	ProjectID string
-	client *firestore.Client
+	client    *firestore.Client
 }
 
 // Setup establishes the client connection
@@ -55,19 +55,21 @@ func (f *UpdateTermFreqDoc) Setup() {
 }
 
 // ProcessElement writes the given entry to Firestore if it does not exist already
-func (f *UpdateTermFreqDoc) ProcessElement(ctx context.Context, entry termfreq.TermFreqDoc) {
-	doc := strings.ReplaceAll(entry.Document, "/", "_")
-	key := fmt.Sprintf("%s_%s", entry.Term, doc)
-	ref := f.client.Collection(f.FbCol).Doc(key)
-	_, err := ref.Get(ctx)
-	if err != nil {
-		if (status.Code(err) != codes.NotFound) {
-			log.Infof(ctx, "Failed getting tf for ref %v: %v", ref, err)
-		} else {
-			_, err = ref.Set(ctx, entry)
-			if err != nil {
-				log.Infof(ctx, "Failed setting tf for ref %v: %v", ref, err)
+func (f *UpdateTermFreqDoc) ProcessElement(ctx context.Context, entries []termfreq.TermFreqDoc) {
+	for _, entry := range entries {
+		doc := strings.ReplaceAll(entry.Document, "/", "_")
+		key := fmt.Sprintf("%s_%s", entry.Term, doc)
+		ref := f.client.Collection(f.FbCol).Doc(key)
+		_, err := ref.Get(ctx)
+		if err != nil {
+			if status.Code(err) != codes.NotFound {
+				log.Infof(ctx, "Failed getting tf for ref %v: %v", ref, err)
+			} else {
+				_, err = ref.Set(ctx, entry)
+				if err != nil {
+					log.Infof(ctx, "Failed setting tf for ref %v: %v", ref, err)
+				}
 			}
-		}
-	} // else do not update entry if it exists already
+		} // else do not update entry if it exists already
+	}
 }

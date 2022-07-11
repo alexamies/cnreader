@@ -17,8 +17,8 @@ package termfreqio
 
 import (
 	"context"
-  "fmt"
 	"flag"
+	"fmt"
 	"testing"
 
 	"github.com/alexamies/chinesenotes-go/termfreq"
@@ -33,38 +33,28 @@ func TestProcessElement(t *testing.T) {
 	generation := 0
 	fbCol := fmt.Sprintf("%s_wordfreqdoc%d", corpus, generation)
 	f := UpdateTermFreqDoc{
-		FbCol: fbCol,
+		FbCol:     fbCol,
 		ProjectID: *projectID,
 	}
 	f.Setup()
 	ctx := context.Background()
 	entries := []termfreq.TermFreqDoc{
 		{
-        Term:  "古",
-        Freq: 1,
-        Collection: "testcollection.html",
-        Document: "testdata/sampletest.html",
-        IDF: 0.4771,
-        DocLen: 7,
+			Term:       "而",
+			Freq:       1,
+			Collection: "testcollection.html",
+			Document:   "testdata/sampletest2.html",
+			IDF:        0.4771,
+			DocLen:     7,
 		},
 		{
-        Term:  "待",
-        Freq: 1,
-        Collection: "testcollection.html",
-        Document: "testdata/sampletest2.html",
-        IDF: 0.4771,
-        DocLen: 7,
-		},
-		{
-        Term:  "而",
-        Freq: 1,
-        Collection: "testcollection.html",
-        Document: "testdata/sampletest2.html",
-        IDF: 0.4771,
-        DocLen: 7,
+			Term:       "而",
+			Freq:       1,
+			Collection: "testcollection.html",
+			Document:   "testdata/sampletest3.html",
+			IDF:        0.4771,
+			DocLen:     3,
 		},
 	}
-	for _, entry := range entries {
-		f.ProcessElement(ctx, entry)
-	}
+	f.ProcessElement(ctx, entries)
 }

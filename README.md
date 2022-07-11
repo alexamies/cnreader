@@ -209,8 +209,16 @@ the bucket:
 gsutil cp testdata/sampletest*.txt gs://${TEXT_BUCKET}/testdata/
 ```
 
+The location to read config, dictionary, and corpus files from
+
 ```shell
 export CNREADER_HOME=${PWD}
+```
+
+The GCP project:
+
+``shell
+PROJECT_ID=[your project id]
 ```
 
 Run the pipeline locally

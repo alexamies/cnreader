@@ -256,65 +256,61 @@ func getColGlossFN(colRawFN string) string {
 }
 
 // transformTFDocEntries is a DoFn that transforms a TermFreqEntry object to a termfreq.TermFreqDoc
-func transformTFDocEntries(ctx context.Context, key string, tfIter func(*TermFreqEntry) bool, dfIter func(*int) bool) termfreq.TermFreqDoc {
+func transformTFDocEntries(ctx context.Context, key string, tfIter func(*TermFreqEntry) bool, dfIter func(*int) bool) []termfreq.TermFreqDoc {
 	// log.Infof(ctx, "transformTFDocEntries, transforming key: %s", key)
-	tf := termfreq.TermFreqDoc{
-		Term:       "",
-		Freq:       0,
-		Collection: "",
-		Document:   "",
-		IDF:        0.0,
-		DocLen:     0,
-	}
+	var df int
+	dfIter(&df)
+	results := []termfreq.TermFreqDoc{}
 	var e TermFreqEntry
 	var corpusLen int64 = 0
 	for tfIter(&e) {
 		// log.Infof(ctx, "transformTFDocEntries, key: %s, term: %s, doc: %s, freq: %d", key, e.Term, e.DocumentId, e.Freq)
-		tf.Term = e.Term
-		tf.Freq += e.Freq
-		tf.Collection = e.ColFile
-		tf.Document = e.DocumentId
-		tf.DocLen = e.DocLen
 		corpusLen = e.CorpusLen
+		idf := 0.0
+		if df > 0 {
+			idf = math.Log10(float64(corpusLen+1) / float64(df))
+		}
+		tf := termfreq.TermFreqDoc{
+			Term:       e.Term,
+			Freq:       e.Freq,
+			Collection: e.ColFile,
+			Document:   e.DocumentId,
+			DocLen:     e.DocLen,
+			IDF:        idf,
+		}
+		results = append(results, tf)
+		termFreqCounter.Inc(ctx, 1)
+		// log.Infof(ctx, "transformTFDocEntries for key %s, docFreq: %d, IDF: %.3f", key, df, tf.IDF)
 	}
-	var df int
-	dfIter(&df)
-	if df > 0 {
-		tf.IDF = math.Log10(float64(corpusLen+1) / float64(df))
-	}
-	// log.Infof(ctx, "transformTFDocEntries for key %s, docFreq: %d, IDF: %.3f", key, df, tf.IDF)
-	termFreqCounter.Inc(ctx, 1)
-	return tf
+	return results
 }
 
 // transformBFDocEntries is a DoFn that transforms a bigram TermFreqEntry object to a termfreq.TermFreqDoc
-func transformBFDocEntries(ctx context.Context, term string, tfIter func(*TermFreqEntry) bool, dfIter func(*int) bool) termfreq.TermFreqDoc {
-	tf := termfreq.TermFreqDoc{
-		Term:       "",
-		Freq:       0,
-		Collection: "",
-		Document:   "",
-		IDF:        0.0,
-		DocLen:     0,
-	}
+func transformBFDocEntries(ctx context.Context, term string, tfIter func(*TermFreqEntry) bool, dfIter func(*int) bool) []termfreq.TermFreqDoc {
+	var df int
+	dfIter(&df)
+	results := []termfreq.TermFreqDoc{}
 	var e TermFreqEntry
 	var corpusLen int64 = 0
 	for tfIter(&e) {
-		tf.Term = e.Term
-		tf.Freq += e.Freq
-		tf.Collection = e.ColFile
-		tf.Document = e.DocumentId
-		tf.DocLen = e.DocLen
 		corpusLen = e.CorpusLen
+		idf := 0.0
+		if df > 0 {
+			idf = math.Log10(float64(corpusLen+1) / float64(df))
+		}
+		tf := termfreq.TermFreqDoc{
+			Term:       e.Term,
+			Freq:       e.Freq,
+			Collection: e.ColFile,
+			Document:   e.DocumentId,
+			DocLen:     e.DocLen,
+			IDF:        idf,
+		}
+		results = append(results, tf)
+		// log.Infof(ctx, "transformBFDocEntries for term %s, docFreq: %d, corpusLen: %d, IDF: %.3f", term, df, corpusLen, tf.IDF)
+		bigramFreqCounter.Inc(ctx, 1)
 	}
-	var df int
-	dfIter(&df)
-	if df > 0 {
-		tf.IDF = math.Log10(float64(corpusLen+1) / float64(df))
-	}
-	// log.Infof(ctx, "transformBFDocEntries for term %s, docFreq: %d, corpusLen: %d, IDF: %.3f", term, df, corpusLen, tf.IDF)
-	bigramFreqCounter.Inc(ctx, 1)
-	return tf
+	return results
 }
 
 // CountTerms processes DocEntries and outputs term frequencies in TermFreqEntry objects
