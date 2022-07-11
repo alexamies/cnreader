@@ -1,4 +1,5 @@
 bigram_doc_freq.txt
 doc_freq.txt
+outputs
 tfidf
 word_freq_doc.txt
