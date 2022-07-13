@@ -85,19 +85,19 @@ const (
 
 // Command line flags
 var (
-	collectionFile = flag.String("collection", "", "Enhance HTML markup and do vocabulary analysis for all the files listed in given collection.")
-	downloadDict = flag.Bool("download_dict", false, "Download the dicitonary files from GitHub and save locally.")
-	html = flag.Bool("html", false, "Enhance HTML markup for all files listed in data/corpus/html-conversion.csv")
-	hwFiles = flag.Bool("hwfiles", false, "Compute and write HTML entries for each headword, writing the files to the web/words directory.")
-	librarymeta = flag.Bool("librarymeta", false, "Top level collection entries for the digital library.")
-	memprofile = flag.String("memprofile", "", "write memory profile to this file.")
-	sourceFile = flag.String("source_file", "", "Analyze vocabulary for source file and write to output.html.")
-	sourceText = flag.String("source_text", "", "Analyze vocabulary for source input on the command line.")
-	writeTMIndex = flag.Bool("tmindex", false, "Compute and write translation memory index.")
-	titleIndex = flag.Bool("titleindex", false, "Builds a flat index of document titles.")
+	collectionFile  = flag.String("collection", "", "Enhance HTML markup and do vocabulary analysis for all the files listed in given collection.")
+	downloadDict    = flag.Bool("download_dict", false, "Download the dicitonary files from GitHub and save locally.")
+	html            = flag.Bool("html", false, "Enhance HTML markup for all files listed in data/corpus/html-conversion.csv")
+	hwFiles         = flag.Bool("hwfiles", false, "Compute and write HTML entries for each headword, writing the files to the web/words directory.")
+	librarymeta     = flag.Bool("librarymeta", false, "Top level collection entries for the digital library.")
+	memprofile      = flag.String("memprofile", "", "write memory profile to this file.")
+	sourceFile      = flag.String("source_file", "", "Analyze vocabulary for source file and write to output.html.")
+	sourceText      = flag.String("source_text", "", "Analyze vocabulary for source input on the command line.")
+	writeTMIndex    = flag.Bool("tmindex", false, "Compute and write translation memory index.")
+	titleIndex      = flag.Bool("titleindex", false, "Builds a flat index of document titles.")
 	testIndexCorpus = flag.String("test_index_corpus", "", "The name of the corpus to test the term frequency index in Firestore.")
-	testIndexGen = flag.Int("test_index_gen", -1, "The generation number to test the term frequency index in Firestore.")
-	projectID = flag.String("project", "", "The GCP project for Firestore access.")
+	testIndexGen    = flag.Int("test_index_gen", -1, "The generation number to test the term frequency index in Firestore.")
+	projectID       = flag.String("project", "", "The GCP project for Firestore access.")
 )
 
 // A type that holds the source and destination files for HTML conversion
@@ -463,7 +463,7 @@ func readIndex(indexConfig index.IndexConfig) (*index.IndexState, error) {
 }
 
 // testFindDocsTermFreq validates the index saved in Firestore
-func testFindDocsTermFreq(ctx context.Context, corpus string, generation int, project string) {
+func testFindDocsTermFreq(ctx context.Context, corpus string, generation int, project, collection string) {
 	client, err := firestore.NewClient(ctx, project)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
@@ -479,7 +479,7 @@ func testFindDocsTermFreq(ctx context.Context, corpus string, generation int, pr
 	if len(docs) == 0 {
 		log.Fatalf("No documents found for terms %v", terms)
 	}
-	log.Printf("testFindDocsTermFreq: found %d docs for terms %v\n: %v", len(docs), terms, docs)
+	log.Printf("Found %d docs for terms %v\n: %v", len(docs), terms, docs)
 
 	// Validate index for bigram frequency
 	bigrams := []string{"不敗"}
@@ -490,7 +490,30 @@ func testFindDocsTermFreq(ctx context.Context, corpus string, generation int, pr
 	if len(bDocs) == 0 {
 		log.Fatalf("No documents found for bigrams %v", bigrams)
 	}
-	log.Printf("testFindDocsTermFreq: found %d docs for bigrams %v\n: %v", len(docs), bigrams, bDocs)
+	log.Printf("Found %d docs for bigrams %v\n: %v", len(bDocs), bigrams, bDocs)
+
+	// Validate within the scope of a corpus collection
+	if len(collection) == 0 {
+		log.Print("Skipping query of collection")
+	} else {
+		colDocs, err := termfreq.FindDocsTermCo(ctx, client, corpus, generation, terms, collection)
+		if err != nil {
+			log.Fatalf("Unexpected error in index validation for terms in collection: %v", err)
+		}
+		if len(colDocs) == 0 {
+			log.Fatalf("No documents found for terms %v in collection %s", terms, collection)
+		}
+		log.Printf("Found %d docs for terms %v in collection %v\n: %v", len(colDocs), terms, collection, colDocs)
+
+		colBDocs, err := termfreq.FindDocsBigramCo(ctx, client, corpus, generation, bigrams, collection)
+		if err != nil {
+			log.Fatalf("Unexpected error in index validation for bigrams in collection: %v", err)
+		}
+		if len(colBDocs) == 0 {
+			log.Fatalf("No documents found for bigrams %v in collection %s", terms, collection)
+		}
+		log.Printf("Found %d docs for bigrams %v in collection %v\n: %v", len(colBDocs), terms, collection, colBDocs)
+	}
 }
 
 // writeLibraryFiles writes HTML files for each file in the corpus.
@@ -592,7 +615,7 @@ func main() {
 		if len(*projectID) == 0 {
 			log.Fatalf("project must be set for Firestore access")
 		}
-		testFindDocsTermFreq(ctx, *testIndexCorpus, *testIndexGen, *projectID)
+		testFindDocsTermFreq(ctx, *testIndexCorpus, *testIndexGen, *projectID, *collectionFile)
 		os.Exit(0)
 	}
 
@@ -620,9 +643,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error opening dictionary: %v", err)
 	}
-	dictTokenizer := tokenizer.DictTokenizer{
-		WDict: dict.Wdict,
-	}
+	dictTokenizer := tokenizer.NewDictTokenizer(dict.Wdict)
 
 	// Simple cases, no validation done
 	if len(*sourceText) > 0 {

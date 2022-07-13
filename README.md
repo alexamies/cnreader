@@ -257,7 +257,9 @@ links for this can be found by running the following validation test:
 
 ```shell
 cd ..
+COLLECTION=testcollection.html
 ./cnreader --test_index_corpus $CORPUS \
   --test_index_gen $GEN \
-  --project $PROJECT_ID
+  --project $PROJECT_ID \
+  --collection ${COLLECTION}
 ```
