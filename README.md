@@ -258,8 +258,7 @@ links for this can be found by running the following validation test:
 ```shell
 cd ..
 COLLECTION=testcollection.html
-./cnreader --test_index_corpus $CORPUS \
-  --test_index_gen $GEN \
+./cnreader --test_index_terms "而" \
   --project $PROJECT_ID \
   --collection ${COLLECTION}
 ```

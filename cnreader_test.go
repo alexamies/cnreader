@@ -19,13 +19,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/alexamies/chinesenotes-go/config"	
-	"github.com/alexamies/chinesenotes-go/dictionary"	
+	"github.com/alexamies/chinesenotes-go/config"
+	"github.com/alexamies/chinesenotes-go/dictionary"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/analysis"
 	"github.com/alexamies/cnreader/corpus"
 )
-	
+
 var integration = flag.Bool("integration", false, "run an integration test")
 
 func listToString(l list.List) string {
@@ -45,9 +45,9 @@ func printList(t *testing.T, l list.List) {
 func testCorpusConfig() corpus.CorpusConfig {
 	return corpus.CorpusConfig{
 		CorpusDataDir: "data/corpus",
-		CorpusDir: "corpus",
-		Excluded: map[string]bool{},
-		ProjectHome: ".",
+		CorpusDir:     "corpus",
+		Excluded:      map[string]bool{},
+		ProjectHome:   ".",
 	}
 }
 
@@ -77,9 +77,9 @@ func TestIntegration(t *testing.T) {
 	}
 	defer r.Close()
 	text := corpus.ReadText(r)
-	tok := tokenizer.DictTokenizer{dict.Wdict}
+	tok := tokenizer.NewDictTokenizer(dict.Wdict)
 	tokens, results := analysis.ParseText(text, "", corpus.NewCorpusEntry(),
-			tok, corpusConfig, dict)
+		tok, corpusConfig, dict)
 	tokenText := listToString(tokens)
 	if len(text) != len(tokenText) {
 		t.Error("Expected to string length ", len(text), ", got ",

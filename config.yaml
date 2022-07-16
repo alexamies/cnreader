@@ -5,3 +5,9 @@ DictionaryDir: data
 
 # Dictionary files to load
 LUFiles: testwords.tsv
+
+# IndexCorpus is the name of the corpus for the term frequency index in Firestore.
+IndexCorpus: cnreader
+
+ # IndexGen is the generation number for the term frequency index in Firestore.
+IndexGen: 0
