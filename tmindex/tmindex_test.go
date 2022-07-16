@@ -15,12 +15,11 @@ package tmindex
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"testing"
 )
 
-func mockDictionary() map[string]*dicttypes.Word {
+func mockDictionary(t *testing.T) map[string]*dicttypes.Word {
 	s1 := "结实"
 	t1 := "結實"
 	p1 := "jiēshi"
@@ -33,6 +32,7 @@ func mockDictionary() map[string]*dicttypes.Word {
 		Domain: "Modern Chinese",
 	}
 	hw1 := dicttypes.Word{
+		HeadwordId: 1,
 		Simplified: s1, 
 		Traditional: t1,
 		Pinyin: p1,
@@ -50,20 +50,21 @@ func mockDictionary() map[string]*dicttypes.Word {
 		Domain: "Literary Chinese",
 	}
 	hw2 := dicttypes.Word{
+		HeadwordId: 2,
 		Simplified: s2, 
 		Traditional: t2,
 		Pinyin: p2,
 		Senses: []dicttypes.WordSense{ws2},
 	}
-  headwords := []dicttypes.Word{hw1, hw2}
+  headwords := []*dicttypes.Word{&hw1, &hw2}
   wdict := make(map[string]*dicttypes.Word)
   for _, hw := range headwords {
-  	fmt.Printf("mockDictionary adding simplified key %s: %v\n", hw.Simplified, hw.Senses)
-  	wdict[hw.Simplified] = &hw
+  	t.Logf("mockDictionary adding simplified key %s: %v\n", hw.Simplified, hw)
+  	wdict[hw.Simplified] = hw
   	trad := hw.Traditional
   	if trad != "\\N" {
-  	fmt.Printf("mockDictionary adding trad key %s: %v\n", trad, hw.Senses)
-  		wdict[trad] = &hw
+  		t.Logf("mockDictionary adding trad key %s: %v\n", trad, hw)
+  		wdict[trad] = hw
   	}
   }
   return wdict
@@ -71,11 +72,10 @@ func mockDictionary() map[string]*dicttypes.Word {
 
 // Test basic BuildIndex functions
 func TestBuildUniDomainIndex(t *testing.T) {
-	fmt.Printf("TestBuildIndex: Begin unit test\n")
-	wdict := mockDictionary()
+	wdict := mockDictionary(t)
 	for k, w := range wdict {
 		for _, s := range w.Senses {
-			fmt.Printf("TestBuildIndex: %s %d %s: %s %s\n", k, w.HeadwordId, s.Pinyin, s.English, s.Domain)
+			t.Logf("TestBuildUniDomainIndex: %s %d %s: %s %s\n", k, w.HeadwordId, s.Pinyin, s.English, s.Domain)
 		}
 	}
 	var buf bytes.Buffer
@@ -99,8 +99,7 @@ func TestBuildUniDomainIndex(t *testing.T) {
 
 // Test basic BuildIndex functions
 func TestBuildUnigramIndex(t *testing.T) {
-	fmt.Printf("TestBuildIndex: Begin unit test\n")
-	wdict := mockDictionary()
+	wdict := mockDictionary(t)
 	var buf bytes.Buffer
 	err := buildUnigramIndex(&buf, wdict)
 	expected := 
