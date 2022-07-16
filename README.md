@@ -258,7 +258,7 @@ links for this can be found by running the following validation test:
 ```shell
 cd ..
 COLLECTION=testcollection.html
-./cnreader --test_index_terms "而" \
+./cnreader --test_index_terms "而,不" \
   --project $PROJECT_ID \
   --collection ${COLLECTION}
 ```

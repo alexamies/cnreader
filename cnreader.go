@@ -65,6 +65,7 @@ import (
 	"github.com/alexamies/chinesenotes-go/bibnotes"
 	"github.com/alexamies/chinesenotes-go/config"
 	"github.com/alexamies/chinesenotes-go/dictionary"
+	"github.com/alexamies/chinesenotes-go/find"
 	"github.com/alexamies/chinesenotes-go/termfreq"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
 	"github.com/alexamies/cnreader/analysis"
@@ -462,7 +463,7 @@ func readIndex(indexConfig index.IndexConfig) (*index.IndexState, error) {
 }
 
 // testFindDocsTermFreq validates the index saved in Firestore
-func testFindDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int, project, collection, term string) {
+func testFindDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int, project, collection string, terms []string) {
 	client, err := firestore.NewClient(ctx, project)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
@@ -472,7 +473,6 @@ func testFindDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int,
 	tfDocFinder := termfreq.NewFirestoreDocFinder(client, indexCorpus, indexGen)
 
 	// Validate index for term frequency
-	terms := []string{term}
 	docs, err := tfDocFinder.FindDocsTermFreq(ctx, terms)
 	if err != nil {
 		log.Fatalf("Unexpected error in index validation for terms: %v", err)
@@ -483,10 +483,14 @@ func testFindDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int,
 	log.Printf("Found %d docs for terms %v\n: %v", len(docs), terms, docs)
 
 	// Validate index for bigram frequency
-	bigrams := []string{"不敗"}
+	bigrams := find.Bigrams(terms)
+	if len(bigrams) == 0 {
+		log.Print("No bigrams")
+		return
+	}
 	bDocs, err := tfDocFinder.FindDocsBigramFreq(ctx, bigrams)
 	if err != nil {
-		log.Fatalf("Unexpected error in index validation for bigrams: %v", err)
+		log.Fatalf("Unexpected error in index validation for bigrams %v: %v", bigrams, err)
 	}
 	if len(bDocs) == 0 {
 		log.Fatalf("No documents found for bigrams %v", bigrams)
@@ -511,9 +515,9 @@ func testFindDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int,
 			log.Fatalf("Unexpected error in index validation for bigrams in collection: %v", err)
 		}
 		if len(colBDocs) == 0 {
-			log.Fatalf("No documents found for bigrams %v in collection %s", terms, collection)
+			log.Fatalf("No documents found for bigrams %v in collection %s", bigrams, collection)
 		}
-		log.Printf("Found %d docs for bigrams %v in collection %v\n: %v", len(colBDocs), terms, collection, colBDocs)
+		log.Printf("Found %d docs for bigrams %v in collection %v\n: %v", len(colBDocs), bigrams, collection, colBDocs)
 	}
 }
 
@@ -618,7 +622,8 @@ func main() {
 		if len(*projectID) == 0 {
 			log.Fatalf("project must be set for Firestore access")
 		}
-		testFindDocsTermFreq(ctx, indexCorpus, indexGen, *projectID, *collectionFile, *testIndexTerms)
+		terms := strings.Split(*testIndexTerms, ",")
+		testFindDocsTermFreq(ctx, indexCorpus, indexGen, *projectID, *collectionFile, terms)
 		os.Exit(0)
 	}
 
