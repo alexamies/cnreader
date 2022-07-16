@@ -96,7 +96,7 @@ var (
 	sourceText     = flag.String("source_text", "", "Analyze vocabulary for source input on the command line.")
 	writeTMIndex   = flag.Bool("tmindex", false, "Compute and write translation memory index.")
 	titleIndex     = flag.Bool("titleindex", false, "Builds a flat index of document titles.")
-	testIndexTerms = flag.String("test_index_terms", "", "Values to test the corpus index with")
+	testIndexTerms = flag.String("test_index_terms", "", "Values to validate the corpus index with")
 	projectID      = flag.String("project", "", "The GCP project for Firestore access.")
 )
 
