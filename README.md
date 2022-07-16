@@ -217,7 +217,7 @@ export CNREADER_HOME=${PWD}
 
 The GCP project:
 
-``shell
+```shell
 PROJECT_ID=[your project id]
 ```
 
