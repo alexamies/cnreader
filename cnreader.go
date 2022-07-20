@@ -478,9 +478,9 @@ func findDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int, pro
 		log.Fatalf("Unexpected error in index validation for terms: %v", err)
 	}
 	if len(docs) == 0 {
-		log.Printf("No documents found for terms %v", terms)
+		fmt.Printf("No documents found for terms %v\n", terms)
 	}
-	log.Printf("Found %d docs for terms %v\n", len(docs), terms)
+	fmt.Printf("Found %d docs for terms %v\n", len(docs), terms)
 	fmt.Println("Document, Collection, BM25, BitVector, ContainsTerms")
 	for _, d := range docs {
 		fmt.Printf("%s, %s, %0.3f, %0.3f, %s\n", d.Document, d.Collection, d.Score, d.BitVector, d.ContainsTerms)
@@ -497,9 +497,9 @@ func findDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int, pro
 		log.Fatalf("Unexpected error in index validation for bigrams %v: %v", bigrams, err)
 	}
 	if len(bDocs) == 0 {
-		log.Printf("No documents found for bigrams %v", bigrams)
+		fmt.Printf("No documents found for bigrams %v\n", bigrams)
 	}
-	log.Printf("Found %d docs for bigrams %v\n", len(bDocs), bigrams)
+	fmt.Printf("Found %d docs for bigrams %v\n", len(bDocs), bigrams)
 	fmt.Println("Document, Collection, BM25, BitVector, ContainsTerms")
 	for _, d := range bDocs {
 		fmt.Printf("%s, %s, %0.3f, %0.3f, %s\n", d.Document, d.Collection, d.Score, d.BitVector, d.ContainsTerms)
@@ -514,9 +514,9 @@ func findDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int, pro
 			log.Fatalf("Unexpected error in index validation for terms in collection: %v", err)
 		}
 		if len(colDocs) == 0 {
-			log.Fatalf("No documents found for terms %v in collection %s", terms, collection)
+			fmt.Printf("No documents found for terms %v in collection %s\n", terms, collection)
 		}
-		log.Printf("Found %d docs for terms %v in collection %v\n", len(colDocs), terms, collection, )
+		fmt.Printf("Found %d docs for terms %v in collection %v\n", len(colDocs), terms, collection, )
 		fmt.Println("Document, Collection, BM25, BitVector, ContainsTerms")
 		for _, d := range colDocs {
 			fmt.Printf("%s, %s, %0.3f, %0.3f, %s\n", d.Document, d.Collection, d.Score, d.BitVector, d.ContainsTerms)
@@ -527,7 +527,7 @@ func findDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int, pro
 			log.Fatalf("Unexpected error in index validation for bigrams in collection: %v", err)
 		}
 		if len(colBDocs) == 0 {
-			log.Fatalf("No documents found for bigrams %v in collection %s", bigrams, collection)
+			fmt.Printf("No documents found for bigrams %v in collection %s\n", bigrams, collection)
 		}
 		log.Printf("Found %d docs for bigrams %v in collection %v\n", len(colBDocs), bigrams, collection)
 		fmt.Println("Document, Collection, BM25, BitVector, ContainsTerms")
