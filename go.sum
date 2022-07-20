@@ -74,6 +74,10 @@ github.com/alexamies/chinesenotes-go v0.0.105 h1:+Ou9B/kbyFkVB+wZhGc9xDTZK2ACTDZ
 github.com/alexamies/chinesenotes-go v0.0.105/go.mod h1:C0gHsGHjQTNZkimoYHhXIJzxfv9YvQ7yZP2IkugGcGs=
 github.com/alexamies/chinesenotes-go v0.0.106 h1:aHjLoS/eMPcb0WRE+Hpqa3Ekc9+Qw/ifNNa/eDVfaVw=
 github.com/alexamies/chinesenotes-go v0.0.106/go.mod h1:C0gHsGHjQTNZkimoYHhXIJzxfv9YvQ7yZP2IkugGcGs=
+github.com/alexamies/chinesenotes-go v0.0.109 h1:zV5DeoArgts49C9F9I2kFZZbNHjsO6io6PQ/peK5xRc=
+github.com/alexamies/chinesenotes-go v0.0.109/go.mod h1:C0gHsGHjQTNZkimoYHhXIJzxfv9YvQ7yZP2IkugGcGs=
+github.com/alexamies/chinesenotes-go v0.0.110 h1:IxJ3i93IVnziFY5fByJ7lVxGH9n2FzntOWtMYtcUBH0=
+github.com/alexamies/chinesenotes-go v0.0.110/go.mod h1:C0gHsGHjQTNZkimoYHhXIJzxfv9YvQ7yZP2IkugGcGs=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
