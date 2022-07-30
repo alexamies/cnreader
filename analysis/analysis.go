@@ -121,13 +121,13 @@ type wFResult struct {
 }
 
 type HWFileDependencies struct {
-	Loader library.LibraryLoader
-	DictTokenizer tokenizer.Tokenizer
-	OutputConfig generator.HTMLOutPutConfig
-	IndexState index.IndexState
-	Dict *dictionary.Dictionary
-	VocabAnalysis VocabAnalysis
-	Hww HeadwordWriter
+	Loader         library.LibraryLoader
+	DictTokenizer  tokenizer.Tokenizer
+	OutputConfig   generator.HTMLOutPutConfig
+	IndexState     index.IndexState
+	Dict           *dictionary.Dictionary
+	VocabAnalysis  VocabAnalysis
+	Hww            HeadwordWriter
 	BibNotesClient bibnotes.BibNotesClient
 }
 
@@ -315,9 +315,7 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 // Returns:
 //   tokens: the tokens for the parsed text
 //   results: vocabulary analysis results
-func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
-		dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig,
-		dict *dictionary.Dictionary) (list.List, *CollectionAResults) {
+func ParseText(text string, colTitle string, document *corpus.CorpusEntry, dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig, dict *dictionary.Dictionary) (list.List, *CollectionAResults) {
 	tokens := list.List{}
 	vocab := map[string]int{}
 	bigrams := map[string]int{}
@@ -332,7 +330,7 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 	lastHW := lastHWPtr
 	lastHWText := ""
 	hwIdMap := dict.HeadwordIds
-	//fmt.Printf("ParseText: For text %s got %d chunks\n", colTitle, chunks.Len())
+	log.Printf("ParseText: For coll %s, doc %s got %d chunks\n", colTitle, document.RawFile, chunks.Len())
 	for e := chunks.Front(); e != nil; e = e.Next() {
 		chunk := e.Value.(string)
 		//fmt.Printf("ParseText: chunk %s\n", chunk)
@@ -365,14 +363,11 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 				hw := hwIdMap[hwid]
 				if lastHW != nil && lastHW.HeadwordId != 0 {
 					if len(hw.Senses) == 0 {
-						log.Printf("ParseText: WordSenses nil for %s "+
-							", id = %d, in %s, %s\n", w, hwid,
-							document.Title, colTitle)
+						log.Printf("ParseText: WordSenses nil for %s , id = %d, in %s, %s\n", w, hwid, document.Title, colTitle)
 					}
 					bigram, ok := bigramMap.GetBigramVal(lastHW.HeadwordId, hwid)
 					if !ok {
-						bigram = ngram.NewBigram(*lastHW, *hw, chunk,
-							document.GlossFile, document.Title, colTitle)
+						bigram = ngram.NewBigram(*lastHW, *hw, chunk, document.GlossFile, document.Title, colTitle)
 					}
 					bigramMap.PutBigram(bigram)
 					collocations.PutBigram(bigram.HeadwordDef1.HeadwordId, bigram)
@@ -397,6 +392,7 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry,
 		UnknownChars:      unknownChars,
 		DocLengthArray:    dlArray,
 	}
+	log.Printf("ParseText: Done coll %s, doc %s got %d tokens\n", colTitle, document.RawFile, tokens.Len())
 	return tokens, &results
 }
 
@@ -646,8 +642,7 @@ func writeCollection(collectionEntry *corpus.CollectionEntry,
 			return nil, fmt.Errorf("analysis.writeCollection error reading src %s: %v",
 				entry.RawFile, err)
 		}
-		_, results := ParseText(text, collectionEntry.Title, &entry,
-			dictTokenizer, corpusConfig, dict)
+		_, results := ParseText(text, collectionEntry.Title, &entry, dictTokenizer, corpusConfig, dict)
 
 		srcFile := entry.RawFile
 		i := strings.Index(srcFile, ".")
@@ -764,8 +759,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	bigramDF := index.NewDocumentFrequency()
 	aResults := NewCollectionAResults()
 	for _, collectionEntry := range collections {
-		results, err := writeCollection(&collectionEntry, outputConfig, libLoader,
-			dictTokenizer, dict, c)
+		results, err := writeCollection(&collectionEntry, outputConfig, libLoader, dictTokenizer, dict, c)
 		if err != nil {
 			return nil, fmt.Errorf("WriteCorpus could not write collection: %v", err)
 		}
@@ -785,7 +779,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	}
 	defer analysisWriter.Close()
 	if err := writeAnalysisCorpus(&aResults, docFreq, outputConfig, indexConfig,
-			dict.Wdict, c, analysisWriter); err != nil {
+		dict.Wdict, c, analysisWriter); err != nil {
 		return nil, fmt.Errorf("WriteCorpus could not write analysis: %v", err)
 	}
 
@@ -953,7 +947,7 @@ func WriteHwFiles(dep HWFileDependencies) error {
 
 		if hw.HeadwordId < 400 {
 			log.Printf("analysis.WriteHwFiles: HeadwordId: %d, num senses: %d",
-					hw.HeadwordId, len(hw.Senses))
+				hw.HeadwordId, len(hw.Senses))
 		}
 
 		// Replace text in notes, if configured
@@ -1009,10 +1003,10 @@ func WriteHwFiles(dep HWFileDependencies) error {
 		}
 
 		dictEntry := DictEntry{
-			Title:            hw.Simplified,
-			Headword:         hw,
-			RelevantDocs:     index.FindDocsForKeyword(hw, *outfileMap, dep.IndexState,
-					dep.BibNotesClient),
+			Title:    hw.Simplified,
+			Headword: hw,
+			RelevantDocs: index.FindDocsForKeyword(hw, *outfileMap, dep.IndexState,
+				dep.BibNotesClient),
 			ContainsByDomain: cByDomain,
 			Contains:         contains,
 			Collocations:     wordCollocations,
