@@ -330,7 +330,7 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry, dictT
 	lastHW := lastHWPtr
 	lastHWText := ""
 	hwIdMap := dict.HeadwordIds
-	log.Printf("ParseText: For coll %s, doc %s got %d chunks\n", colTitle, document.RawFile, chunks.Len())
+	// log.Printf("ParseText: For coll %s, doc %s got %d chunks\n", colTitle, document.RawFile, chunks.Len())
 	for e := chunks.Front(); e != nil; e = e.Next() {
 		chunk := e.Value.(string)
 		//fmt.Printf("ParseText: chunk %s\n", chunk)
@@ -392,7 +392,7 @@ func ParseText(text string, colTitle string, document *corpus.CorpusEntry, dictT
 		UnknownChars:      unknownChars,
 		DocLengthArray:    dlArray,
 	}
-	log.Printf("ParseText: Done coll %s, doc %s got %d tokens\n", colTitle, document.RawFile, tokens.Len())
+	// log.Printf("ParseText: Done coll %s, doc %s got %d tokens\n", colTitle, document.RawFile, tokens.Len())
 	return tokens, &results
 }
 
@@ -943,11 +943,6 @@ func WriteHwFiles(dep HWFileDependencies) error {
 
 		if i%1000 == 0 {
 			log.Printf("analysis.WriteHwFiles: wrote %d words", i)
-		}
-
-		if hw.HeadwordId < 400 {
-			log.Printf("analysis.WriteHwFiles: HeadwordId: %d, num senses: %d",
-				hw.HeadwordId, len(hw.Senses))
 		}
 
 		// Replace text in notes, if configured

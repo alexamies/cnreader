@@ -470,7 +470,7 @@ func findDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int, pro
 	}
 	defer client.Close()
 
-	tfDocFinder := termfreq.NewFirestoreDocFinder(client, indexCorpus, indexGen)
+	tfDocFinder := termfreq.NewFirestoreDocFinder(client, indexCorpus, indexGen, false)
 
 	// Validate index for term frequency
 	docs, err := tfDocFinder.FindDocsTermFreq(ctx, terms)
@@ -516,12 +516,12 @@ func findDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int, pro
 		if len(colDocs) == 0 {
 			fmt.Printf("No documents found for terms %v in collection %s\n", terms, collection)
 		}
-		fmt.Printf("Found %d docs for terms %v in collection %v\n", len(colDocs), terms, collection, )
+		fmt.Printf("Found %d docs for terms %v in collection %v\n", len(colDocs), terms, collection)
 		fmt.Println("Document, Collection, BM25, BitVector, ContainsTerms")
 		for _, d := range colDocs {
 			fmt.Printf("%s, %s, %0.3f, %0.3f, %s\n", d.Document, d.Collection, d.Score, d.BitVector, d.ContainsTerms)
 		}
-	
+
 		colBDocs, err := tfDocFinder.FindDocsBigramCo(ctx, bigrams, collection)
 		if err != nil {
 			log.Fatalf("Unexpected error in index validation for bigrams in collection: %v", err)
@@ -831,6 +831,27 @@ func main() {
 		err := tmindex.BuildIndexes(indexConfig.IndexDir, dict.Wdict)
 		if err != nil {
 			log.Fatalf("main: could not create tm index file, err: %v\n", err)
+		}
+
+	} else if *titleIndex && len(*projectID) > 0 {
+		log.Println("main: writing title index to Firestore")
+		client, err := firestore.NewClient(ctx, *projectID)
+		if err != nil {
+			log.Fatalf("Failed to create client: %v", err)
+		}
+		defer client.Close()
+		indexCorpus, ok := c.IndexCorpus()
+		if !ok {
+			log.Fatalf("IndexCorpus must be set in config.yaml")
+		}
+		indexGen := c.IndexGen()
+		if len(*projectID) == 0 {
+			log.Fatalf("project must be set for Firestore access")
+		}
+		ctx := context.Background()
+		err = index.UpdateDocTitleIndex(ctx, libraryLoader, client, indexCorpus, indexGen)
+		if err != nil {
+			log.Fatalf("main: could not update title index, err: %v\n", err)
 		}
 
 	} else if *titleIndex {

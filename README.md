@@ -262,3 +262,11 @@ COLLECTION=testcollection.html
   --project $PROJECT_ID \
   --collection ${COLLECTION}
 ```
+
+## Update the title index in Firestore
+
+```shell
+CORPUS=cnreader
+GEN=0
+./cnreader --titleindex --project $PROJECT_ID
+```
