@@ -77,6 +77,7 @@ import (
 )
 
 const (
+	colFileName       = "collections.csv"
 	conversionsFile   = "data/corpus/html-conversion.csv"
 	file2RefKey       = "File2Ref"
 	refNo2ParallelKey = "RefNo2ParallelKey"
@@ -88,16 +89,17 @@ const (
 var (
 	collectionFile = flag.String("collection", "", "Enhance HTML markup and do vocabulary analysis for all the files listed in given collection.")
 	downloadDict   = flag.Bool("download_dict", false, "Download the dicitonary files from GitHub and save locally.")
+	findDocs       = flag.String("find_docs", "", "Full text document search.")
 	html           = flag.Bool("html", false, "Enhance HTML markup for all files listed in data/corpus/html-conversion.csv")
 	hwFiles        = flag.Bool("hwfiles", false, "Compute and write HTML entries for each headword, writing the files to the web/words directory.")
 	librarymeta    = flag.Bool("librarymeta", false, "Top level collection entries for the digital library.")
 	memprofile     = flag.String("memprofile", "", "write memory profile to this file.")
+	projectID      = flag.String("project", "", "The GCP project for Firestore access.")
 	sourceFile     = flag.String("source_file", "", "Analyze vocabulary for source file and write to output.html.")
 	sourceText     = flag.String("source_text", "", "Analyze vocabulary for source input on the command line.")
-	writeTMIndex   = flag.Bool("tmindex", false, "Compute and write translation memory index.")
 	titleIndex     = flag.Bool("titleindex", false, "Builds a flat index of document titles.")
 	testIndexTerms = flag.String("test_index_terms", "", "Values to validate the corpus index with")
-	projectID      = flag.String("project", "", "The GCP project for Firestore access.")
+	writeTMIndex   = flag.Bool("tmindex", false, "Compute and write translation memory index.")
 )
 
 // A type that holds the source and destination files for HTML conversion
@@ -460,6 +462,76 @@ func readIndex(indexConfig index.IndexConfig) (*index.IndexState, error) {
 		return nil, fmt.Errorf("readIndex: Could not build index: %v", err)
 	}
 	return indexState, nil
+}
+
+// Initialize the document title finder
+func initDocTitleFinder(appConfig config.AppConfig) (find.TitleFinder, error) {
+	colFileName := appConfig.CorpusDataDir() + "/" + colFileName
+	cr, err := os.Open(colFileName)
+	if err != nil {
+		return nil, fmt.Errorf("initDocTitleFinder: Error opening %s: %v", colFileName, err)
+	}
+	defer cr.Close()
+	colMap, err := find.LoadColMap(cr)
+	if err != nil {
+		return nil, fmt.Errorf("initDocTitleFinder: Error loading col map: %v", err)
+	}
+	titleFileName := appConfig.IndexDir() + "/" + titleIndexFN
+	r, err := os.Open(titleFileName)
+	if err != nil {
+		return nil, fmt.Errorf("initDocTitleFinder: Error opening %s: %v", titleFileName, err)
+	}
+	defer r.Close()
+	var dInfoCN, docMap map[string]find.DocInfo
+	dInfoCN, docMap = find.LoadDocInfo(r)
+	log.Printf("initDocTitleFinder loaded %d cols and  %d docs", len(colMap), len(docMap))
+	docTitleFinder := find.NewFileTitleFinder(colMap, dInfoCN, docMap)
+	return docTitleFinder, nil
+}
+
+// findDocuments matching the given query
+func findDocuments(ctx context.Context, c config.AppConfig, dict *dictionary.Dictionary, project, collection, query string) {
+	client, err := firestore.NewClient(ctx, project)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+	defer client.Close()
+
+	indexCorpus, ok := c.IndexCorpus()
+	if !ok {
+		log.Fatalf("IndexCorpus must be set in config.yaml")
+	}
+	indexGen := c.IndexGen()
+	if len(*projectID) == 0 {
+		log.Fatalf("project must be set for Firestore access")
+	}
+	tfDocFinder := termfreq.NewFirestoreDocFinder(client, indexCorpus, indexGen, false)
+	titleFinder, err := initDocTitleFinder(c)
+	if err != nil {
+		log.Fatalf("main.initApp() unable to load titleFinder: %v", err)
+	}
+
+	df := find.NewDocFinder(tfDocFinder, titleFinder)
+	extractor, err := dictionary.NewNotesExtractor("")
+	if err != nil {
+		log.Fatalf("findDocuments: could not create extractor: %v", err)
+	}
+	reverseIndex := dictionary.NewReverseIndex(dict, extractor)
+	parser := find.NewQueryParser(dict.Wdict)
+	results, err := df.FindDocuments(ctx, reverseIndex, parser, query, true)
+	if err != nil {
+		log.Fatalf("Unexpected error in index validation for terms: %v", err)
+	}
+	docs := results.Documents
+	if len(docs) == 0 {
+		fmt.Printf("No documents found for query %s\n", query)
+		return
+	}
+	fmt.Printf("Found %d docs for query %s\n", len(docs), query)
+	fmt.Println("Title, Collection, File, match details")
+	for _, d := range docs {
+		fmt.Printf("%s, %s, %s, %v\n", d.Title, d.CollectionTitle, d.GlossFile, d.MatchDetails)
+	}
 }
 
 // findDocsTermFreq validates the index saved in Firestore
@@ -855,7 +927,7 @@ func main() {
 		}
 
 	} else if *titleIndex {
-		log.Println("main: building title index")
+		log.Println("main: building title index file")
 		fname := indexConfig.IndexDir + "/" + titleIndexFN
 		f, err := os.Create(fname)
 		if err != nil {
@@ -865,7 +937,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("main: could not build title index file, err: %v\n", err)
 		}
-
+	} else if len(*findDocs) > 0 {
+		log.Printf("main: document search for %s", *findDocs)
+		findDocuments(ctx, c, dict, *projectID, *collectionFile, *findDocs)
 	} else {
 		log.Println("main: writing out entire corpus")
 		_, err := analysis.WriteCorpusAll(libraryLoader, dictTokenizer,

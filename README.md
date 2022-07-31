@@ -263,10 +263,25 @@ COLLECTION=testcollection.html
   --collection ${COLLECTION}
 ```
 
-## Update the title index in Firestore
+## Title index in Firestore
+
+To update the document title index in Firestore
 
 ```shell
 CORPUS=cnreader
 GEN=0
-./cnreader --titleindex --project $PROJECT_ID
+./cnreader --project $PROJECT_ID --titleindex 
+```
+
+Also, generate a file for the document index, needed for the web app:
+
+```shell
+./cnreader --titleindex 
+```
+
+Run a search against the index:
+
+```shell
+export TEXT_BUCKET=chinesenotes_tfidf
+./cnreader --project $PROJECT_ID --find_docs "一者大地依於水住"
 ```
