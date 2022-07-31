@@ -506,7 +506,7 @@ func findDocuments(ctx context.Context, c config.AppConfig, dict *dictionary.Dic
 	if len(*projectID) == 0 {
 		log.Fatalf("project must be set for Firestore access")
 	}
-	tfDocFinder := termfreq.NewFirestoreDocFinder(client, indexCorpus, indexGen, false)
+	tfDocFinder := termfreq.NewFirestoreDocFinder(client, indexCorpus, indexGen, true)
 	titleFinder, err := initDocTitleFinder(c)
 	if err != nil {
 		log.Fatalf("main.initApp() unable to load titleFinder: %v", err)
