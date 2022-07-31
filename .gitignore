@@ -2,4 +2,5 @@ cnreader
 coverage.out
 dataflow-service-account.json
 output.html
+results.csv
 web-staging/

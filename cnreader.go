@@ -94,6 +94,7 @@ var (
 	hwFiles        = flag.Bool("hwfiles", false, "Compute and write HTML entries for each headword, writing the files to the web/words directory.")
 	librarymeta    = flag.Bool("librarymeta", false, "Top level collection entries for the digital library.")
 	memprofile     = flag.String("memprofile", "", "write memory profile to this file.")
+	outFile        = flag.String("outfile", "", "For writing results of document search.")
 	projectID      = flag.String("project", "", "The GCP project for Firestore access.")
 	sourceFile     = flag.String("source_file", "", "Analyze vocabulary for source file and write to output.html.")
 	sourceText     = flag.String("source_text", "", "Analyze vocabulary for source input on the command line.")
@@ -490,7 +491,7 @@ func initDocTitleFinder(appConfig config.AppConfig) (find.TitleFinder, error) {
 }
 
 // findDocuments matching the given query
-func findDocuments(ctx context.Context, c config.AppConfig, dict *dictionary.Dictionary, project, collection, query string) {
+func findDocuments(ctx context.Context, c config.AppConfig, dict *dictionary.Dictionary, project, collection, query, outfile string) {
 	client, err := firestore.NewClient(ctx, project)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
@@ -528,9 +529,18 @@ func findDocuments(ctx context.Context, c config.AppConfig, dict *dictionary.Dic
 		return
 	}
 	fmt.Printf("Found %d docs for query %s\n", len(docs), query)
-	fmt.Println("Title, Collection, File, match details")
+	w := os.Stdout
+	if len(outfile) > 0 {
+		w, err = os.Create(outfile)
+		if err != nil {
+			fmt.Printf("Could not write to file %s, writing to standard out instead: %v\n", outfile, err)
+		} else {
+			fmt.Printf("Writing results to file %s\n", outfile)
+		}
+	}
+	fmt.Fprintln(w, "Title\tCollection\tFile\tExactMatch\tLongestMatch\tContainsTerms")
 	for _, d := range docs {
-		fmt.Printf("%s, %s, %s, %v\n", d.Title, d.CollectionTitle, d.GlossFile, d.MatchDetails)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%t\t%s\t%s\n", d.Title, d.CollectionTitle, d.GlossFile, d.MatchDetails.ExactMatch, d.MatchDetails.LongestMatch, d.ContainsTerms)
 	}
 }
 
@@ -939,7 +949,7 @@ func main() {
 		}
 	} else if len(*findDocs) > 0 {
 		log.Printf("main: document search for %s", *findDocs)
-		findDocuments(ctx, c, dict, *projectID, *collectionFile, *findDocs)
+		findDocuments(ctx, c, dict, *projectID, *collectionFile, *findDocs, *outFile)
 	} else {
 		log.Println("main: writing out entire corpus")
 		_, err := analysis.WriteCorpusAll(libraryLoader, dictTokenizer,

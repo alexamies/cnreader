@@ -268,8 +268,6 @@ COLLECTION=testcollection.html
 To update the document title index in Firestore
 
 ```shell
-CORPUS=cnreader
-GEN=0
 ./cnreader --project $PROJECT_ID --titleindex 
 ```
 
@@ -283,5 +281,5 @@ Run a search against the index:
 
 ```shell
 export TEXT_BUCKET=chinesenotes_tfidf
-./cnreader --project $PROJECT_ID --find_docs "一者大地依於水住"
+./cnreader --project $PROJECT_ID --find_docs "不見古人" --outfile results.csv
 ```
