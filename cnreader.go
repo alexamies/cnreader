@@ -506,7 +506,7 @@ func findDocuments(ctx context.Context, c config.AppConfig, dict *dictionary.Dic
 	if len(*projectID) == 0 {
 		log.Fatalf("project must be set for Firestore access")
 	}
-	tfDocFinder := termfreq.NewFirestoreDocFinder(client, indexCorpus, indexGen, true)
+	tfDocFinder := termfreq.NewFirestoreDocFinder(client, indexCorpus, indexGen, true, 1000)
 	titleFinder, err := initDocTitleFinder(c)
 	if err != nil {
 		log.Fatalf("main.initApp() unable to load titleFinder: %v", err)
@@ -552,7 +552,7 @@ func findDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int, pro
 	}
 	defer client.Close()
 
-	tfDocFinder := termfreq.NewFirestoreDocFinder(client, indexCorpus, indexGen, false)
+	tfDocFinder := termfreq.NewFirestoreDocFinder(client, indexCorpus, indexGen, false, 1000)
 
 	// Validate index for term frequency
 	docs, err := tfDocFinder.FindDocsTermFreq(ctx, terms)
