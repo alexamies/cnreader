@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"cloud.google.com/go/firestore"
 	"github.com/alexamies/chinesenotes-go/find"
@@ -48,17 +49,19 @@ func UpdateDocTitleIndex(ctx context.Context, libLoader library.LibraryLoader, c
 			return fmt.Errorf("UpdateDocTitleIndex error loading %s: %v", c.CollectionFile, err)
 		}
 		for _, d := range *docs {
-			title_cn, title_en := splitTitle(d.Title)
+			titleZh, titleEn := splitTitle(d.Title)
 			title := c.Title + ": " + d.Title
+			colTitleZh, _ := splitTitle(c.Title)
 			record := find.DocTitleRecord{
 				RawFile:         d.RawFile,
 				GlossFile:       d.GlossFile,
 				DocTitle:        d.Title,
-				DocTitleZh:      title_cn,
-				DocTitleEn:      title_en,
+				DocTitleZh:      titleZh,
+				DocTitleEn:      titleEn,
 				ColGlossFile:    c.GlossFile,
 				ColTitle:        c.Title,
 				ColPlusDocTitle: title,
+				Substrings:      titleSubtrings(colTitleZh, titleZh),
 			}
 			ref := client.Collection(fsCol).Doc(title)
 			_, err := ref.Get(ctx)
@@ -75,4 +78,26 @@ func UpdateDocTitleIndex(ctx context.Context, libLoader library.LibraryLoader, c
 		}
 	}
 	return nil
+}
+
+// titleSubtrings finds the union of all the substrings both input strings
+func titleSubtrings(titleZh, colTitleZh string) []string {
+	s1 := strings.Split(titleZh, "")
+	s2 := strings.Split(colTitleZh, "")
+	ss := append(s1, s2...)
+	return substrings(ss)
+}
+
+func substrings(chars []string) []string {
+	if len(chars) == 0 {
+		return []string{}
+	}
+	if len(chars) == 1 {
+		return []string{chars[0]}
+	}
+	whole := []string{strings.Join(chars, "")}
+	first := chars[0]
+	ss := append(whole, first)
+	rest := substrings(chars[1:])
+	return append(ss, rest...)
 }
