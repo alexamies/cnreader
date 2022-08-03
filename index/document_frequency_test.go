@@ -95,7 +95,7 @@ func TestIDF2(t *testing.T) {
 }
 
 // Example from p. 109 of Manning, Christopher D., Prabhakar Raghavan, and
-// Hinrich Schütze. Introduction to information retrieval, Cambridge: Cambridge 
+// Hinrich Schütze. Introduction to information retrieval, Cambridge: Cambridge
 // university press, 2008.
 func TestIDF3(t *testing.T) {
 	df := NewDocumentFrequency()
@@ -110,9 +110,9 @@ func TestIDF3(t *testing.T) {
 	if ok != okExpected {
 		t.Error("index.TestIDF0: okExpected ", okExpected, " got ", ok)
 	}
-	v1, ok := df.IDF(terms[1])
-	v2, ok := df.IDF(terms[2])
-	v3, ok := df.IDF(terms[3])
+	v1, _ := df.IDF(terms[1])
+	v2, _ := df.IDF(terms[2])
+	v3, _ := df.IDF(terms[3])
 	t.Logf("index.TestIDF3 idf = (%v, %v, %v, %v)\n", v0, v1, v2, v3)
 }
 
@@ -141,16 +141,16 @@ func TestWriteDocumentFrequency(t *testing.T) {
 	dfSmall.AddVocabulary(vocab)
 	type test struct {
 		name string
-		df DocumentFrequency
-  }
-  tests := []test{
+		df   DocumentFrequency
+	}
+	tests := []test{
 		{
 			name: "Empty index",
-			df: dfEmpty,
+			df:   dfEmpty,
 		},
 		{
 			name: "Small index",
-			df: dfSmall,
+			df:   dfSmall,
 		},
 	}
 	for _, tc := range tests {

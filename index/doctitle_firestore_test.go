@@ -35,7 +35,7 @@ func TestTitleSubtrings(t *testing.T) {
 			name:   "Three characters",
 			input1: "看",
 			input2: "世界",
-			want:   []string{"看世界", "看", "世界", "世", "界"},
+			want:   []string{"看世界", "看世", "世界"},
 		},
 	}
 	for _, tc := range tests {
@@ -46,7 +46,7 @@ func TestTitleSubtrings(t *testing.T) {
 	}
 }
 
-func TestSubstrings(t *testing.T) {
+func TestNgrams(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
@@ -60,22 +60,32 @@ func TestSubstrings(t *testing.T) {
 		{
 			name:  "One character",
 			input: "世",
-			want:  []string{"世"},
+			want:  []string{},
 		},
 		{
 			name:  "Two characters",
 			input: "世界",
-			want:  []string{"世界", "世", "界"},
+			want:  []string{"世界"},
 		},
 		{
 			name:  "Three characters",
 			input: "看世界",
-			want:  []string{"看世界", "看", "世界", "世", "界"},
+			want:  []string{"看世界", "看世", "世界"},
+		},
+		{
+			name:  "Four characters",
+			input: "看看世界",
+			want:  []string{"看看世界", "看看世", "看看", "看世界", "看世", "世界"},
+		},
+		{
+			name:  "Five characters",
+			input: "看整個世界",
+			want:  []string{"看整個世界", "看整個世", "看整個", "看整", "整個世界", "整個世", "整個", "個世界", "個世", "世界"},
 		},
 	}
 	for _, tc := range tests {
 		chars := strings.Split(tc.input, "")
-		got := substrings(chars)
+		got := ngrams(chars, 2)
 		if !reflect.DeepEqual(got, tc.want) {
 			t.Errorf("%s, got %v\n but want %v", tc.name, got, tc.want)
 		}

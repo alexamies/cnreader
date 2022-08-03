@@ -81,23 +81,33 @@ func UpdateDocTitleIndex(ctx context.Context, libLoader library.LibraryLoader, c
 }
 
 // titleSubtrings finds the union of all the substrings both input strings
+// greater than two characters in length
 func titleSubtrings(titleZh, colTitleZh string) []string {
 	s1 := strings.Split(titleZh, "")
 	s2 := strings.Split(colTitleZh, "")
 	ss := append(s1, s2...)
-	return substrings(ss)
+	return ngrams(ss, 2)
 }
 
-func substrings(chars []string) []string {
-	if len(chars) == 0 {
+// ngrams finds the set of all substrings in the array longer than minLen characters
+func ngrams(chars []string, minLen int) []string {
+	// log.Printf("ngrams, chars %v", chars)
+	if len(chars) < 2 {
 		return []string{}
 	}
-	if len(chars) == 1 {
-		return []string{chars[0]}
+	ss := []string{}
+	for i := range chars {
+		for j := len(chars); j > 1; j-- {
+			if i < j {
+				x := chars[i:j]
+				w := strings.Join(x, "")
+				if len(x) >= minLen {
+					// log.Printf("ngrams i=%d: j=%d, w=%s\n", i, j, w)
+					ss = append(ss, w)
+				}
+			}
+		}
 	}
-	whole := []string{strings.Join(chars, "")}
-	first := chars[0]
-	ss := append(whole, first)
-	rest := substrings(chars[1:])
-	return append(ss, rest...)
+	// log.Printf("ngrams, ss %v\n", ss)
+	return ss
 }

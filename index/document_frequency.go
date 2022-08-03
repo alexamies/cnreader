@@ -35,16 +35,16 @@ type DocumentFrequency struct {
 func NewDocumentFrequency() DocumentFrequency {
 	return DocumentFrequency{
 		DocFreq: map[string]int{},
-		N: 0,
+		N:       0,
 	}
 }
 
 // Adds the given vocabulary to the map and increments the document count
 // Param:
-//   vocab - word frequencies are ignored, only the presence of the term is 
+//   vocab - word frequencies are ignored, only the presence of the term is
 //           important
 func (df *DocumentFrequency) AddVocabulary(vocab map[string]int) {
-	for k, _ := range vocab {
+	for k := range vocab {
 		_, ok := df.DocFreq[k]
 		if ok {
 			df.DocFreq[k]++
@@ -57,7 +57,7 @@ func (df *DocumentFrequency) AddVocabulary(vocab map[string]int) {
 
 // Merges the given document frequency to the map and increments the counts
 // Param:
-//   vocab - word frequencies are ignored, only the presence of the term is 
+//   vocab - word frequencies are ignored, only the presence of the term is
 //           important
 func (df *DocumentFrequency) AddDocFreq(otherDF DocumentFrequency) {
 	for k, v := range otherDF.DocFreq {
@@ -77,9 +77,9 @@ func (df *DocumentFrequency) AddDocFreq(otherDF DocumentFrequency) {
 func (df *DocumentFrequency) IDF(term string) (val float64, ok bool) {
 	ndocs, ok := df.DocFreq[term]
 	if ok && ndocs > 0 {
-		val = math.Log10(float64(df.N + 1) / float64(ndocs))
-	//log.Println("index.IDF: term, val, df.n, ", term, val, df.N)
-	} 
+		val = math.Log10(float64(df.N+1) / float64(ndocs))
+		//log.Println("index.IDF: term, val, df.n, ", term, val, df.N)
+	}
 	return val, ok
 }
 
@@ -98,7 +98,7 @@ func ReadDocumentFrequency(r io.Reader) (*DocumentFrequency, error) {
 		count, err := strconv.ParseInt(row[1], 10, 0)
 		if err != nil {
 			return nil, fmt.Errorf("ReadDocumentFrequency: could not parse word count %d: %v",
-					i, err)
+				i, err)
 		}
 		dfMap[w] = int(count)
 	}
@@ -115,8 +115,6 @@ func tfIdf(term string, count int, completeDF DocumentFrequency) (val float64, o
 	//log.Println("index.tfIdf: idf, term, ", idf, term)
 	if ok {
 		val = float64(count) * idf
-	} else {
-		//log.Println("index.tfIdf: could not compute tf-idf for, ", term)
 	}
 	return val, ok
 }

@@ -17,9 +17,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alexamies/chinesenotes-go/bibnotes"
+	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"github.com/alexamies/cnreader/corpus"
-	"github.com/alexamies/chinesenotes-go/bibnotes"	
-	"github.com/alexamies/chinesenotes-go/dicttypes"	
 )
 
 // IndexConfig encapsulates parameters for index configuration
@@ -27,28 +27,6 @@ func mockIndexConfig() IndexConfig {
 	return IndexConfig{
 		IndexDir: "index",
 	}
-}
-
-func mockCorpusConfig() corpus.CorpusConfig {
-	return corpus.CorpusConfig{
-		CorpusDataDir: "data/corpus",
-		CorpusDir: "corpus",
-		Excluded: map[string]bool{},
-		ProjectHome: "..",
-	}
-}
-
-func mockDictionaryConfig() dicttypes.DictionaryConfig {
-	return dicttypes.DictionaryConfig{
-		AvoidSubDomains: map[string]bool{},
-		DictionaryDir: "data",
-	}
-}
-
-type mockValidator struct {}
-
-func (mock mockValidator) Validate(pos, domain string) error {
-	return nil
 }
 
 // Trivial test for loading index
@@ -64,24 +42,24 @@ func TestFindDocsForKeyword(t *testing.T) {
 	s1 := "海"
 	s2 := "\\N"
 	hw := dicttypes.Word{
-		HeadwordId:          1,
+		HeadwordId:  1,
 		Simplified:  s1,
 		Traditional: s2,
 		Pinyin:      "hǎi",
-		Senses:  []dicttypes.WordSense{},
+		Senses:      []dicttypes.WordSense{},
 	}
 	corpusLoader := mockCorpusLoader{}
 	outfileMap, err := corpus.GetOutfileMap(corpusLoader)
 	if err != nil {
 		t.Fatalf("index.TestFindDocsForKeyword: error: %v", err)
 	}
-  ref2FileReader := strings.NewReader("")
-  refNo2ParallelReader := strings.NewReader("")
-  refNo2TransReader := strings.NewReader("")
-  bibNotesClient, err := bibnotes.LoadBibNotes(ref2FileReader, refNo2ParallelReader, refNo2TransReader)
-  if err != nil {
-  	t.Fatalf("TestFindDocsForKeyword error loading bibnotes: %v", err)
-  }
+	ref2FileReader := strings.NewReader("")
+	refNo2ParallelReader := strings.NewReader("")
+	refNo2TransReader := strings.NewReader("")
+	bibNotesClient, err := bibnotes.LoadBibNotes(ref2FileReader, refNo2ParallelReader, refNo2TransReader)
+	if err != nil {
+		t.Fatalf("TestFindDocsForKeyword error loading bibnotes: %v", err)
+	}
 	documents := FindDocsForKeyword(hw, *outfileMap, *indexState, bibNotesClient)
 	if len(documents) != 0 {
 		t.Errorf("index.TestFindDocsForKeyword: expected no documents: %d", len(documents))

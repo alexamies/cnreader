@@ -48,23 +48,23 @@ type WFEntry struct {
 
 // A word frequency entry record
 type IndexState struct {
-	wf *map[string]WFEntry
-	wfdoc *map[string][]WFDocEntry
+	wf                *map[string]WFEntry
+	wfdoc             *map[string][]WFDocEntry
 	KeywordIndexReady bool
 }
 
 // Storage for the keyword index
 type IndexStore struct {
-	WfReader io.Reader
+	WfReader    io.Reader
 	WfDocReader io.Reader
 	IndexWriter io.Writer
 }
 
 // Storage for word frequency data
 type WordFreqStore struct {
-	WFWriter io.Writer
+	WFWriter           io.Writer
 	UnknownCharsWriter io.Writer
-	BigramWriter io.Writer
+	BigramWriter       io.Writer
 }
 
 // Reads word frequencies data from files into memory and builds the keyword
@@ -75,17 +75,17 @@ func BuildIndex(indexConfig IndexConfig, indexStore IndexStore) (*IndexState, er
 	indexState.wf, err = readWFCorpus(indexStore.WfReader)
 	if err != nil {
 		return nil, fmt.Errorf("index.BuildIndex, error reading word freq corpus: %f",
-				err)
+			err)
 	}
 	indexState.wfdoc, err = readWFDoc(indexStore.WfDocReader)
 	if err != nil {
 		return nil, fmt.Errorf("index.BuildIndex, error reading word freq doc: %f",
-				err)
+			err)
 	}
 	err = writeKeywordIndex(indexState, indexStore.IndexWriter)
 	if err != nil {
 		return nil, fmt.Errorf("index.BuildIndex, error writing index: %f",
-				err)
+			err)
 	}
 	indexState.KeywordIndexReady = true
 	return &indexState, nil
@@ -104,12 +104,12 @@ func readWFCorpus(r io.Reader) (*map[string]WFEntry, error) {
 	for i, row := range rawCSVdata {
 		if len(row) < 2 {
 			return nil, fmt.Errorf("index.readWFCorpus: not enough rows in line %d: %d",
-					i, len(row))
+				i, len(row))
 		}
 		w := row[0] // Chinese text for word
 		count, err := strconv.ParseInt(row[1], 10, 0)
 		if err != nil {
-			return nil, fmt.Errorf("Could not parse word count, %d: %v", i, err)
+			return nil, fmt.Errorf("could not parse word count, %d: %v", i, err)
 		}
 		wfentry := WFEntry{
 			Chinese: w,
@@ -134,7 +134,7 @@ func readWFDoc(wffile io.Reader) (*map[string][]WFDocEntry, error) {
 		w := row[0] // Chinese text for word
 		count, err := strconv.ParseInt(row[1], 10, 0)
 		if err != nil {
-			return nil, fmt.Errorf("Could not parse word count %d: %v", i, err)
+			return nil, fmt.Errorf("could not parse word count %d: %v", i, err)
 		}
 		filename := row[3]
 		entry := WFDocEntry{filename, int(count)}
@@ -167,8 +167,8 @@ func writeKeywordIndex(indexState IndexState, indexWriter io.Writer) error {
 
 // Write corpus analysis to plain text files in the index directory
 func WriteWFCorpus(wfStore WordFreqStore, sortedWords,
-		sortedUnknownWords []SortedWordItem,
-		bFreq []ngram.BigramFreq, wc int, indexConfig IndexConfig) error {
+	sortedUnknownWords []SortedWordItem,
+	bFreq []ngram.BigramFreq, wc int, indexConfig IndexConfig) error {
 
 	// Word frequencies
 	wfWriter := bufio.NewWriter(wfStore.WFWriter)
@@ -201,7 +201,7 @@ func WriteWFCorpus(wfStore WordFreqStore, sortedWords,
 			rel_freq = float64(ngramItem.Frequency) * 10000.0 / float64(wc)
 		}
 		fmt.Fprintf(nWriter, "%s\t%d\t%f\n", ngramItem.BigramVal.Traditional(),
-			ngramItem.Frequency,	rel_freq)
+			ngramItem.Frequency, rel_freq)
 	}
 	nWriter.Flush()
 	return nil
