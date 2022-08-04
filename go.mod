@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	cloud.google.com/go/firestore v1.6.1
-	github.com/alexamies/chinesenotes-go v0.0.130
+	github.com/alexamies/chinesenotes-go v0.0.131
 	github.com/gomarkdown/markdown v0.0.0-20220607163217-45f7c050e2d1
 	google.golang.org/grpc v1.46.2
 )

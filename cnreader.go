@@ -98,8 +98,9 @@ var (
 	projectID      = flag.String("project", "", "The GCP project for Firestore access.")
 	sourceFile     = flag.String("source_file", "", "Analyze vocabulary for source file and write to output.html.")
 	sourceText     = flag.String("source_text", "", "Analyze vocabulary for source input on the command line.")
-	titleIndex     = flag.Bool("titleindex", false, "Builds a flat index of document titles.")
 	testIndexTerms = flag.String("test_index_terms", "", "Values to validate the corpus index with")
+	titleIndex     = flag.Bool("titleindex", false, "Builds a flat index of document titles.")
+	titleSearch    = flag.String("titlesearch", "", "Searches the document title index.")
 	writeTMIndex   = flag.Bool("tmindex", false, "Compute and write translation memory index.")
 )
 
@@ -483,8 +484,7 @@ func initDocTitleFinder(appConfig config.AppConfig) (find.TitleFinder, error) {
 		return nil, fmt.Errorf("initDocTitleFinder: Error opening %s: %v", titleFileName, err)
 	}
 	defer r.Close()
-	var dInfoCN, docMap map[string]find.DocInfo
-	dInfoCN, docMap = find.LoadDocInfo(r)
+	dInfoCN, docMap := find.LoadDocInfo(r)
 	log.Printf("initDocTitleFinder loaded %d cols and  %d docs", len(colMap), len(docMap))
 	docTitleFinder := find.NewFileTitleFinder(colMap, dInfoCN, docMap)
 	return docTitleFinder, nil
@@ -494,7 +494,7 @@ func initDocTitleFinder(appConfig config.AppConfig) (find.TitleFinder, error) {
 func findDocuments(ctx context.Context, c config.AppConfig, dict *dictionary.Dictionary, project, collection, query, outfile string) {
 	client, err := firestore.NewClient(ctx, project)
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		log.Fatalf("Failed to create project client: %v", err)
 	}
 	defer client.Close()
 
@@ -541,6 +541,40 @@ func findDocuments(ctx context.Context, c config.AppConfig, dict *dictionary.Dic
 	fmt.Fprintln(w, "Title\tCollection\tFile\tExactMatch\tLongestMatch\tContainsTerms")
 	for _, d := range docs {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%t\t%s\t%s\n", d.Title, d.CollectionTitle, d.GlossFile, d.MatchDetails.ExactMatch, d.MatchDetails.LongestMatch, d.ContainsTerms)
+	}
+}
+
+func searchDocTitleIndex(ctx context.Context, c config.AppConfig, client *firestore.Client, query string) {
+	indexCorpus, ok := c.IndexCorpus()
+	if !ok {
+		log.Fatalf("searchDocTitleIndex, IndexCorpus must be set in config.yaml")
+	}
+	indexGen := c.IndexGen()
+	colFileName := c.CorpusDataDir() + "/" + colFileName
+	cr, err := os.Open(colFileName)
+	if err != nil {
+		log.Fatalf("searchDocTitleIndex, error opening colFile %s: %v", colFileName, err)
+	}
+	defer cr.Close()
+	colMap, err := find.LoadColMap(cr)
+	if err != nil {
+		log.Fatalf("searchDocTitleIndex, error loading col map: %v", err)
+	}
+	titleFileName := c.IndexDir() + "/" + titleIndexFN
+	r, err := os.Open(titleFileName)
+	if err != nil {
+		log.Fatalf("searchDocTitleIndex: Error opening %s: %v", titleFileName, err)
+	}
+	defer r.Close()
+	dInfoCN, docMap := find.LoadDocInfo(r)
+	titleFinder := find.NewFirebaseTitleFinder(client, indexCorpus, indexGen, colMap, dInfoCN, docMap)
+	docs, err := titleFinder.FindDocsByTitle(ctx, query)
+	if err != nil {
+		log.Fatalf("searchDocTitleIndex, error opening %s: %v", titleFileName, err)
+	}
+	log.Printf("Got %d docs", len(docs))
+	for _, doc := range docs {
+		log.Printf("%s, %s, %s, %s", doc.Title, doc.CollectionTitle, doc.GlossFile, doc.CollectionFile)
 	}
 }
 
@@ -917,6 +951,9 @@ func main() {
 
 	} else if *titleIndex && len(*projectID) > 0 {
 		log.Println("main: writing title index to Firestore")
+		if len(*projectID) == 0 {
+			log.Fatalf("project must be set for Firestore access")
+		}
 		client, err := firestore.NewClient(ctx, *projectID)
 		if err != nil {
 			log.Fatalf("Failed to create client: %v", err)
@@ -927,10 +964,6 @@ func main() {
 			log.Fatalf("IndexCorpus must be set in config.yaml")
 		}
 		indexGen := c.IndexGen()
-		if len(*projectID) == 0 {
-			log.Fatalf("project must be set for Firestore access")
-		}
-		ctx := context.Background()
 		err = index.UpdateDocTitleIndex(ctx, libraryLoader, client, indexCorpus, indexGen)
 		if err != nil {
 			log.Fatalf("main: could not update title index, err: %v\n", err)
@@ -947,6 +980,17 @@ func main() {
 		if err != nil {
 			log.Fatalf("main: could not build title index file, err: %v\n", err)
 		}
+	} else if len(*titleSearch) > 0 {
+		log.Println("main: searching title index")
+		if len(*projectID) == 0 {
+			log.Fatalf("project must be set for Firestore access")
+		}
+		client, err := firestore.NewClient(ctx, *projectID)
+		if err != nil {
+			log.Fatalf("Failed to create firestore client: %v", err)
+		}
+		defer client.Close()
+		searchDocTitleIndex(ctx, c, client, *titleSearch)
 	} else if len(*findDocs) > 0 {
 		log.Printf("main: document search for %s", *findDocs)
 		findDocuments(ctx, c, dict, *projectID, *collectionFile, *findDocs, *outFile)

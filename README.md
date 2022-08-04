@@ -277,7 +277,15 @@ Also, generate a file for the document index, needed for the web app:
 ./cnreader --titleindex 
 ```
 
-Run a search against the index:
+Search the title index
+
+```shell
+./cnreader --project $PROJECT_ID --titlesearch "測試"
+```
+
+## Full Text Search
+
+Run a full text search:
 
 ```shell
 export TEXT_BUCKET=chinesenotes_tfidf
