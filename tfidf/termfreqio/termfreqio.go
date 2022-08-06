@@ -64,12 +64,13 @@ func (f *UpdateTermFreqDoc) ProcessElement(ctx context.Context, entries []termfr
 		if err != nil {
 			if status.Code(err) != codes.NotFound {
 				log.Infof(ctx, "Failed getting tf for ref %v: %v", ref, err)
-			} else {
-				_, err = ref.Set(ctx, entry)
-				if err != nil {
-					log.Infof(ctx, "Failed setting tf for ref %v: %v", ref, err)
-				}
+				continue
 			}
-		} // else do not update entry if it exists already
+		}
+		// update entry whether or not it exists already
+		_, err = ref.Set(ctx, entry)
+		if err != nil {
+			log.Infof(ctx, "Failed setting tf for existing ref %v: %v", ref, err)
+		}
 	}
 }

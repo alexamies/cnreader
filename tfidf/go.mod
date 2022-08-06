@@ -3,7 +3,7 @@ module github.com/alexamies/cnreader/tfidf
 go 1.18
 
 require (
-	github.com/alexamies/chinesenotes-go v0.0.101
+	github.com/alexamies/chinesenotes-go v0.0.134
 	github.com/apache/beam/sdks/v2 v2.40.0
 )
 

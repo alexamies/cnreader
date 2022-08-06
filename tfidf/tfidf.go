@@ -277,6 +277,7 @@ func transformTFDocEntries(ctx context.Context, key string, tfIter func(*TermFre
 			Document:   e.DocumentId,
 			DocLen:     e.DocLen,
 			IDF:        idf,
+			TFIDF:      float64(e.Freq) * idf,
 		}
 		results = append(results, tf)
 		termFreqCounter.Inc(ctx, 1)
@@ -305,6 +306,7 @@ func transformBFDocEntries(ctx context.Context, term string, tfIter func(*TermFr
 			Document:   e.DocumentId,
 			DocLen:     e.DocLen,
 			IDF:        idf,
+			TFIDF:      float64(e.Freq) * idf,
 		}
 		results = append(results, tf)
 		// log.Infof(ctx, "transformBFDocEntries for term %s, docFreq: %d, corpusLen: %d, IDF: %.3f", term, df, corpusLen, tf.IDF)

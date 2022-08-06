@@ -125,6 +125,8 @@ github.com/alexamies/chinesenotes-go v0.0.99 h1:tQXD5ncMjCXsl8D2OWUNxO8Nlr18pDHh
 github.com/alexamies/chinesenotes-go v0.0.99/go.mod h1:Av4kaPkarjvTN4v/rHgZA0v52W284FWSNgqGgB/a2Bc=
 github.com/alexamies/chinesenotes-go v0.0.101 h1:b9w5ugxZvoE40/FBH93b2mFwfadKo3WWkjeA/wSY0dQ=
 github.com/alexamies/chinesenotes-go v0.0.101/go.mod h1:Av4kaPkarjvTN4v/rHgZA0v52W284FWSNgqGgB/a2Bc=
+github.com/alexamies/chinesenotes-go v0.0.134 h1:l5pV/z6c+svQXbA9eHzDNcNGu67gDfBR9Ts++u6Mafg=
+github.com/alexamies/chinesenotes-go v0.0.134/go.mod h1:ne93bWH0MDWk2IeQiMw1kuUuBY6dinxd+PMEzZzDYXY=
 github.com/alexflint/go-filemutex v0.0.0-20171022225611-72bdc8eae2ae/go.mod h1:CgnQgUtFrFz9mxFNtED3jI5tLDjKlOM+oUF/sTk6ps0=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/apache/arrow/go/arrow v0.0.0-20200730104253-651201b0f516/go.mod h1:QNYViu/X0HXDHw7m3KXzWSVXIbfUvJqBFe6Gj8/pYA0=
