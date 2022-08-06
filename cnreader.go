@@ -466,8 +466,8 @@ func readIndex(indexConfig index.IndexConfig) (*index.IndexState, error) {
 	return indexState, nil
 }
 
-// Initialize the document title finder
-func initDocTitleFinder(appConfig config.AppConfig) (find.TitleFinder, error) {
+// initDocTitleFinder initializes the document title finder
+func initDocTitleFinder(ctx context.Context, appConfig config.AppConfig, project string) (find.TitleFinder, error) {
 	colFileName := appConfig.CorpusDataDir() + "/" + colFileName
 	cr, err := os.Open(colFileName)
 	if err != nil {
@@ -484,9 +484,28 @@ func initDocTitleFinder(appConfig config.AppConfig) (find.TitleFinder, error) {
 		return nil, fmt.Errorf("initDocTitleFinder: Error opening %s: %v", titleFileName, err)
 	}
 	defer r.Close()
-	dInfoCN, docMap := find.LoadDocInfo(r)
+	var dInfoCN, docMap map[string]find.DocInfo
+	dInfoCN, docMap = find.LoadDocInfo(r)
 	log.Printf("initDocTitleFinder loaded %d cols and  %d docs", len(colMap), len(docMap))
-	docTitleFinder := find.NewFileTitleFinder(colMap, dInfoCN, docMap)
+	var docTitleFinder find.TitleFinder
+	if len(project) > 0 {
+		log.Println("initDocTitleFinder creating a FirebaseTitleFinder")
+		client, err := firestore.NewClient(ctx, project)
+		if err != nil {
+			log.Printf("initDocTitleFinder, failed to create firestore client: %v", err)
+		} else {
+			indexCorpus, ok := appConfig.IndexCorpus()
+			if !ok {
+				log.Printf("initDocTitleFinder, IndexCorpus must be set in config.yaml")
+			} else {
+				indexGen := appConfig.IndexGen()
+				docTitleFinder = find.NewFirebaseTitleFinder(client, indexCorpus, indexGen, colMap, dInfoCN, docMap)
+				return docTitleFinder, nil
+			}
+		}
+	}
+	log.Println("initDocTitleFinder fall back to a file based TitleFinder")
+	docTitleFinder = find.NewFileTitleFinder(colMap, dInfoCN, docMap)
 	return docTitleFinder, nil
 }
 
@@ -507,7 +526,7 @@ func findDocuments(ctx context.Context, c config.AppConfig, dict *dictionary.Dic
 		log.Fatalf("project must be set for Firestore access")
 	}
 	tfDocFinder := termfreq.NewFirestoreDocFinder(client, indexCorpus, indexGen, true, 1000)
-	titleFinder, err := initDocTitleFinder(c)
+	titleFinder, err := initDocTitleFinder(ctx, c, project)
 	if err != nil {
 		log.Fatalf("main.initApp() unable to load titleFinder: %v", err)
 	}
@@ -538,9 +557,9 @@ func findDocuments(ctx context.Context, c config.AppConfig, dict *dictionary.Dic
 			fmt.Printf("Writing results to file %s\n", outfile)
 		}
 	}
-	fmt.Fprintln(w, "Title\tCollection\tFile\tExactMatch\tLongestMatch\tContainsTerms")
+	fmt.Fprintln(w, "Title\tCollection\tFile\tExactMatch\tLongestMatch\tContainsTerms\tSimWords\tSimBigram\tSimBitVector")
 	for _, d := range docs {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%t\t%s\t%s\n", d.Title, d.CollectionTitle, d.GlossFile, d.MatchDetails.ExactMatch, d.MatchDetails.LongestMatch, d.ContainsTerms)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%t\t%s\t%s\t%0.6f\t%0.6f\t%0.6f\n", d.Title, d.CollectionTitle, d.GlossFile, d.MatchDetails.ExactMatch, d.MatchDetails.LongestMatch, d.ContainsTerms, d.SimWords, d.SimBigram, d.SimBitVector)
 	}
 }
 
