@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	cloud.google.com/go/firestore v1.6.1
-	github.com/alexamies/chinesenotes-go v0.0.134
+	github.com/alexamies/chinesenotes-go v0.0.139
 	github.com/gomarkdown/markdown v0.0.0-20220607163217-45f7c050e2d1
 	google.golang.org/grpc v1.46.2
 )
@@ -32,3 +32,5 @@ require (
 	google.golang.org/genproto v0.0.0-20220523171625-347a074981d8 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 )
+
+// replace github.com/alexamies/chinesenotes-go => ../chinesenotes-go

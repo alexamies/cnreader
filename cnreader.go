@@ -499,7 +499,7 @@ func initDocTitleFinder(ctx context.Context, appConfig config.AppConfig, project
 				log.Printf("initDocTitleFinder, IndexCorpus must be set in config.yaml")
 			} else {
 				indexGen := appConfig.IndexGen()
-				docTitleFinder = find.NewFirebaseTitleFinder(client, indexCorpus, indexGen, colMap, dInfoCN, docMap)
+				docTitleFinder = find.NewFirestoreTitleFinder(client, indexCorpus, indexGen, colMap, dInfoCN, docMap)
 				return docTitleFinder, nil
 			}
 		}
@@ -586,7 +586,7 @@ func searchDocTitleIndex(ctx context.Context, c config.AppConfig, client *firest
 	}
 	defer r.Close()
 	dInfoCN, docMap := find.LoadDocInfo(r)
-	titleFinder := find.NewFirebaseTitleFinder(client, indexCorpus, indexGen, colMap, dInfoCN, docMap)
+	titleFinder := find.NewFirestoreTitleFinder(client, indexCorpus, indexGen, colMap, dInfoCN, docMap)
 	docs, err := titleFinder.FindDocsByTitle(ctx, query)
 	if err != nil {
 		log.Fatalf("searchDocTitleIndex, error opening %s: %v", titleFileName, err)
