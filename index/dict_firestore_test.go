@@ -17,30 +17,30 @@ import (
 	"testing"
 )
 
-func TestTitleSubtrings(t *testing.T) {
+func TestMergeSubtrings(t *testing.T) {
 	tests := []struct {
-		name   string
-		input1 string
-		input2 string
-		want   []string
+		name        string
+		simplified  string
+		traditional string
+		want        []string
 	}{
 		{
-			name:   "Empty",
-			input1: "",
-			input2: "",
-			want:   []string{},
+			name:        "Simplifed same as traditional",
+			simplified:  "看",
+			traditional: "",
+			want:        []string{"看"},
 		},
 		{
-			name:   "Three characters",
-			input1: "看",
-			input2: "世界",
-			want:   []string{"看世界", "看世", "世界"},
+			name:        "Simplifed different to traditional",
+			simplified:  "奥运",
+			traditional: "奧運",
+			want:        []string{"奥运", "奥", "运", "奧運", "奧", "運"},
 		},
 	}
 	for _, tc := range tests {
-		got := titleSubtrings(tc.input1, tc.input2)
+		got := mergeSubtrings(tc.simplified, tc.traditional)
 		if !reflect.DeepEqual(got, tc.want) {
-			t.Errorf("%s, got %v\n but want %v", tc.name, got, tc.want)
+			t.Errorf("%s, got %v\n but want %v.", tc.name, got, tc.want)
 		}
 	}
 }

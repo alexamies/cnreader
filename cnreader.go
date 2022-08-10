@@ -88,6 +88,7 @@ const (
 // Command line flags
 var (
 	collectionFile = flag.String("collection", "", "Enhance HTML markup and do vocabulary analysis for all the files listed in given collection.")
+	dictIndex      = flag.Bool("dict_index", false, "Builds an index of dictionary word substrings.")
 	downloadDict   = flag.Bool("download_dict", false, "Download the dicitonary files from GitHub and save locally.")
 	findDocs       = flag.String("find_docs", "", "Full text document search.")
 	html           = flag.Bool("html", false, "Enhance HTML markup for all files listed in data/corpus/html-conversion.csv")
@@ -1010,6 +1011,26 @@ func main() {
 		}
 		defer client.Close()
 		searchDocTitleIndex(ctx, c, client, *titleSearch)
+	} else if *dictIndex {
+		log.Println("main: writing dictionary substring index to Firestore")
+		if len(*projectID) == 0 {
+			log.Fatalf("project must be set for Firestore access to write dictionary index")
+		}
+		client, err := firestore.NewClient(ctx, *projectID)
+		if err != nil {
+			log.Fatalf("Failed to create client: %v", err)
+		}
+		defer client.Close()
+		indexCorpus, ok := c.IndexCorpus()
+		if !ok {
+			log.Fatalf("IndexCorpus must be set in config.yaml")
+		}
+		indexGen := c.IndexGen()
+		err = index.UpdateDictIndex(ctx, client, dict, indexCorpus, indexGen)
+		if err != nil {
+			log.Fatalf("main: could not update title index, err: %v\n", err)
+		}
+
 	} else if len(*findDocs) > 0 {
 		log.Printf("main: document search for %s", *findDocs)
 		findDocuments(ctx, c, dict, *projectID, *collectionFile, *findDocs, *outFile)

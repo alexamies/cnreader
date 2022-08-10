@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/firestore"
+	"github.com/alexamies/chinesenotes-go/dictionary"
 	"github.com/alexamies/chinesenotes-go/find"
 	"github.com/alexamies/cnreader/library"
 	"google.golang.org/grpc/codes"
@@ -32,8 +33,7 @@ type FsClient interface {
 	Collection(path string) *firestore.CollectionRef
 }
 
-// UpdateDocTitleIndex writes a flast list of document titles from the
-// hierarchical corpus.
+// UpdateDocTitleIndex writes a list of document titles from the hierarchical corpus  with subtring arrays
 func UpdateDocTitleIndex(ctx context.Context, libLoader library.LibraryLoader, client FsClient, corpus string, generation int) error {
 	fsCol := fmt.Sprintf("%s_doc_title_%d", corpus, generation)
 	corpLoader := libLoader.GetCorpusLoader()
@@ -67,7 +67,7 @@ func UpdateDocTitleIndex(ctx context.Context, libLoader library.LibraryLoader, c
 			_, err := ref.Get(ctx)
 			if err != nil {
 				if status.Code(err) != codes.NotFound {
-					log.Printf("UpdateDocTitleIndex, Failed getting tf for ref %v: %v", ref, err)
+					log.Printf("UpdateDocTitleIndex, Failed getting record for ref %v: %v", ref, err)
 				} else {
 					_, err = ref.Set(ctx, record)
 					if err != nil {
@@ -86,28 +86,5 @@ func titleSubtrings(titleZh, colTitleZh string) []string {
 	s1 := strings.Split(titleZh, "")
 	s2 := strings.Split(colTitleZh, "")
 	ss := append(s1, s2...)
-	return ngrams(ss, 2)
-}
-
-// ngrams finds the set of all substrings in the array longer than minLen characters
-func ngrams(chars []string, minLen int) []string {
-	// log.Printf("ngrams, chars %v", chars)
-	if len(chars) < 2 {
-		return []string{}
-	}
-	ss := []string{}
-	for i := range chars {
-		for j := len(chars); j > 1; j-- {
-			if i < j {
-				x := chars[i:j]
-				w := strings.Join(x, "")
-				if len(x) >= minLen {
-					// log.Printf("ngrams i=%d: j=%d, w=%s\n", i, j, w)
-					ss = append(ss, w)
-				}
-			}
-		}
-	}
-	// log.Printf("ngrams, ss %v\n", ss)
-	return ss
+	return dictionary.Ngrams(ss, 2)
 }
