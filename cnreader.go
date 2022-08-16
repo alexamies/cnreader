@@ -755,9 +755,10 @@ func main() {
 	}
 	
 	var client *firestore.Client
+	var err error
 	if len(*projectID) > 0 {
-			log.Fatalf("project must be set for Firestore access to write dictionary index")
-		client, err := firestore.NewClient(ctx, *projectID)
+		log.Printf("main: initializing Firestore client for project %s", *projectID)
+		client, err = firestore.NewClient(ctx, *projectID)
 		if err != nil {
 			log.Fatalf("Failed to create Firestore client: %v", err)
 		}
@@ -778,7 +779,6 @@ func main() {
 
 	// Minimal config for simple cases
 	var dict *dictionary.Dictionary
-	var err error
 	if len(c.LUFileNames) > 0 {
 		dict, err = dictionary.LoadDictFile(c)
 		if err != nil {

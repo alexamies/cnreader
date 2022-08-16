@@ -291,3 +291,12 @@ Run a full text search:
 export TEXT_BUCKET=chinesenotes_tfidf
 ./cnreader --project $PROJECT_ID --find_docs "不見古人" --outfile results.csv
 ```
+
+## Indexing of Idioms
+
+To index idioms use the command
+
+```shell
+./cnreader --project $PROJECT_ID --dict_index Idiom
+
+```
