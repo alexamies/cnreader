@@ -1016,7 +1016,7 @@ func main() {
 		}
 
 	} else if len(*findDictSS) > 0 {
-		log.Printf("main: writing dictionary substring index for domain %s to Firestore", *dictIndex)
+		log.Printf("main: searching dictionary substring index for domain %s to Firestore", *findDictDomain)
 		if len(*findDictDomain) == 0 {
 			log.Fatalln("flag find_dict_domain is not set but needed for dictionary substring search")
 		}
