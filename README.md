@@ -300,3 +300,9 @@ To index idioms use the command
 ./cnreader --project $PROJECT_ID --dict_index Idiom
 
 ```
+
+Use the substring index for searching
+
+```shell
+./cnreader --project $PROJECT_ID --find_dict_substring 明 --find_dict_domain Idiom
+```

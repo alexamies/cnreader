@@ -90,6 +90,8 @@ var (
 	collectionFile = flag.String("collection", "", "Enhance HTML markup and do vocabulary analysis for all the files listed in given collection.")
 	dictIndex      = flag.String("dict_index", "", "Builds an index of dictionary word substrings for a given domain, eg 'Idiom'.")
 	downloadDict   = flag.Bool("download_dict", false, "Download the dicitonary files from GitHub and save locally.")
+	findDictSS     = flag.String("find_dict_substring", "", "Finds dictionary words with substrings for a given domain.")
+	findDictDomain = flag.String("find_dict_domain", "", "Domain to use in dictionary substrings search, eg 'Idiom'.")
 	findDocs       = flag.String("find_docs", "", "Full text document search.")
 	html           = flag.Bool("html", false, "Enhance HTML markup for all files listed in data/corpus/html-conversion.csv")
 	hwFiles        = flag.Bool("hwfiles", false, "Compute and write HTML entries for each headword, writing the files to the web/words directory.")
@@ -1010,7 +1012,33 @@ func main() {
 		indexGen := c.IndexGen()
 		err = index.UpdateDictIndex(ctx, client, dict, indexCorpus, indexGen, *dictIndex)
 		if err != nil {
-			log.Fatalf("main: could not update title index, err: %v\n", err)
+			log.Fatalf("main: could not update title index, err: %v", err)
+		}
+
+	} else if len(*findDictSS) > 0 {
+		log.Printf("main: writing dictionary substring index for domain %s to Firestore", *dictIndex)
+		if len(*findDictDomain) == 0 {
+			log.Fatalln("flag find_dict_domain is not set but needed for dictionary substring search")
+		}
+		if client == nil {
+			log.Fatalln("Firestore client not set, set project flag to initiate it")
+		}
+		indexCorpus, ok := c.IndexCorpus()
+		if !ok {
+			log.Fatalf("IndexCorpus must be set in config.yaml")
+		}
+		indexGen := c.IndexGen()
+		ssIndex, err := dictionary.NewSubstringIndexFS(client, indexCorpus, indexGen, dict)
+		if err != nil {
+			log.Fatalf("main: could not create SubstringIndex, err: %v", err)
+		}
+		results, err := ssIndex.LookupSubstr(ctx, *findDictSS, *findDictDomain, "")
+		if err != nil {
+			log.Fatalf("main: error looking up substring index, err: %v", err)
+		}
+		log.Printf("main: substring index returned %d results", len(results.Words))
+		for _, w := range results.Words {
+			fmt.Printf("%d, %s, %s, %s\n", w.HeadwordId, w.Simplified, w.Traditional, w.Pinyin)
 		}
 
 	} else if len(*findDocs) > 0 {
