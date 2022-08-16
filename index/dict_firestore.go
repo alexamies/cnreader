@@ -19,15 +19,21 @@ import (
 	"strings"
 
 	"github.com/alexamies/chinesenotes-go/dictionary"
+	"github.com/alexamies/chinesenotes-go/dicttypes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 // UpdateDictIndex writes a list of dicitonary words with subtring array
-func UpdateDictIndex(ctx context.Context, client FsClient, dict *dictionary.Dictionary, corpus string, generation int) error {
-	fsCol := fmt.Sprintf("%s_dict_substring_%d", corpus, generation)
+func UpdateDictIndex(ctx context.Context, client FsClient, dict *dictionary.Dictionary, corpus string, generation int, domain string) error {
+	dom := strings.ToLower(domain)
+	fsCol := fmt.Sprintf("%s_dict_%s_substring_%d", corpus, dom, generation)
 	log.Printf("UpdateDictSubstringIndex loaded %d headwords", len(dict.HeadwordIds))
+	i := 0
 	for _, hw := range dict.HeadwordIds {
+		if !isDomain(hw, domain) {
+			continue
+		}
 		ref := client.Collection(fsCol).Doc(hw.Pinyin)
 		_, err := ref.Get(ctx)
 		if err != nil {
@@ -49,8 +55,19 @@ func UpdateDictIndex(ctx context.Context, client FsClient, dict *dictionary.Dict
 		if err != nil {
 			return fmt.Errorf("failed setting entry for ref %v: %v", hws, err)
 		}
+		i++
 	}
+	log.Printf("UpdateDictSubstringIndex processed %d entries", i)
 	return nil
+}
+
+func isDomain(w *dicttypes.Word, domain string) bool {
+	for _, ws := range w.Senses {
+		if ws.Domain == domain {
+			return true
+		}
+	}
+	return false
 }
 
 func mergeSubtrings(simplified, traditional string) []string {

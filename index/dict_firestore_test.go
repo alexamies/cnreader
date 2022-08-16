@@ -15,7 +15,76 @@ package index
 import (
 	"reflect"
 	"testing"
+
+	"github.com/alexamies/chinesenotes-go/dicttypes"
 )
+
+func TestIsDomain(t *testing.T) {
+	s1 := "莲花"
+	t1 := "蓮花"
+	p1 := "liánhuā"
+	e1 := "lotus"
+	s2 := "域"
+	t2 := "\\N"
+	p2 := "yù"
+	e2 := "district; region"
+	hw1 := dicttypes.Word{
+		HeadwordId:  1,
+		Simplified:  s1,
+		Traditional: t1,
+		Pinyin:      p1,
+		Senses: []dicttypes.WordSense{
+			{
+				HeadwordId:  1,
+				Simplified:  s1,
+				Traditional: t1,
+				Pinyin:      p1,
+				English:     e1,
+			},
+		},
+	}
+	hw2 := dicttypes.Word{
+		HeadwordId:  2,
+		Simplified:  s2,
+		Traditional: t2,
+		Pinyin:      p2,
+		Senses: []dicttypes.WordSense{
+			{
+				HeadwordId:  2,
+				Simplified:  s2,
+				Traditional: t2,
+				Pinyin:      p2,
+				English:     e2,
+				Domain: "Idiom",
+			},
+		},
+	}
+	tests := []struct {
+		name  	string
+		w 			*dicttypes.Word
+		domain 	string
+		want    bool
+	}{
+		{
+			name:     "Is not Idiom",
+			w:  			&hw1,
+			domain: 	"Idiom",
+			want:     false,
+		},
+		{
+			name:     "Is an Idiom",
+			w:  			&hw2,
+			domain: 	"Idiom",
+			want:     true,
+		},
+	}
+	for _, tc := range tests {
+		got := isDomain(tc.w, tc.domain)
+		if got != tc.want {
+			t.Errorf("%s, got %v\n but want %v.", tc.name, got, tc.want)
+		}
+	}
+}
 
 func TestMergeSubtrings(t *testing.T) {
 	tests := []struct {
