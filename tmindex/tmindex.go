@@ -25,6 +25,7 @@ import (
 const (
 	fnameUni = "tmindex_unigram.tsv"
 	fnameDomain = "tmindex_uni_domain.tsv"
+	minChars = 3
 	maxChars = 11
 )
 
@@ -34,35 +35,35 @@ type indexEntry struct {
 	count int
 }
 
-// Builds a unigram index with domain
+// BuildIndexes saves unigram indexes with and without domain in a file
 func BuildIndexes(indexDir string, wdict map[string]*dicttypes.Word) error {
 	pathUni := fmt.Sprintf("%s/%s", indexDir, fnameUni)
 	fUni, err := os.Create(pathUni)
 	defer fUni.Close()
 	if err != nil {
-		return fmt.Errorf("Could not create index file %s, err: %v\n", fnameUni, err)
+		return fmt.Errorf("Could not create index file %s, err: %v", fnameUni, err)
 	}
 	wUni := bufio.NewWriter(fUni)
 	err = buildUnigramIndex(wUni, wdict)
 	if err != nil {
-		return fmt.Errorf("could not write to index file %s, err: %v\n", fnameUni, err)
+		return fmt.Errorf("could not write to index file %s, err: %v", fnameUni, err)
 	}
 
 	pathDomain := fmt.Sprintf("%s/%s", indexDir, fnameDomain)
 	fDomain, err := os.Create(pathDomain)
 	defer fDomain.Close()
 	if err != nil {
-		return fmt.Errorf("could not create index file %s, err: %v\n", fnameDomain, err)
+		return fmt.Errorf("could not create index file %s, err: %v", fnameDomain, err)
 	}
 	wDomain := bufio.NewWriter(fDomain)
 	err = buildUniDomainIndex(wDomain, wdict)
 	if err != nil {
-		return fmt.Errorf("could not write to index file %s, err: %v\n", fnameDomain, err)
+		return fmt.Errorf("could not write to index file %s, err: %v", fnameDomain, err)
 	}
 	return nil
 }
 
-// Builds a unigram index with domain
+// buildUniDomainIndex builds a unigram index with domain
 func buildUniDomainIndex(w io.Writer, wdict map[string]*dicttypes.Word) error {
 	tmindexUni := make(map[string]bool)
 	for term, word := range wdict {
@@ -84,7 +85,7 @@ func buildUniDomainIndex(w io.Writer, wdict map[string]*dicttypes.Word) error {
 	return nil
 }
 
-// Builds a unigram index, skip for strings > maxChars
+// buildUnigramIndex builds a unigram index, skip for strings > maxChars
 func buildUnigramIndex(w io.Writer, wdict map[string]*dicttypes.Word) error {
 	tmindexUni := make(map[string]bool)
 	for term := range wdict {

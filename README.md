@@ -306,3 +306,13 @@ Use the substring index for searching
 ```shell
 ./cnreader --project $PROJECT_ID --find_dict_substring 明 --find_dict_domain Idiom
 ```
+
+## Translation Memory Index
+
+To index the translation memory use the command
+
+```shell
+./cnreader --project $PROJECT_ID --tmindex
+
+```
+

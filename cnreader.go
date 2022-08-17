@@ -963,6 +963,18 @@ func main() {
 
 	} else if *writeTMIndex {
 		log.Println("main: writing translation memory index")
+		if client != nil {
+			indexCorpus, ok := c.IndexCorpus()
+			if !ok {
+				log.Fatalf("IndexCorpus must be set in config.yaml")
+			}
+			indexGen := c.IndexGen()
+			err := tmindex.BuildIndexesFS(ctx, client, dict.Wdict, indexCorpus, indexGen)
+			if err != nil {
+				log.Fatalf("main: could not save tm index in Firestore, err: %v\n", err)
+			}
+			return
+		}
 		err := tmindex.BuildIndexes(indexConfig.IndexDir, dict.Wdict)
 		if err != nil {
 			log.Fatalf("main: could not create tm index file, err: %v\n", err)
