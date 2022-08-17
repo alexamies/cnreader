@@ -73,7 +73,9 @@ func buildUniDomainIndexFS(ctx context.Context, client dictionary.FsClient, wdic
 	  			}
 		  		tmindexDom[key] = true
 					i++
-					log.Printf("tmindex.buildUniDomainIndexFS processed %d entries so far", i)
+					if i % 100 == 0 {
+						log.Printf("tmindex.buildUniDomainIndexFS processed %d entries so far", i)
+					}
 				}
 			}
 		}
@@ -114,7 +116,9 @@ func buildUnigramIndexFS(ctx context.Context, client dictionary.FsClient, wdict 
 	  		}
 	  		tmindexUni[key] = true
 				i++
-				log.Printf("tmindex.buildUnigramIndexFS processed %d entries so far", i)
+				if i % 100 == 0 {
+					log.Printf("tmindex.buildUnigramIndexFS processed %d entries so far", i)
+				}
 			}
 		}
 	}
