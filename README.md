@@ -298,7 +298,6 @@ To index idioms use the command
 
 ```shell
 ./cnreader --project $PROJECT_ID --dict_index Idiom
-
 ```
 
 Use the substring index for searching
@@ -313,6 +312,14 @@ To index the translation memory use the command
 
 ```shell
 ./cnreader --project $PROJECT_ID --tmindex
-
 ```
 
+Alternatively, use a
+[Cloud Run Job](https://cloud.google.com/run/docs/create-jobs). 
+Push a Docker impage to the Google Cloud Artifact Repository using Cloud Build:
+
+```shell
+BUILD_ID=[your build id, eg 1234]
+gcloud builds submit --config cloudbuild.yaml . \
+  --substitutions=_IMAGE_TAG="$BUILD_ID"
+```
