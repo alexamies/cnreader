@@ -323,3 +323,10 @@ BUILD_ID=[your build id, eg 1234]
 gcloud builds submit --config cloudbuild.yaml . \
   --substitutions=_IMAGE_TAG="$BUILD_ID"
 ```
+
+Search the translation memory index
+
+
+```shell
+./cnreader --project $PROJECT_ID --tmsearch 柳暗名明
+```

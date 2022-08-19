@@ -1,4 +1,4 @@
-FROM 1.19.0-bullseye
+FROM golang:1.19.0-bullseye
 
 ENV GO111MODULE=on
 WORKDIR /app
@@ -8,6 +8,4 @@ RUN apt-get update
 RUN apt-get install -y ca-certificates
 COPY *.yaml ./
 COPY data/*.tsv /data/
-COPY web-resources/*.html /web-resources/
-COPY web/* /web/
 ENTRYPOINT ["./cnreader"]

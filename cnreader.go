@@ -68,6 +68,7 @@ import (
 	"github.com/alexamies/chinesenotes-go/find"
 	"github.com/alexamies/chinesenotes-go/termfreq"
 	"github.com/alexamies/chinesenotes-go/tokenizer"
+	"github.com/alexamies/chinesenotes-go/transmemory"
 	"github.com/alexamies/cnreader/analysis"
 	"github.com/alexamies/cnreader/corpus"
 	"github.com/alexamies/cnreader/generator"
@@ -89,6 +90,7 @@ const (
 var (
 	collectionFile = flag.String("collection", "", "Enhance HTML markup and do vocabulary analysis for all the files listed in given collection.")
 	dictIndex      = flag.String("dict_index", "", "Builds an index of dictionary word substrings for a given domain, eg 'Idiom'.")
+	domain 				 = flag.String("domain", "", "Used in searching the translation memory index.")
 	downloadDict   = flag.Bool("download_dict", false, "Download the dicitonary files from GitHub and save locally.")
 	findDictSS     = flag.String("find_dict_substring", "", "Finds dictionary words with substrings for a given domain.")
 	findDictDomain = flag.String("find_dict_domain", "", "Domain to use in dictionary substrings search, eg 'Idiom'.")
@@ -104,6 +106,7 @@ var (
 	testIndexTerms = flag.String("test_index_terms", "", "Values to validate the corpus index with")
 	titleIndex     = flag.Bool("titleindex", false, "Builds a flat index of document titles.")
 	titleSearch    = flag.String("titlesearch", "", "Searches the document title index.")
+	tmSearch   		 = flag.String("tmsearch", "", "Search the translation memory index.")
 	writeTMIndex   = flag.Bool("tmindex", false, "Compute and write translation memory index.")
 )
 
@@ -978,6 +981,35 @@ func main() {
 		err := tmindex.BuildIndexes(indexConfig.IndexDir, dict.Wdict)
 		if err != nil {
 			log.Fatalf("main: could not create tm index file, err: %v\n", err)
+		}
+
+	} else if len(*tmSearch) > 0 {
+		log.Println("main: searching translation memory index")
+		if client != nil {
+			indexCorpus, ok := c.IndexCorpus()
+			if !ok {
+				log.Fatalf("IndexCorpus must be set in config.yaml")
+			}
+			indexGen := c.IndexGen()
+			extractor, err := dictionary.NewNotesExtractor("")
+			if err != nil {
+				log.Fatalf("findDocuments: could not create extractor: %v", err)
+			}
+			revIndex := dictionary.NewReverseIndex(dict, extractor)
+			searcher, err := transmemory.NewFSSearcher(client, indexCorpus, indexGen, revIndex)
+			if err != nil {
+				log.Fatalf("main: could not save tm index in Firestore, err: %v\n", err)
+			}
+			results, err := searcher.Search(ctx, *tmSearch, *domain, true, dict.Wdict)
+			if err != nil {
+				log.Fatalf("main: error calling translation memory search: %v", err)
+			}
+			words := results.Words
+			log.Printf("main: translation memory search, got %d results", len(words))
+			for _, w := range words {
+				log.Printf("%s\t%s\t%s", w.Simplified, w.Traditional, w.Pinyin)
+			}
+			return
 		}
 
 	} else if *titleIndex && len(*projectID) > 0 {
