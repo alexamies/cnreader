@@ -34,7 +34,8 @@ func UpdateDictIndex(ctx context.Context, client FsClient, dict *dictionary.Dict
 		if !isDomain(hw, domain) {
 			continue
 		}
-		ref := client.Collection(fsCol).Doc(hw.Pinyin)
+		p := strings.Replace(hw.Pinyin, "/", "", -1)
+		ref := client.Collection(fsCol).Doc(p)
 		_, err := ref.Get(ctx)
 		if err != nil {
 			if status.Code(err) != codes.NotFound {
