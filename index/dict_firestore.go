@@ -35,11 +35,13 @@ func UpdateDictIndex(ctx context.Context, client FsClient, dict *dictionary.Dict
 			continue
 		}
 		p := strings.Replace(hw.Pinyin, "/", "", -1)
+		p = strings.Replace(p, ".", "", -1)
 		ref := client.Collection(fsCol).Doc(p)
 		_, err := ref.Get(ctx)
 		if err != nil {
 			if status.Code(err) != codes.NotFound {
-				return fmt.Errorf("UpdateDocTitleIndex, Failed getting tf for ref %v: %v", ref, err)
+				fmt.Printf("UpdateDocTitleIndex, Failed getting tf for ref %v: %v", ref, err)
+				continue
 			}
 		}
 		if hw.Traditional == "\\N" {
