@@ -326,7 +326,6 @@ gcloud builds submit --config cloudbuild.yaml . \
 
 Search the translation memory index
 
-
 ```shell
 ./cnreader --project $PROJECT_ID --tmsearch 柳暗名明
 ```
