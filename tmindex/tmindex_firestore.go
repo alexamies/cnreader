@@ -52,28 +52,32 @@ func buildUniDomainIndexFS(ctx context.Context, client dictionary.FsClient, wdic
 		for _, sense := range word.Senses {
 			chars := strings.Split(term, "")
 			for _, c := range chars {
-		  	key := fmt.Sprintf("%s_%s_%s", c, term, sense.Domain)
+				key := fmt.Sprintf("%s_%s_%s", c, term, sense.Domain)
+				key = strings.Replace(key, "/", "", -1)
+				key = strings.Replace(key, ".", "", -1)
 				if _, ok := tmindexDom[key]; ok {
 					continue
 				}
 				rec := transmemory.TMIndexDomain{
-					Ch: c,
-					Word: term,
+					Ch:     c,
+					Word:   term,
 					Domain: sense.Domain,
 				}
 				ref := client.Collection(fsCol).Doc(key)
 				_, err := ref.Get(ctx)
 				if err != nil {
 					if status.Code(err) != codes.NotFound {
-						return fmt.Errorf("UpdateDocTitleIndex, Failed getting record for ref %v: %v", ref, err)
+						log.Printf("buildUniDomainIndexFS, Failed getting record for ref %v: %v", ref, err)
+						continue
 					}
 					_, err = ref.Set(ctx, rec)
-	  			if err != nil {
-	  				return err
-	  			}
-		  		tmindexDom[key] = true
+					if err != nil {
+						log.Printf("buildUniDomainIndexFS, Failed setting record for ref %v: %v", ref, err)
+						continue
+					}
+					tmindexDom[key] = true
 					i++
-					if i % 100 == 0 {
+					if i%100 == 0 {
 						log.Printf("tmindex.buildUniDomainIndexFS processed %d entries so far", i)
 					}
 				}
@@ -96,27 +100,31 @@ func buildUnigramIndexFS(ctx context.Context, client dictionary.FsClient, wdict 
 		}
 		chars := strings.Split(term, "")
 		for _, c := range chars {
-	  	key := fmt.Sprintf("%s_%s", c, term)
+			key := fmt.Sprintf("%s_%s", c, term)
+			key = strings.Replace(key, "/", "", -1)
+			key = strings.Replace(key, ".", "", -1)
 			if _, ok := tmindexUni[key]; ok {
 				continue
 			}
 			rec := transmemory.TMIndexUnigram{
-				Ch: c,
+				Ch:   c,
 				Word: term,
 			}
 			ref := client.Collection(fsCol).Doc(key)
 			_, err := ref.Get(ctx)
 			if err != nil {
 				if status.Code(err) != codes.NotFound {
-					return fmt.Errorf("UpdateDocTitleIndex, Failed getting record for ref %v: %v", ref, err)
+					log.Printf("buildUnigramIndexFS, Failed getting record for ref %v: %v", ref, err)
+					continue
 				}
 				_, err = ref.Set(ctx, rec)
-	  		if err != nil {
-	  			return err
-	  		}
-	  		tmindexUni[key] = true
+				if err != nil {
+					log.Printf("buildUnigramIndexFS, Failed setting record for ref %v: %v", ref, err)
+					continue
+				}
+				tmindexUni[key] = true
 				i++
-				if i % 100 == 0 {
+				if i%100 == 0 {
 					log.Printf("tmindex.buildUnigramIndexFS processed %d entries so far", i)
 				}
 			}
