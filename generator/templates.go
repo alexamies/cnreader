@@ -13,8 +13,8 @@
 package generator
 
 import (
-  "fmt"
-  "text/template"
+	"fmt"
+	"text/template"
 
 	"github.com/alexamies/chinesenotes-go/config"
 )
@@ -301,50 +301,51 @@ const useFileTemplate = `
 
 // newTemplateMap builds a template map
 func NewTemplateMap(appConfig config.AppConfig) map[string]*template.Template {
-  templateMap := make(map[string]*template.Template)
-  templDir := appConfig.ProjectHome + "/" + appConfig.GetVar("TemplateDir")
-  tNames := map[string]string{
-    "about-template.html": pageTemplate,
-    "advanced-search-template.html": useFileTemplate,
-    "collection-template.html": collectionTemplate,
-    "corpus-analysis-template.html": corpusAnalysisTemplate,
-    "corpus-summary-analysis-template.html": corpusSummaryAnalysisTemplate,
-    "corpus-template.html": corpusTemplate,
-    "headword-template.html": headwordTemplate,
-    "index-template.html": useFileTemplate,
-    "library-template.html": useFileTemplate,
-    "lookup-template.html": useFileTemplate,
-    "mediadetail.html-template.html": useFileTemplate,
-    "page-template.html": useFileTemplate,
-    "reference-template.html": useFileTemplate,
-    "texts-template.html": textsTemplate,
-    "tools-template.html": useFileTemplate,
-  }
-  funcs := template.FuncMap{
-    "add": func(x, y int) int { return x + y },
-    "Deref":   func(sp *string) string { return *sp },
-    "DerefNe": func(sp *string, s string) bool { return *sp != s },
-  }
-  if len(templDir) > 0 {
-    for tName, defTmpl := range tNames {
-      fileName := templDir + "/" + tName
-      var tmpl *template.Template
-      var err error
-      tmpl, err = template.New(tName).Funcs(funcs).ParseFiles(fileName)
-      if err != nil {
-        //log.Printf("newTemplateMap: error parsing template, using default %s: %v",
-        //    tName, err)
-        t := fmt.Sprintf(defTmpl, head, header, nav, footer)
-        tmpl = template.Must(template.New(tName).Funcs(funcs).Parse(t))
-      }
-      templateMap[tName] = tmpl
-    }
-  } else {
-    for tName, defTmpl := range tNames {
-      t := fmt.Sprintf(defTmpl, head, header, nav, footer)
-      tmpl := template.Must(template.New(tName).Funcs(funcs).Parse(t))
-      templateMap[tName] = tmpl
-    }
-  }
-  return templateMap
+	templateMap := make(map[string]*template.Template)
+	templDir := appConfig.ProjectHome + "/" + appConfig.GetVar("TemplateDir")
+	tNames := map[string]string{
+		"about-template.html":                   pageTemplate,
+		"advanced-search-template.html":         useFileTemplate,
+		"collection-template.html":              collectionTemplate,
+		"corpus-analysis-template.html":         corpusAnalysisTemplate,
+		"corpus-summary-analysis-template.html": corpusSummaryAnalysisTemplate,
+		"corpus-template.html":                  corpusTemplate,
+		"headword-template.html":                headwordTemplate,
+		"index-template.html":                   useFileTemplate,
+		"library-template.html":                 useFileTemplate,
+		"login-template.html":                   useFileTemplate,
+		"lookup-template.html":                  useFileTemplate,
+		"mediadetail.html-template.html":        useFileTemplate,
+		"page-template.html":                    useFileTemplate,
+		"reference-template.html":               useFileTemplate,
+		"texts-template.html":                   textsTemplate,
+		"tools-template.html":                   useFileTemplate,
+	}
+	funcs := template.FuncMap{
+		"add":     func(x, y int) int { return x + y },
+		"Deref":   func(sp *string) string { return *sp },
+		"DerefNe": func(sp *string, s string) bool { return *sp != s },
+	}
+	if len(templDir) > 0 {
+		for tName, defTmpl := range tNames {
+			fileName := templDir + "/" + tName
+			var tmpl *template.Template
+			var err error
+			tmpl, err = template.New(tName).Funcs(funcs).ParseFiles(fileName)
+			if err != nil {
+				//log.Printf("newTemplateMap: error parsing template, using default %s: %v",
+				//    tName, err)
+				t := fmt.Sprintf(defTmpl, head, header, nav, footer)
+				tmpl = template.Must(template.New(tName).Funcs(funcs).Parse(t))
+			}
+			templateMap[tName] = tmpl
+		}
+	} else {
+		for tName, defTmpl := range tNames {
+			t := fmt.Sprintf(defTmpl, head, header, nav, footer)
+			tmpl := template.Must(template.New(tName).Funcs(funcs).Parse(t))
+			templateMap[tName] = tmpl
+		}
+	}
+	return templateMap
 }

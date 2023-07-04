@@ -90,7 +90,7 @@ const (
 var (
 	collectionFile = flag.String("collection", "", "Enhance HTML markup and do vocabulary analysis for all the files listed in given collection.")
 	dictIndex      = flag.String("dict_index", "", "Builds an index of dictionary word substrings for a given domain, eg 'Idiom'.")
-	domain 				 = flag.String("domain", "", "Used in searching the translation memory index.")
+	domain         = flag.String("domain", "", "Used in searching the translation memory index.")
 	downloadDict   = flag.Bool("download_dict", false, "Download the dicitonary files from GitHub and save locally.")
 	findDictSS     = flag.String("find_dict_substring", "", "Finds dictionary words with substrings for a given domain.")
 	findDictDomain = flag.String("find_dict_domain", "", "Domain to use in dictionary substrings search, eg 'Idiom'.")
@@ -106,7 +106,7 @@ var (
 	testIndexTerms = flag.String("test_index_terms", "", "Values to validate the corpus index with")
 	titleIndex     = flag.Bool("titleindex", false, "Builds a flat index of document titles.")
 	titleSearch    = flag.String("titlesearch", "", "Searches the document title index.")
-	tmSearch   		 = flag.String("tmsearch", "", "Search the translation memory index.")
+	tmSearch       = flag.String("tmsearch", "", "Search the translation memory index.")
 	writeTMIndex   = flag.Bool("tmindex", false, "Compute and write translation memory index.")
 )
 
@@ -758,7 +758,7 @@ func main() {
 		}
 		os.Exit(0)
 	}
-	
+
 	var client *firestore.Client
 	var err error
 	if len(*projectID) > 0 {
@@ -911,7 +911,7 @@ func main() {
 			defer f.Close()
 			template, ok := outputConfig.Templates[conversion.Template]
 			if !ok {
-				log.Fatalf("template %s not found", conversion.Template)
+				log.Fatalf("template %s error", conversion.Template)
 			}
 			vocabFormat := outputConfig.VocabFormat
 			err = generator.WriteDoc(tokens, f, *template, conversion.GlossChinese,
