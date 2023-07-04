@@ -23,26 +23,20 @@ import (
 )
 
 const (
-	fnameUni = "tmindex_unigram.tsv"
+	fnameUni    = "tmindex_unigram.tsv"
 	fnameDomain = "tmindex_uni_domain.tsv"
-	minChars = 3
-	maxChars = 11
+	minChars    = 3
+	maxChars    = 11
 )
-
-type indexEntry struct {
-	c string
-	term string
-	count int
-}
 
 // BuildIndexes saves unigram indexes with and without domain in a file
 func BuildIndexes(indexDir string, wdict map[string]*dicttypes.Word) error {
 	pathUni := fmt.Sprintf("%s/%s", indexDir, fnameUni)
 	fUni, err := os.Create(pathUni)
-	defer fUni.Close()
 	if err != nil {
-		return fmt.Errorf("Could not create index file %s, err: %v", fnameUni, err)
+		return fmt.Errorf("could not create index file %s, err: %v", fnameUni, err)
 	}
+	defer fUni.Close()
 	wUni := bufio.NewWriter(fUni)
 	err = buildUnigramIndex(wUni, wdict)
 	if err != nil {
@@ -51,10 +45,10 @@ func BuildIndexes(indexDir string, wdict map[string]*dicttypes.Word) error {
 
 	pathDomain := fmt.Sprintf("%s/%s", indexDir, fnameDomain)
 	fDomain, err := os.Create(pathDomain)
-	defer fDomain.Close()
 	if err != nil {
 		return fmt.Errorf("could not create index file %s, err: %v", fnameDomain, err)
 	}
+	defer fDomain.Close()
 	wDomain := bufio.NewWriter(fDomain)
 	err = buildUniDomainIndex(wDomain, wdict)
 	if err != nil {
@@ -69,16 +63,16 @@ func buildUniDomainIndex(w io.Writer, wdict map[string]*dicttypes.Word) error {
 	for term, word := range wdict {
 		for _, sense := range word.Senses {
 			for _, c := range term {
-		  	line := fmt.Sprintf("%c\t%s\t%s\n", c, term, sense.Domain)
+				line := fmt.Sprintf("%c\t%s\t%s\n", c, term, sense.Domain)
 				// log.Printf("buildUniDomainIndex, line: %s", line)
 				if _, ok := tmindexUni[line]; ok {
 					continue
 				}
-		  	_, err := io.WriteString(w, line)
-		  	if err != nil {
-		  		return err
-		  	}
-		  	tmindexUni[line] = true
+				_, err := io.WriteString(w, line)
+				if err != nil {
+					return err
+				}
+				tmindexUni[line] = true
 			}
 		}
 	}
@@ -93,15 +87,15 @@ func buildUnigramIndex(w io.Writer, wdict map[string]*dicttypes.Word) error {
 			continue
 		}
 		for _, c := range term {
-	  	line := fmt.Sprintf("%c\t%s\n", c, term)
+			line := fmt.Sprintf("%c\t%s\n", c, term)
 			if _, ok := tmindexUni[line]; ok {
 				continue
 			}
-	  	_, err := io.WriteString(w, line)
-	  	if err != nil {
-	  		return err
-	  	}
-	  	tmindexUni[line] = true
+			_, err := io.WriteString(w, line)
+			if err != nil {
+				return err
+			}
+			tmindexUni[line] = true
 		}
 	}
 	return nil
