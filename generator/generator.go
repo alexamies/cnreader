@@ -187,7 +187,7 @@ func span(w dicttypes.Word, text string) string {
 	if w.IsQuote() {
 		classTxt += " quote"
 	}
-	if w.HasNotesLabel("Sanskrit equivalent:") {
+	if w.HasNotesLabel("Parallel, Sanskrit equivalent:") {
 		classTxt += " sanskrit"
 	}
 	if w.HasNotesLabel("FGDB entry") {
