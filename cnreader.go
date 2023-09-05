@@ -27,18 +27,19 @@
 // go run github.com/alexamies/cnreader -source_text="君不見黃河之水天上來"
 //
 // Flags:
-//  -download_dict 	Download the dicitonary files from GitHub and save locally.
-//  -source_text 		Analyze vocabulary for source input on the command line
-//  -source_file 		Analyze vocabulary for source file and write to output.html.
-//  -collection 		Enhance HTML markup and do vocabulary analysis for all the
-//              		files listed in given collection.
-//  -html						Enhance HTML markup for all files listed in
-// 									data/corpus/html-conversion.csv
-//  -hwfiles				Compute and write HTML entries for each headword, writing
-// 									the files to the web/words directory.
-//  -librarymeta		collection entries for the digital library.
-//  -tmindex				Compute and write translation memory index.
-//  -titleindex			Builds a flat index of document titles
+//
+//	 -download_dict 	Download the dicitonary files from GitHub and save locally.
+//	 -source_text 		Analyze vocabulary for source input on the command line
+//	 -source_file 		Analyze vocabulary for source file and write to output.html.
+//	 -collection 		Enhance HTML markup and do vocabulary analysis for all the
+//	             		files listed in given collection.
+//	 -html						Enhance HTML markup for all files listed in
+//										data/corpus/html-conversion.csv
+//	 -hwfiles				Compute and write HTML entries for each headword, writing
+//										the files to the web/words directory.
+//	 -librarymeta		collection entries for the digital library.
+//	 -tmindex				Compute and write translation memory index.
+//	 -titleindex			Builds a flat index of document titles
 //
 // Follow instructions in the README.md file for setup.
 package main
@@ -675,7 +676,7 @@ func findDocsTermFreq(ctx context.Context, indexCorpus string, indexGen int, cli
 func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 	outputConfig generator.HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
 	indexConfig index.IndexConfig,
-	dict *dictionary.Dictionary, appConfig config.AppConfig) error {
+	dict *dictionary.Dictionary, appConfig config.AppConfig, bibClient bibnotes.BibNotesClient) error {
 	log.Printf("writeLibraryFiles, LibraryFile: %s", library.LibraryFile)
 	libFle, err := os.Open(library.LibraryFile)
 	if err != nil {
@@ -713,7 +714,7 @@ func writeLibraryFiles(lib library.Library, dictTokenizer tokenizer.Tokenizer,
 		log.Printf("writeLibraryFiles, loaded %d collections from corpus: %s",
 			len(*collections), srcFileName)
 		_, err = analysis.WriteCorpus(*collections, outputConfig, lib.Loader,
-			dictTokenizer, indexConfig, dict, appConfig, corpusConfig)
+			dictTokenizer, indexConfig, dict, appConfig, corpusConfig, bibClient)
 		if err != nil {
 			return fmt.Errorf("library.WriteLibraryFiles: could not open file: %v", err)
 		}
@@ -848,6 +849,12 @@ func main() {
 	corpusConfig := getCorpusConfig(c)
 	indexConfig := getIndexConfig(c)
 
+	// Bibliographic notes client
+	bibNotesClient, err := getBibNotes(c)
+	if err != nil {
+		log.Printf("main: non-fatal error, could not load bib notes: %v", err)
+	}
+
 	// Validate
 	posFName := fmt.Sprintf("%s/%s", c.DictionaryDir(), "grammar.txt")
 	posFile, err := os.Open(posFName)
@@ -877,16 +884,10 @@ func main() {
 		log.Fatalf("main: unexpected error reading headwords, %v", err)
 	}
 
-	// Bibliographic notes client
-	bibNotesClient, err := getBibNotes(c)
-	if err != nil {
-		log.Printf("main: non-fatal error, could not load bib notes: %v", err)
-	}
-
 	if len(*collectionFile) > 0 {
 		log.Printf("main: writing collection %s\n", *collectionFile)
 		err := analysis.WriteCorpusCol(*collectionFile, libraryLoader,
-			dictTokenizer, outputConfig, corpusConfig, dict, c)
+			dictTokenizer, outputConfig, corpusConfig, dict, c, bibNotesClient)
 		if err != nil {
 			log.Fatalf("error writing collection %v\n", err)
 		}
@@ -959,7 +960,7 @@ func main() {
 			Loader:       libraryLoader,
 		}
 		err := writeLibraryFiles(lib, dictTokenizer, outputConfig,
-			corpusConfig, indexConfig, dict, c)
+			corpusConfig, indexConfig, dict, c, bibNotesClient)
 		if err != nil {
 			log.Fatalf("main: could not write library files: %v\n", err)
 		}
@@ -1091,7 +1092,7 @@ func main() {
 	} else {
 		log.Println("main: writing out entire corpus")
 		_, err := analysis.WriteCorpusAll(libraryLoader, dictTokenizer,
-			outputConfig, indexConfig, dict, c)
+			outputConfig, indexConfig, dict, c, bibNotesClient)
 		if err != nil {
 			log.Fatalf("main: writing out corpus, err: %v\n", err)
 		}

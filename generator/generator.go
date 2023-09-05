@@ -64,7 +64,32 @@ type HTMLOutPutConfig struct {
 	NotesReplace string
 }
 
-// CorpusEntryContent holds the content for a corpus entry
+// CorpusEntryMeta holds metadata for a corpus entry
+type CorpusEntryMeta struct {
+
+	// A link to the connection of documents
+	CollectionURL string
+
+	// A title for the connection of documents
+	CollectionTitle string
+
+	// A title for this document
+	EntryTitle string
+
+	// Name of the file with analysis of this document
+	AnalysisFile string
+
+	// Name of file with bilingual parallel text
+	ParallelTextFile string
+
+	// Name of file with bilingual text
+	BilingualTextFile string
+
+	// Name of file with Chinese text, in case this is a bilingual or parallel file
+	ChineseTextFile string
+}
+
+// CorpusEntryContent holds the content for a corpus entry to write to HTML
 type CorpusEntryContent struct {
 
 	// Page title
@@ -102,8 +127,9 @@ type CollectionListContent struct {
 }
 
 // decodeUsageExample formats usage example text into links with highlight
-//   Return
-//      marked up text with links and highlight
+//
+//	Return
+//	   marked up text with links and highlight
 func DecodeUsageExample(usageText string, headword dicttypes.Word,
 	dictTokenizer tokenizer.Tokenizer, outputConfig HTMLOutPutConfig,
 	wdict map[string]*dicttypes.Word) string {
@@ -214,8 +240,9 @@ func span(w dicttypes.Word, text string) string {
 
 // WriteCollectionFile writes a HTML file describing the collection
 // Parameters:
-//   collectionFile: The name of the file describing the collection
-//   baseDir: The base directory for writing the file
+//
+//	collectionFile: The name of the file describing the collection
+//	baseDir: The base directory for writing the file
 func WriteCollectionFile(colEntry *corpus.CollectionEntry,
 	outputConfig HTMLOutPutConfig, corpusConfig corpus.CorpusConfig,
 	f io.Writer) error {
@@ -290,8 +317,7 @@ func WriteCollectionList(colIEntries []corpus.CollectionEntry, analysisFile stri
 // aFile: The vocabulary analysis file written to or empty string for none
 // sourceFormat: TEXT, or HTML used for formatting output
 func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Writer,
-	collectionURL string, collectionTitle string, entryTitle string,
-	aFile string, sourceFormat string, outputConfig HTMLOutPutConfig,
+	corpusEntryMeta CorpusEntryMeta, sourceFormat string, outputConfig HTMLOutPutConfig,
 	corpusConfig corpus.CorpusConfig, wdict map[string]*dicttypes.Word) error {
 
 	var b bytes.Buffer
@@ -312,14 +338,15 @@ func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Wri
 
 	textContent := b.String()
 	dateUpdated := time.Now().Format("2006-01-02")
+	entryTitle := corpusEntryMeta.EntryTitle
 	content := CorpusEntryContent{
 		Title:           outputConfig.Title,
 		CorpusText:      textContent,
 		DateUpdated:     dateUpdated,
-		CollectionURL:   collectionURL,
-		CollectionTitle: collectionTitle,
+		CollectionURL:   corpusEntryMeta.CollectionURL,
+		CollectionTitle: corpusEntryMeta.CollectionTitle,
 		EntryTitle:      entryTitle,
-		AnalysisFile:    aFile}
+		AnalysisFile:    corpusEntryMeta.AnalysisFile}
 
 	tmpl := outputConfig.Templates["corpus-template.html"]
 	if tmpl == nil {

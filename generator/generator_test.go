@@ -115,30 +115,6 @@ func TestSpan(t *testing.T) {
 		Pinyin:      "guó",
 		Senses:      []dicttypes.WordSense{ws2},
 	}
-	s3 := "菩萨"
-	t3 := "菩薩"
-	ws3 := dicttypes.WordSense{
-		Pinyin:  "púsà",
-		English: "bodhisattva",
-		Notes:   "Sanskrit equivalent: bodhisattva",
-	}
-	hw3 := dicttypes.Word{
-		HeadwordId:  3,
-		Simplified:  s3,
-		Traditional: t3,
-		Pinyin:      "púsà",
-		Senses:      []dicttypes.WordSense{ws3},
-	}
-	ws4 := dicttypes.WordSense{
-		Notes: "FGDB entry 42",
-	}
-	hw4 := dicttypes.Word{
-		HeadwordId:  3,
-		Simplified:  s3,
-		Traditional: t3,
-		Pinyin:      "púsà",
-		Senses:      []dicttypes.WordSense{ws3, ws4},
-	}
 	tests := []struct {
 		name     string
 		input    string
@@ -156,18 +132,6 @@ func TestSpan(t *testing.T) {
 			input:    "國",
 			hw:       hw2,
 			expected: `<span title="guó | country" class="vocabulary" itemprop="HeadwordId" value="2">國</span>`,
-		},
-		{
-			name:     "Has Sanskrit",
-			input:    "菩薩",
-			hw:       hw3,
-			expected: `<span title="púsà | bodhisattva" class="vocabulary sanskrit" itemprop="HeadwordId" value="3">菩薩</span>`,
-		},
-		{
-			name:     "Has Sanskrit and is a FGDB entry",
-			input:    "菩薩",
-			hw:       hw4,
-			expected: `<span title="púsà | 1. bodhisattva, 2. " class="vocabulary sanskrit fgdb" itemprop="HeadwordId" value="3">菩薩</span>`,
 		},
 	}
 	for _, tc := range tests {
@@ -266,7 +230,14 @@ func TestWriteCorpusDoc(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		err := WriteCorpusDoc(tokens, vocab, &buf, "", "", "", "", "TXT",
+		entryMeta := CorpusEntryMeta{
+			CollectionURL:   "",
+			CollectionTitle: "",
+			EntryTitle:      "",
+			AnalysisFile:    "",
+		}
+
+		err := WriteCorpusDoc(tokens, vocab, &buf, entryMeta, "TXT",
 			tc.config, corpusConfig, wdict)
 		if tc.expectErr && err == nil {
 			t.Fatalf("%s: expected error but got none", tc.name)

@@ -131,6 +131,18 @@ type HWFileDependencies struct {
 	BibNotesClient bibnotes.BibNotesClient
 }
 
+type bilingualEntryMeta struct {
+
+	// Name of file with bilingual parallel text
+	ParallelTextFile string
+
+	// Name of file with bilingual text
+	BilingualTextFile string
+
+	// Name of file with Chinese text, in case this is a bilingual or parallel file
+	ChineseTextFile string
+}
+
 // containsWord gets a list of words that contain the given word
 func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
 	//log.Printf("dictionary.containsWord: Enter\n")
@@ -141,6 +153,20 @@ func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
 		}
 	}
 	return contains
+}
+
+func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, fileName string) bilingualEntryMeta {
+	transRefs := bibClient.GetTransRefs(fileName)
+	if len(transRefs) == 0 {
+		return bilingualEntryMeta{}
+	}
+	parallelFile := ""
+	if transRefs[0].Kind == "parallel" {
+		parallelFile = transRefs[0].URL
+	}
+	return bilingualEntryMeta{
+		ParallelTextFile: parallelFile,
+	}
 }
 
 // getHeadwords compute headword numbers for all lexical units listed in data/words.txt
@@ -309,12 +335,15 @@ func GetWordFrequencies(libLoader library.LibraryLoader,
 
 // ParseText tokenizes a Chinese text corpus document into terms
 // Parameters:
-//   text: the string to parse
-//   ColTitle: Optional parameter used for tracing collocation usage
-//   document: Optional parameter used for tracing collocation usage
+//
+//	text: the string to parse
+//	ColTitle: Optional parameter used for tracing collocation usage
+//	document: Optional parameter used for tracing collocation usage
+//
 // Returns:
-//   tokens: the tokens for the parsed text
-//   results: vocabulary analysis results
+//
+//	tokens: the tokens for the parsed text
+//	results: vocabulary analysis results
 func ParseText(text string, colTitle string, document *corpus.CorpusEntry, dictTokenizer tokenizer.Tokenizer, corpusConfig corpus.CorpusConfig, dict *dictionary.Dictionary) (list.List, *CollectionAResults) {
 	tokens := list.List{}
 	vocab := map[string]int{}
@@ -422,8 +451,10 @@ func sampleUsage(usageMap map[string]*[]wordUsage) map[string]*[]wordUsage {
 // word frequencies and other data. The output file is called
 // 'corpus-analysis.html' in the web/analysis directory.
 // Parameters:
-//   results: The results of corpus analysis
-//   docFreq: document frequency for terms
+//
+//	results: The results of corpus analysis
+//	docFreq: document frequency for terms
+//
 // Returns: the name of the file written to
 func writeAnalysisCorpus(results *CollectionAResults,
 	docFreq index.DocumentFrequency, outputConfig generator.HTMLOutPutConfig,
@@ -621,8 +652,7 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 // baseDir: The base directory to use
 func writeCollection(collectionEntry *corpus.CollectionEntry,
 	outputConfig generator.HTMLOutPutConfig, libLoader library.LibraryLoader,
-	dictTokenizer tokenizer.Tokenizer,
-	dict *dictionary.Dictionary, c config.AppConfig) (*CollectionAResults, error) {
+	dictTokenizer tokenizer.Tokenizer, dict *dictionary.Dictionary, c config.AppConfig, bibClient bibnotes.BibNotesClient) (*CollectionAResults, error) {
 
 	log.Printf("analysis.writeCollection: enter CollectionFile =" +
 		collectionEntry.CollectionFile)
@@ -679,9 +709,18 @@ func writeCollection(collectionEntry *corpus.CollectionEntry,
 		textTokens := dictTokenizer.Tokenize(text)
 		// log.Printf("writeCollection: writing corpus doc, entry.RawFile = %s, got %d tokens, analysis file: %s",
 		//	entry.RawFile, len(textTokens), basename)
+		bilingualMeta := getBilingualEntryMeta(bibClient, collectionEntry.CollectionFile)
+		entryMeta := generator.CorpusEntryMeta{
+			CollectionURL:     collectionEntry.GlossFile,
+			CollectionTitle:   collectionEntry.Title,
+			EntryTitle:        entry.Title,
+			AnalysisFile:      basename,
+			ParallelTextFile:  bilingualMeta.ParallelTextFile,
+			BilingualTextFile: bilingualMeta.BilingualTextFile,
+			ChineseTextFile:   bilingualMeta.ChineseTextFile,
+		}
 		err = generator.WriteCorpusDoc(textTokens, results.Vocab, w,
-			collectionEntry.GlossFile, collectionEntry.Title, entry.Title,
-			basename, sourceFormat, outputConfig,
+			entryMeta, sourceFormat, outputConfig,
 			corpusConfig, wdict)
 		w.Flush()
 		df.Close()
@@ -751,7 +790,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	outputConfig generator.HTMLOutPutConfig,
 	libLoader library.LibraryLoader, dictTokenizer tokenizer.Tokenizer,
 	indexConfig index.IndexConfig, dict *dictionary.Dictionary,
-	c config.AppConfig, corpusConfig corpus.CorpusConfig) (*index.IndexState, error) {
+	c config.AppConfig, corpusConfig corpus.CorpusConfig, bibClient bibnotes.BibNotesClient) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpus: enter %d collections", len(collections))
 	wfDocMap := index.TermFreqDocMap{}
 	bigramDocMap := index.TermFreqDocMap{}
@@ -759,7 +798,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	bigramDF := index.NewDocumentFrequency()
 	aResults := NewCollectionAResults()
 	for _, collectionEntry := range collections {
-		results, err := writeCollection(&collectionEntry, outputConfig, libLoader, dictTokenizer, dict, c)
+		results, err := writeCollection(&collectionEntry, outputConfig, libLoader, dictTokenizer, dict, c, bibClient)
 		if err != nil {
 			return nil, fmt.Errorf("WriteCorpus could not write collection: %v", err)
 		}
@@ -863,7 +902,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 func WriteCorpusAll(libLoader library.LibraryLoader,
 	dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
 	indexConfig index.IndexConfig, dict *dictionary.Dictionary,
-	c config.AppConfig) (*index.IndexState, error) {
+	c config.AppConfig, bibClient bibnotes.BibNotesClient) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpusAll: enter")
 	corpLoader := libLoader.GetCorpusLoader()
 	corpusConfig := corpLoader.GetConfig()
@@ -872,7 +911,7 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 		return nil, fmt.Errorf("writeCorpusAll could not load corpus: %v", err)
 	}
 	indexState, err := WriteCorpus(*collections, outputConfig, libLoader, dictTokenizer,
-		indexConfig, dict, c, corpusConfig)
+		indexConfig, dict, c, corpusConfig, bibClient)
 	if err != nil {
 		return nil, fmt.Errorf("writeCorpusAll error: %v", err)
 	}
@@ -885,14 +924,14 @@ func WriteCorpusAll(libLoader library.LibraryLoader,
 func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 	dictTokenizer tokenizer.Tokenizer, outputConfig generator.HTMLOutPutConfig,
 	corpusConfig corpus.CorpusConfig, dict *dictionary.Dictionary,
-	c config.AppConfig) error {
+	c config.AppConfig, bibClient bibnotes.BibNotesClient) error {
 
 	collectionEntry, err := libLoader.GetCorpusLoader().GetCollectionEntry(collectionFile)
 	if err != nil {
 		return fmt.Errorf("analysis.WriteCorpusCol:  could not get entry %v", err)
 	}
 	_, err = writeCollection(collectionEntry, outputConfig, libLoader,
-		dictTokenizer, dict, c)
+		dictTokenizer, dict, c, bibClient)
 	if err != nil {
 		return fmt.Errorf("analysis.WriteCorpusCol: error writing collection %v", err)
 	}
@@ -900,7 +939,8 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 }
 
 // Writes dictionary headword entries
-//func WriteHwFiles(loader library.LibraryLoader,
+// func WriteHwFiles(loader library.LibraryLoader,
+//
 //	dictTokenizer tokenizer.Tokenizer,
 //	outputConfig generator.HTMLOutPutConfig,
 //	indexState index.IndexState,
