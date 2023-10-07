@@ -112,6 +112,9 @@ type CorpusEntryContent struct {
 
 	// Name of the file with analysis of this document
 	AnalysisFile string
+
+	// Name of file with bilingual parallel text
+	ParallelTextFile string
 }
 
 // HTMLContent holds content for the template
@@ -340,13 +343,15 @@ func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Wri
 	dateUpdated := time.Now().Format("2006-01-02")
 	entryTitle := corpusEntryMeta.EntryTitle
 	content := CorpusEntryContent{
-		Title:           outputConfig.Title,
-		CorpusText:      textContent,
-		DateUpdated:     dateUpdated,
-		CollectionURL:   corpusEntryMeta.CollectionURL,
-		CollectionTitle: corpusEntryMeta.CollectionTitle,
-		EntryTitle:      entryTitle,
-		AnalysisFile:    corpusEntryMeta.AnalysisFile}
+		Title:            outputConfig.Title,
+		CorpusText:       textContent,
+		DateUpdated:      dateUpdated,
+		CollectionURL:    corpusEntryMeta.CollectionURL,
+		CollectionTitle:  corpusEntryMeta.CollectionTitle,
+		EntryTitle:       entryTitle,
+		AnalysisFile:     corpusEntryMeta.AnalysisFile,
+		ParallelTextFile: corpusEntryMeta.ParallelTextFile,
+	}
 
 	tmpl := outputConfig.Templates["corpus-template.html"]
 	if tmpl == nil {
