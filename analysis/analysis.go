@@ -145,7 +145,7 @@ type bilingualEntryMeta struct {
 
 // containsWord gets a list of words that contain the given word
 func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
-	//log.Printf("dictionary.containsWord: Enter\n")
+	//log.Printf("dictionary.containsWord: Enter")
 	contains := []dicttypes.Word{}
 	for _, hw := range headwords {
 		if len(contains) <= maxContains && hw.Simplified != word && strings.Contains(hw.Simplified, word) {
@@ -156,6 +156,10 @@ func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
 }
 
 func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, fileName string) bilingualEntryMeta {
+	log.Printf("analysis.getBilingualEntryMeta: fileName = %s", fileName)
+	if bibClient == nil || len(fileName) == 0 {
+		return bilingualEntryMeta{}
+	}
 	transRefs := bibClient.GetTransRefs(fileName)
 	if len(transRefs) == 0 {
 		return bilingualEntryMeta{}
