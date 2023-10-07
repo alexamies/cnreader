@@ -157,18 +157,17 @@ func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
 
 func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, fileName string) bilingualEntryMeta {
 	if bibClient == nil || len(fileName) == 0 {
-		log.Printf("analysis.getBilingualEntryMeta: bibClient = %v, fileName = %s", bibClient, fileName)
 		return bilingualEntryMeta{}
 	}
 	transRefs := bibClient.GetTransRefs(fileName)
 	if len(transRefs) == 0 {
-		log.Printf("analysis.getBilingualEntryMeta: len(transRefs) = 0, fileName = %s", fileName)
 		return bilingualEntryMeta{}
 	}
 	parallelFile := ""
 	if transRefs[0].Kind == "parallel" {
 		parallelFile = transRefs[0].URL
 	}
+	log.Printf("analysis.getBilingualEntryMeta: len(transRefs) = %d, fileName = %s, parallelFile = %s", len(transRefs), fileName, parallelFile)
 	return bilingualEntryMeta{
 		ParallelTextFile: parallelFile,
 	}
