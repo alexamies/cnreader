@@ -167,7 +167,7 @@ func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, fileName string) b
 	if transRefs[0].Kind == "parallel" {
 		parallelFile = transRefs[0].URL
 	}
-	log.Printf("analysis.getBilingualEntryMeta: len(transRefs) = %d, fileName = %s, parallelFile = %s", len(transRefs), fileName, parallelFile)
+	log.Printf("analysis.getBilingualEntryMeta: len(transRefs) = %d, fileName = %s, parallelFile = %s, kind = %s", len(transRefs), fileName, parallelFile, transRefs[0])
 	return bilingualEntryMeta{
 		ParallelTextFile: parallelFile,
 	}
