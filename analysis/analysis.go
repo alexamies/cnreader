@@ -155,22 +155,44 @@ func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
 	return contains
 }
 
-func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, fileName string) bilingualEntryMeta {
-	if bibClient == nil || len(fileName) == 0 {
+func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, glossFile string, colMap map[string]corpus.CollectionEntry) bilingualEntryMeta {
+	if bibClient == nil || len(collectionFile) == 0 {
 		return bilingualEntryMeta{}
 	}
-	transRefs := bibClient.GetTransRefs(fileName)
+	transRefs := bibClient.GetTransRefs(collectionFile)
 	if len(transRefs) == 0 {
 		return bilingualEntryMeta{}
 	}
-	parallelFile := ""
+	parallelCollectionFile := ""
 	if transRefs[0].Kind == "parallel" {
-		parallelFile = transRefs[0].URL
+		parallelCollectionFile = transRefs[0].URL
 	}
-	log.Printf("analysis.getBilingualEntryMeta: len(transRefs) = %d, fileName = %s, parallelFile = %s, kind = %s", len(transRefs), fileName, parallelFile, transRefs[0])
+	parallelTextFile := ""
+	// Check that the paralell text file really exists
+	if colMap != nil {
+		pTextFile := getParallelTextFN(glossFile)
+		parallelCol, ok := colMap[collectionFile]
+		if ok {
+			for _, pEntry := range parallelCol.CorpusEntries {
+				if pEntry.GlossFile == pTextFile {
+					parallelTextFile = pTextFile
+				}
+			}
+		}
+	}
+	log.Printf("analysis.getBilingualEntryMeta: len(transRefs) = %d, collectionFile = %s, parallelFile = %s, kind = %s, parallelTextFile = %s", len(transRefs), collectionFile,
+		parallelCollectionFile, transRefs[0], parallelTextFile)
 	return bilingualEntryMeta{
-		ParallelTextFile: parallelFile,
+		ParallelTextFile: parallelTextFile,
 	}
+}
+
+// Constructs the name of a parallel text file with the pattern {collection_file}{chapter_no}_en_aligned.html, where '_en_aligned' is inserted
+func getParallelTextFN(glossFile string) string {
+	if len(glossFile) > 5 {
+		return glossFile[:len(glossFile)-5] + "_en_aligned.html"
+	}
+	return ""
 }
 
 // getHeadwords compute headword numbers for all lexical units listed in data/words.txt
@@ -654,27 +676,23 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 // the entries contained in the collection
 // collectionEntry: the CollectionEntry struct
 // baseDir: The base directory to use
-func writeCollection(collectionEntry *corpus.CollectionEntry,
-	outputConfig generator.HTMLOutPutConfig, libLoader library.LibraryLoader,
-	dictTokenizer tokenizer.Tokenizer, dict *dictionary.Dictionary, c config.AppConfig, bibClient bibnotes.BibNotesClient) (*CollectionAResults, error) {
+func writeCollection(collectionEntry *corpus.CollectionEntry, outputConfig generator.HTMLOutPutConfig, libLoader library.LibraryLoader,
+	dictTokenizer tokenizer.Tokenizer, dict *dictionary.Dictionary, c config.AppConfig, bibClient bibnotes.BibNotesClient, colMap map[string]corpus.CollectionEntry) (*CollectionAResults, error) {
 
-	log.Printf("analysis.writeCollection: enter CollectionFile =" +
-		collectionEntry.CollectionFile)
+	log.Printf("analysis.writeCollection: enter CollectionFile =" + collectionEntry.CollectionFile)
 	corpLoader := libLoader.GetCorpusLoader()
 	corpusConfig := corpLoader.GetConfig()
 	cFile := collectionEntry.CollectionFile
 	corpusEntries, err := corpLoader.LoadCollection(cFile, collectionEntry.Title)
 	if err != nil {
-		return nil, fmt.Errorf("analysis.writeCollection error loading file %s: %v",
-			cFile, err)
+		return nil, fmt.Errorf("analysis.writeCollection error loading file %s: %v", cFile, err)
 	}
 	aResults := NewCollectionAResults()
 	wdict := dict.Wdict
 	for _, entry := range *corpusEntries {
 		text, err := corpLoader.ReadText(entry.RawFile)
 		if err != nil {
-			return nil, fmt.Errorf("analysis.writeCollection error reading src %s: %v",
-				entry.RawFile, err)
+			return nil, fmt.Errorf("analysis.writeCollection error reading src %s: %v", entry.RawFile, err)
 		}
 		_, results := ParseText(text, collectionEntry.Title, &entry, dictTokenizer, corpusConfig, dict)
 
@@ -688,11 +706,9 @@ func writeCollection(collectionEntry *corpus.CollectionEntry,
 		filename := analysisDir + basename
 		af, err := os.Create(filename)
 		if err != nil {
-			return nil, fmt.Errorf("writeCollection: count not create analysis file %s: %v",
-				filename, err)
+			return nil, fmt.Errorf("writeCollection: count not create analysis file %s: %v", filename, err)
 		}
-		err = writeAnalysis(results, entry.RawFile, entry.GlossFile,
-			collectionEntry.Title, entry.Title, outputConfig, wdict, af)
+		err = writeAnalysis(results, entry.RawFile, entry.GlossFile, collectionEntry.Title, entry.Title, outputConfig, wdict, af)
 		af.Close()
 		if err != nil {
 			return nil, fmt.Errorf("writeCollection could write analysis: %v", err)
@@ -713,7 +729,7 @@ func writeCollection(collectionEntry *corpus.CollectionEntry,
 		textTokens := dictTokenizer.Tokenize(text)
 		// log.Printf("writeCollection: writing corpus doc, entry.RawFile = %s, got %d tokens, analysis file: %s",
 		//	entry.RawFile, len(textTokens), basename)
-		bilingualMeta := getBilingualEntryMeta(bibClient, collectionEntry.CollectionFile)
+		bilingualMeta := getBilingualEntryMeta(bibClient, collectionEntry.CollectionFile, collectionEntry.GlossFile, colMap)
 		entryMeta := generator.CorpusEntryMeta{
 			CollectionURL:     collectionEntry.GlossFile,
 			CollectionTitle:   collectionEntry.Title,
@@ -743,8 +759,7 @@ func writeCollection(collectionEntry *corpus.CollectionEntry,
 	srcFile := collectionEntry.CollectionFile
 	i := strings.Index(srcFile, ".")
 	if i <= 0 {
-		return nil, fmt.Errorf("writeAnalysis: no period in source file name: %s",
-			srcFile)
+		return nil, fmt.Errorf("writeAnalysis: no period in source file name: %s", srcFile)
 	}
 	basename := srcFile[:i] + "_analysis.html"
 	analysisDir := c.ProjectHome + "/" + outputConfig.WebDir + "/analysis/"
@@ -764,8 +779,7 @@ func writeCollection(collectionEntry *corpus.CollectionEntry,
 	introFN := corpusConfig.CorpusDir + "/" + collectionEntry.Intro
 	infile, err := os.Open(introFN)
 	if err != nil {
-		return nil, fmt.Errorf("writeCollection, could not open intro file %s: %v",
-			collectionEntry.Intro, err)
+		return nil, fmt.Errorf("writeCollection, could not open intro file %s: %v", collectionEntry.Intro, err)
 	}
 	defer infile.Close()
 	introText := corpus.ReadIntroFile(infile)
@@ -796,13 +810,17 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	indexConfig index.IndexConfig, dict *dictionary.Dictionary,
 	c config.AppConfig, corpusConfig corpus.CorpusConfig, bibClient bibnotes.BibNotesClient) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpus: enter %d collections", len(collections))
+	colMap := make(map[string]corpus.CollectionEntry)
+	for _, collectionEntry := range collections {
+		colMap[collectionEntry.CollectionFile] = collectionEntry
+	}
 	wfDocMap := index.TermFreqDocMap{}
 	bigramDocMap := index.TermFreqDocMap{}
 	docFreq := index.NewDocumentFrequency() // used to accumulate doc frequencies
 	bigramDF := index.NewDocumentFrequency()
 	aResults := NewCollectionAResults()
 	for _, collectionEntry := range collections {
-		results, err := writeCollection(&collectionEntry, outputConfig, libLoader, dictTokenizer, dict, c, bibClient)
+		results, err := writeCollection(&collectionEntry, outputConfig, libLoader, dictTokenizer, dict, c, bibClient, colMap)
 		if err != nil {
 			return nil, fmt.Errorf("WriteCorpus could not write collection: %v", err)
 		}
@@ -892,10 +910,8 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 			textsFN, err)
 	}
 	defer collListWriter.Close()
-	if err := generator.WriteCollectionList(collections, analysisFN, outputConfig,
-		collListWriter); err != nil {
-		return nil, fmt.Errorf("analysis.WriteCorpus: Could write texts file, %s: %v",
-			textsFN, err)
+	if err := generator.WriteCollectionList(collections, analysisFN, outputConfig, collListWriter); err != nil {
+		return nil, fmt.Errorf("analysis.WriteCorpus: Could write texts file, %s: %v", textsFN, err)
 	}
 	log.Println("analysis.WriteCorpus: exit")
 	return indexState, nil
@@ -935,7 +951,7 @@ func WriteCorpusCol(collectionFile string, libLoader library.LibraryLoader,
 		return fmt.Errorf("analysis.WriteCorpusCol:  could not get entry %v", err)
 	}
 	_, err = writeCollection(collectionEntry, outputConfig, libLoader,
-		dictTokenizer, dict, c, bibClient)
+		dictTokenizer, dict, c, bibClient, nil)
 	if err != nil {
 		return fmt.Errorf("analysis.WriteCorpusCol: error writing collection %v", err)
 	}
