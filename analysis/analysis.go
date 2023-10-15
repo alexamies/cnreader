@@ -174,8 +174,10 @@ func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, gl
 		parallelCol, ok := colMap[collectionFile]
 		if ok {
 			for _, pEntry := range parallelCol.CorpusEntries {
+				log.Printf("analysis.getBilingualEntryMeta: pEntry.GlossFile = %s, pTextFile = %s", pEntry.GlossFile, pTextFile)
 				if pEntry.GlossFile == pTextFile {
 					parallelTextFile = pTextFile
+					break
 				}
 			}
 		}
@@ -812,6 +814,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	log.Printf("analysis.WriteCorpus: enter %d collections", len(collections))
 	colMap := make(map[string]corpus.CollectionEntry)
 	for _, collectionEntry := range collections {
+		log.Printf("analysis.WriteCorpus: indexing %s", collectionEntry.CollectionFile)
 		colMap[collectionEntry.CollectionFile] = collectionEntry
 	}
 	wfDocMap := index.TermFreqDocMap{}
