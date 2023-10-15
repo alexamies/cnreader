@@ -820,7 +820,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	colMap := make(map[string]corpus.CollectionEntry)
 	for _, collectionEntry := range collections {
 		log.Printf("analysis.WriteCorpus: indexing %s", collectionEntry.CollectionFile)
-		colMap[collectionEntry.CollectionFile] = collectionEntry
+		colMap[collectionEntry.GlossFile] = collectionEntry
 	}
 	wfDocMap := index.TermFreqDocMap{}
 	bigramDocMap := index.TermFreqDocMap{}
