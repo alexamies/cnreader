@@ -736,7 +736,7 @@ func writeCollection(collectionEntry *corpus.CollectionEntry, outputConfig gener
 		textTokens := dictTokenizer.Tokenize(text)
 		// log.Printf("writeCollection: writing corpus doc, entry.RawFile = %s, got %d tokens, analysis file: %s",
 		//	entry.RawFile, len(textTokens), basename)
-		bilingualMeta := getBilingualEntryMeta(bibClient, collectionEntry.CollectionFile, collectionEntry.GlossFile, colMap)
+		bilingualMeta := getBilingualEntryMeta(bibClient, collectionEntry.CollectionFile, entry.GlossFile, colMap)
 		entryMeta := generator.CorpusEntryMeta{
 			CollectionURL:     collectionEntry.GlossFile,
 			CollectionTitle:   collectionEntry.Title,
