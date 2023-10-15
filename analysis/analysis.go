@@ -180,10 +180,12 @@ func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, gl
 					break
 				}
 			}
+		} else {
+			log.Printf("analysis.getBilingualEntryMeta: did not find parallelCol for collectionFile = %s in colMap of %d entries", collectionFile, len(colMap))
 		}
 	}
-	log.Printf("analysis.getBilingualEntryMeta: len(transRefs) = %d, collectionFile = %s, parallelFile = %s, kind = %s, parallelTextFile = %s", len(transRefs), collectionFile,
-		parallelCollectionFile, transRefs[0], parallelTextFile)
+	log.Printf("analysis.getBilingualEntryMeta: len(transRefs) = %d, collectionFile = %s, parallelFile = %s, kind = %s, glossFile = %s, parallelTextFile = %s", len(transRefs), collectionFile,
+		parallelCollectionFile, transRefs[0], glossFile, parallelTextFile)
 	return bilingualEntryMeta{
 		ParallelTextFile: parallelTextFile,
 	}
