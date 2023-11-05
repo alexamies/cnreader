@@ -155,7 +155,7 @@ func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
 	return contains
 }
 
-func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, glossFile string, colMap map[string]corpus.CollectionEntry) bilingualEntryMeta {
+func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, glossFile string, colMap map[string]*[]corpus.CorpusEntry) bilingualEntryMeta {
 	if bibClient == nil || len(collectionFile) == 0 {
 		return bilingualEntryMeta{}
 	}
@@ -172,9 +172,10 @@ func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, gl
 	if colMap != nil {
 		pTextFile := strings.Replace(glossFile, ".html", "_en_aligned.html", 1)
 		log.Printf("analysis.getBilingualEntryMeta: glossFile = %s, pTextFile = %s, parallelCollectionFile = %s", glossFile, pTextFile, parallelCollectionFile)
-		parallelCol, ok := colMap[glossFile]
+		parallelEntries, ok := colMap[parallelCollectionFile]
 		if ok {
-			for _, pEntry := range parallelCol.CorpusEntries {
+			log.Printf("analysis.getBilingualEntryMeta: glossFile = %s, len(*parallelEntries) = %d", glossFile, len(*parallelEntries))
+			for _, pEntry := range *parallelEntries {
 				log.Printf("analysis.getBilingualEntryMeta: pEntry.GlossFile = %s, pTextFile = %s", pEntry.GlossFile, pTextFile)
 				if pEntry.GlossFile == pTextFile {
 					parallelTextFile = pTextFile
@@ -676,7 +677,7 @@ func writeAnalysis(results *CollectionAResults, srcFile, glossFile,
 // collectionEntry: the CollectionEntry struct
 // baseDir: The base directory to use
 func writeCollection(collectionEntry *corpus.CollectionEntry, outputConfig generator.HTMLOutPutConfig, libLoader library.LibraryLoader,
-	dictTokenizer tokenizer.Tokenizer, dict *dictionary.Dictionary, c config.AppConfig, bibClient bibnotes.BibNotesClient, colMap map[string]corpus.CollectionEntry) (*CollectionAResults, error) {
+	dictTokenizer tokenizer.Tokenizer, dict *dictionary.Dictionary, c config.AppConfig, bibClient bibnotes.BibNotesClient, colMap map[string]*[]corpus.CorpusEntry) (*CollectionAResults, error) {
 
 	log.Printf("analysis.writeCollection: enter CollectionFile =" + collectionEntry.CollectionFile)
 	corpLoader := libLoader.GetCorpusLoader()
@@ -809,10 +810,17 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	indexConfig index.IndexConfig, dict *dictionary.Dictionary,
 	c config.AppConfig, corpusConfig corpus.CorpusConfig, bibClient bibnotes.BibNotesClient) (*index.IndexState, error) {
 	log.Printf("analysis.WriteCorpus: enter %d collections", len(collections))
-	colMap := make(map[string]corpus.CollectionEntry)
+	corpLoader := libLoader.GetCorpusLoader()
+	colMap := make(map[string]*[]corpus.CorpusEntry)
 	for _, collectionEntry := range collections {
 		log.Printf("analysis.WriteCorpus: indexing %s", collectionEntry.CollectionFile)
-		colMap[collectionEntry.GlossFile] = collectionEntry
+		cFile := collectionEntry.CollectionFile
+		corpusEntries, err := corpLoader.LoadCollection(cFile, collectionEntry.Title)
+		if err != nil {
+			log.Printf("analysis.WriteCorpus error loading file %s: %v", cFile, err)
+			continue
+		}
+		colMap[collectionEntry.GlossFile] = corpusEntries
 	}
 	wfDocMap := index.TermFreqDocMap{}
 	bigramDocMap := index.TermFreqDocMap{}
