@@ -171,8 +171,8 @@ func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, gl
 	// Check that the paralell text file really exists
 	if colMap != nil {
 		pTextFile := strings.Replace(glossFile, ".html", "_en_aligned.html", 1)
-		log.Printf("analysis.getBilingualEntryMeta: pTextFile = %s, parallelCollectionFile = %s", pTextFile, parallelCollectionFile)
-		parallelCol, ok := colMap[parallelCollectionFile]
+		log.Printf("analysis.getBilingualEntryMeta: glossFile = %s, pTextFile = %s, parallelCollectionFile = %s", glossFile, pTextFile, parallelCollectionFile)
+		parallelCol, ok := colMap[glossFile]
 		if ok {
 			for _, pEntry := range parallelCol.CorpusEntries {
 				log.Printf("analysis.getBilingualEntryMeta: pEntry.GlossFile = %s, pTextFile = %s", pEntry.GlossFile, pTextFile)
