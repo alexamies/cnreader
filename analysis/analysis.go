@@ -170,6 +170,12 @@ func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, gl
 	parallelTextFile := ""
 	// Check that the paralell text file really exists
 	if colMap != nil {
+		if strings.Contains(glossFile, "_en_aligned.html") {
+			// Navigate from a parallel text file to the regular file
+			return bilingualEntryMeta{
+				ChineseTextFile: strings.Replace(glossFile, "_en_aligned.html", ".html", 1),
+			}
+		}
 		pTextFile := strings.Replace(glossFile, ".html", "_en_aligned.html", 1)
 		pIndexFile := strings.Replace(parallelCollectionFile, "html", "tsv", 1)
 		log.Printf("analysis.getBilingualEntryMeta: pTextFile = %s, pIndexFile = %s", pTextFile, pIndexFile)
@@ -183,7 +189,7 @@ func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, gl
 				}
 			}
 		} else {
-			log.Printf("analysis.getBilingualEntryMeta: did not find parallelCol for parallelCollectionFile = %s in colMap of %d entries", parallelCollectionFile, len(colMap))
+			log.Printf("analysis.getBilingualEntryMeta: did not find parallelCol for pIndexFile = %s in colMap of %d entries", pIndexFile, len(colMap))
 		}
 	} else {
 		log.Printf("analysis.getBilingualEntryMeta: colMap == nil")
