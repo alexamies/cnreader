@@ -115,6 +115,9 @@ type CorpusEntryContent struct {
 
 	// Name of file with bilingual parallel text
 	ParallelTextFile string
+
+	// Name of file with Chinese text, in case this is a bilingual or parallel file
+	ChineseTextFile string
 }
 
 // HTMLContent holds content for the template
@@ -351,6 +354,7 @@ func WriteCorpusDoc(tokens []tokenizer.TextToken, vocab map[string]int, w io.Wri
 		EntryTitle:       entryTitle,
 		AnalysisFile:     corpusEntryMeta.AnalysisFile,
 		ParallelTextFile: corpusEntryMeta.ParallelTextFile,
+		ChineseTextFile:  corpusEntryMeta.ChineseTextFile,
 	}
 
 	tmpl := outputConfig.Templates["corpus-template.html"]
