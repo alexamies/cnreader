@@ -155,6 +155,7 @@ func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
 	return contains
 }
 
+// getBilingualEntryMeta finds related bilingual parallel text entries for a corpus text
 func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, glossFile string, colMap map[string]*[]corpus.CorpusEntry) bilingualEntryMeta {
 	if bibClient == nil || len(collectionFile) == 0 {
 		return bilingualEntryMeta{}
@@ -189,7 +190,7 @@ func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, gl
 				}
 			}
 		} else {
-			log.Printf("analysis.getBilingualEntryMeta: did not find parallelCol for pIndexFile = %s in colMap of %d entries", pIndexFile, len(colMap))
+			log.Printf("analysis.getBilingualEntryMeta: did not find parallelCol for parallelCollectionFile = %s in colMap of %d entries", parallelCollectionFile, len(colMap))
 		}
 	} else {
 		log.Printf("analysis.getBilingualEntryMeta: colMap == nil")
