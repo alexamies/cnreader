@@ -157,6 +157,12 @@ func containsWord(word string, headwords []dicttypes.Word) []dicttypes.Word {
 
 // getBilingualEntryMeta finds related bilingual parallel text entries for a corpus text
 func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, glossFile string, colMap map[string]*[]corpus.CorpusEntry) bilingualEntryMeta {
+	if strings.Contains(glossFile, "_en_aligned.html") {
+		log.Printf("analysis.getBilingualEntryMeta: glossFile = %s, give link back to the monolingual file", glossFile)
+		return bilingualEntryMeta{
+			ChineseTextFile: strings.Replace(glossFile, "_en_aligned.html", ".html", 1),
+		}
+	}
 	if bibClient == nil || len(collectionFile) == 0 {
 		return bilingualEntryMeta{}
 	}
@@ -171,12 +177,6 @@ func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, gl
 	parallelTextFile := ""
 	// Check that the paralell text file really exists
 	if colMap != nil {
-		if strings.Contains(glossFile, "_en_aligned.html") {
-			// Navigate from a parallel text file to the regular file
-			return bilingualEntryMeta{
-				ChineseTextFile: strings.Replace(glossFile, "_en_aligned.html", ".html", 1),
-			}
-		}
 		pTextFile := strings.Replace(glossFile, ".html", "_en_aligned.html", 1)
 		log.Printf("analysis.getBilingualEntryMeta: glossFile = %s, pTextFile = %s, parallelCollectionFile = %s", glossFile, pTextFile, parallelCollectionFile)
 		parallelEntries, ok := colMap[parallelCollectionFile]
