@@ -178,25 +178,25 @@ func getBilingualEntryMeta(bibClient bibnotes.BibNotesClient, collectionFile, gl
 	// Check that the paralell text file really exists
 	if colMap != nil {
 		pTextFile := strings.Replace(glossFile, ".html", "_en_aligned.html", 1)
-		log.Printf("analysis.getBilingualEntryMeta: glossFile = %s, pTextFile = %s, parallelCollectionFile = %s", glossFile, pTextFile, parallelCollectionFile)
+		// log.Printf("analysis.getBilingualEntryMeta: glossFile = %s, pTextFile = %s, parallelCollectionFile = %s", glossFile, pTextFile, parallelCollectionFile)
 		parallelEntries, ok := colMap[parallelCollectionFile]
 		if ok {
-			log.Printf("analysis.getBilingualEntryMeta: glossFile = %s, len(*parallelEntries) = %d", glossFile, len(*parallelEntries))
+			// log.Printf("analysis.getBilingualEntryMeta: glossFile = %s, len(*parallelEntries) = %d", glossFile, len(*parallelEntries))
 			for _, pEntry := range *parallelEntries {
-				log.Printf("analysis.getBilingualEntryMeta: pEntry.GlossFile = %s, pTextFile = %s", pEntry.GlossFile, pTextFile)
+				// log.Printf("analysis.getBilingualEntryMeta: pEntry.GlossFile = %s, pTextFile = %s", pEntry.GlossFile, pTextFile)
 				if pEntry.GlossFile == pTextFile {
 					parallelTextFile = pTextFile
 					break
 				}
 			}
 		} else {
-			log.Printf("analysis.getBilingualEntryMeta: did not find parallelCol for parallelCollectionFile = %s in colMap of %d entries", parallelCollectionFile, len(colMap))
+			// log.Printf("analysis.getBilingualEntryMeta: did not find parallelCol for parallelCollectionFile = %s in colMap of %d entries", parallelCollectionFile, len(colMap))
 		}
 	} else {
-		log.Printf("analysis.getBilingualEntryMeta: colMap == nil")
+		// log.Printf("analysis.getBilingualEntryMeta: colMap == nil")
 	}
-	log.Printf("analysis.getBilingualEntryMeta: len(transRefs) = %d, collectionFile = %s, parallelFile = %s, kind = %s, glossFile = %s, parallelTextFile = %s", len(transRefs), collectionFile,
-		parallelCollectionFile, transRefs[0], glossFile, parallelTextFile)
+	// log.Printf("analysis.getBilingualEntryMeta: len(transRefs) = %d, collectionFile = %s, parallelFile = %s, kind = %s, glossFile = %s, parallelTextFile = %s", len(transRefs), collectionFile,
+	//	parallelCollectionFile, transRefs[0], glossFile, parallelTextFile)
 	return bilingualEntryMeta{
 		ParallelTextFile: parallelTextFile,
 	}
