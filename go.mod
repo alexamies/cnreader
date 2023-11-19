@@ -4,9 +4,9 @@ go 1.18
 
 require (
 	cloud.google.com/go/firestore v1.11.0
-	github.com/alexamies/chinesenotes-go v0.0.177
+	github.com/alexamies/chinesenotes-go v0.0.179
 	github.com/gomarkdown/markdown v0.0.0-20220607163217-45f7c050e2d1
-	google.golang.org/grpc v1.56.2
+	google.golang.org/grpc v1.56.3
 )
 
 require (
@@ -28,12 +28,12 @@ require (
 	github.com/sendgrid/rest v2.4.1+incompatible // indirect
 	github.com/sendgrid/sendgrid-go v3.5.0+incompatible // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/crypto v0.11.0 // indirect
-	golang.org/x/net v0.12.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.132.0 // indirect

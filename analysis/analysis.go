@@ -820,7 +820,7 @@ func WriteCorpus(collections []corpus.CollectionEntry,
 	corpLoader := libLoader.GetCorpusLoader()
 	colMap := make(map[string]*[]corpus.CorpusEntry)
 	for _, collectionEntry := range collections {
-		log.Printf("analysis.WriteCorpus: indexing %s", collectionEntry.CollectionFile)
+		// log.Printf("analysis.WriteCorpus: indexing %s", collectionEntry.CollectionFile)
 		cFile := collectionEntry.CollectionFile
 		corpusEntries, err := corpLoader.LoadCollection(cFile, collectionEntry.Title)
 		if err != nil {
